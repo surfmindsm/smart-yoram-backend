@@ -36,15 +36,15 @@ def get_attendance_summary(
     
     # Get attendance records
     attendance_query = db.query(
-        models.Attendance.attendance_date,
+        models.Attendance.service_date,
         func.count(models.Attendance.id).label('present_count')
     ).filter(
         models.Attendance.church_id == current_user.church_id,
-        models.Attendance.attendance_date >= start_date,
-        models.Attendance.attendance_date <= end_date,
-        models.Attendance.attendance_type == attendance_type,
-        models.Attendance.is_present == True
-    ).group_by(models.Attendance.attendance_date).all()
+        models.Attendance.service_date >= start_date,
+        models.Attendance.service_date <= end_date,
+        models.Attendance.service_type == attendance_type,
+        models.Attendance.present == True
+    ).group_by(models.Attendance.service_date).all()
     
     # Calculate statistics
     attendance_data = []
@@ -53,7 +53,7 @@ def get_attendance_summary(
     for record in attendance_query:
         attendance_rate = (record.present_count / total_members * 100) if total_members > 0 else 0
         attendance_data.append({
-            'date': record.attendance_date,
+            'date': record.service_date.isoformat(),
             'present_count': record.present_count,
             'total_members': total_members,
             'attendance_rate': round(attendance_rate, 1)
@@ -184,11 +184,11 @@ def get_member_demographics(
     members_with_dob = db.query(models.Member).filter(
         models.Member.church_id == current_user.church_id,
         models.Member.member_status == 'active',
-        models.Member.date_of_birth.isnot(None)
+        models.Member.birthdate.isnot(None)
     ).all()
     
     for member in members_with_dob:
-        age = today.year - member.date_of_birth.year
+        age = today.year - member.birthdate.year
         if age < 10:
             age_groups['0-9'] += 1
         elif age < 20:

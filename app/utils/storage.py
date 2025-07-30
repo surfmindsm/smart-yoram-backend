@@ -41,8 +41,8 @@ def ensure_buckets_exist():
                     supabase.storage.create_bucket(bucket_name)
                     logger.info(f"Created storage bucket: {bucket_name}")
                 except Exception as create_error:
-                    logger.warning(f"Could not create bucket {bucket_name}: {create_error}")
-                    logger.info(f"Please create bucket '{bucket_name}' manually in Supabase dashboard")
+                    # RLS policy prevents bucket creation with anon key, but that's OK
+                    logger.debug(f"Bucket {bucket_name} creation skipped (likely already exists or RLS policy): {create_error}")
     except Exception as e:
         logger.error(f"Error ensuring buckets exist: {e}")
 

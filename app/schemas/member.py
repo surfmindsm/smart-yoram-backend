@@ -1,5 +1,5 @@
 from typing import Optional
-from datetime import date
+from datetime import date, datetime
 from pydantic import BaseModel
 
 
@@ -22,6 +22,14 @@ class MemberBase(BaseModel):
     family_role: Optional[str] = None
     status: Optional[str] = "active"
     notes: Optional[str] = None
+    # New fields for enhanced features
+    profile_photo_url: Optional[str] = None
+    member_status: Optional[str] = "active"
+    transfer_church: Optional[str] = None
+    transfer_date: Optional[date] = None
+    memo: Optional[str] = None
+    invitation_sent: Optional[bool] = False
+    invitation_sent_at: Optional[datetime] = None
 
 
 class MemberCreate(MemberBase):

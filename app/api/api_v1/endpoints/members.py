@@ -43,7 +43,7 @@ def read_members(
             query = query.filter(
                 or_(
                     models.Member.name.contains(search),
-                    models.Member.phone_number.contains(search)
+                    models.Member.phone.contains(search)
                 )
             )
     
