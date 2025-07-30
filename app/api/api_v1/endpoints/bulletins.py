@@ -1,9 +1,10 @@
 from typing import Any, List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 
 from app import models, schemas
 from app.api import deps
+from app.utils.storage import upload_bulletin
 
 router = APIRouter()
 
@@ -122,3 +123,45 @@ def delete_bulletin(
     db.delete(bulletin)
     db.commit()
     return {"message": "Bulletin deleted successfully"}
+
+
+@router.post("/{bulletin_id}/upload-file", response_model=schemas.Bulletin)
+async def upload_bulletin_file(
+    *,
+    db: Session = Depends(deps.get_db),
+    bulletin_id: int,
+    current_user: models.User = Depends(deps.get_current_active_user),
+    file: UploadFile = File(...)
+) -> Any:
+    """
+    Upload bulletin file to Supabase Storage.
+    """
+    bulletin = (
+        db.query(models.Bulletin).filter(models.Bulletin.id == bulletin_id).first()
+    )
+    if not bulletin:
+        raise HTTPException(status_code=404, detail="Bulletin not found")
+    
+    if bulletin.church_id != current_user.church_id and not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    
+    # Read file content
+    file_content = await file.read()
+    
+    # Upload to Supabase Storage
+    success, file_url, error_msg = upload_bulletin(
+        file_content=file_content,
+        filename=file.filename,
+        church_id=bulletin.church_id,
+        bulletin_date=str(bulletin.date)
+    )
+    
+    if not success:
+        raise HTTPException(status_code=400, detail=error_msg)
+    
+    # Update bulletin with file URL
+    bulletin.file_url = file_url
+    db.commit()
+    db.refresh(bulletin)
+    
+    return bulletin

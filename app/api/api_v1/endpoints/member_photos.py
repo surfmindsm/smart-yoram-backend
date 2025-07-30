@@ -1,25 +1,16 @@
 from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
-import os
-import uuid
-from datetime import datetime
 
 from app import models, schemas
 from app.api import deps
-from app.core.config import settings
+from app.utils.storage import upload_member_photo, delete_member_photo
 
 router = APIRouter()
 
-UPLOAD_DIR = "static/uploads/members"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
-MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
-
 
 @router.post("/{member_id}/upload-photo", response_model=schemas.Member)
-async def upload_member_photo(
+async def upload_member_photo_endpoint(
     *,
     db: Session = Depends(deps.get_db),
     member_id: int,
@@ -27,7 +18,7 @@ async def upload_member_photo(
     file: UploadFile = File(...)
 ) -> Any:
     """
-    Upload profile photo for a member.
+    Upload profile photo for a member to Supabase Storage.
     """
     member = db.query(models.Member).filter(models.Member.id == member_id).first()
     if not member:
@@ -36,49 +27,28 @@ async def upload_member_photo(
     if member.church_id != current_user.church_id:
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
-    # Validate file extension
-    file_ext = os.path.splitext(file.filename)[1].lower()
-    if file_ext not in ALLOWED_EXTENSIONS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"File type not allowed. Allowed types: {', '.join(ALLOWED_EXTENSIONS)}"
-        )
+    # Read file content
+    file_content = await file.read()
     
-    # Check file size
-    file.file.seek(0, 2)
-    file_size = file.file.tell()
-    file.file.seek(0)
+    # Upload to Supabase Storage
+    success, photo_url, error_msg = upload_member_photo(
+        file_content=file_content,
+        filename=file.filename,
+        church_id=member.church_id,
+        member_id=member_id
+    )
     
-    if file_size > MAX_FILE_SIZE:
-        raise HTTPException(
-            status_code=400,
-            detail=f"File size too large. Maximum size: {MAX_FILE_SIZE / 1024 / 1024}MB"
-        )
+    if not success:
+        raise HTTPException(status_code=400, detail=error_msg)
     
-    # Generate unique filename
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    unique_filename = f"{member.church_id}_{member_id}_{timestamp}_{uuid.uuid4().hex[:8]}{file_ext}"
-    file_path = os.path.join(UPLOAD_DIR, unique_filename)
-    
-    # Save file
-    try:
-        with open(file_path, "wb") as buffer:
-            content = await file.read()
-            buffer.write(content)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Could not save file: {str(e)}")
-    
-    # Delete old photo if exists
+    # Delete old photo from Supabase if exists
     if member.profile_photo_url:
-        old_path = member.profile_photo_url.replace("/static/", "static/")
-        if os.path.exists(old_path):
-            try:
-                os.remove(old_path)
-            except:
-                pass
+        delete_success, delete_error = delete_member_photo(member.profile_photo_url)
+        if not delete_success:
+            # Log error but don't fail the upload
+            print(f"Failed to delete old photo: {delete_error}")
     
-    # Update member with photo URL
-    photo_url = f"/static/uploads/members/{unique_filename}"
+    # Update member with new photo URL
     member.profile_photo_url = photo_url
     db.commit()
     db.refresh(member)
@@ -87,14 +57,14 @@ async def upload_member_photo(
 
 
 @router.delete("/{member_id}/delete-photo", response_model=schemas.Member)
-def delete_member_photo(
+def delete_member_photo_endpoint(
     *,
     db: Session = Depends(deps.get_db),
     member_id: int,
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    Delete profile photo for a member.
+    Delete profile photo for a member from Supabase Storage.
     """
     member = db.query(models.Member).filter(models.Member.id == member_id).first()
     if not member:
@@ -106,13 +76,10 @@ def delete_member_photo(
     if not member.profile_photo_url:
         raise HTTPException(status_code=400, detail="Member has no profile photo")
     
-    # Delete file
-    file_path = member.profile_photo_url.replace("/static/", "static/")
-    if os.path.exists(file_path):
-        try:
-            os.remove(file_path)
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Could not delete file: {str(e)}")
+    # Delete from Supabase Storage
+    success, error_msg = delete_member_photo(member.profile_photo_url)
+    if not success:
+        raise HTTPException(status_code=500, detail=f"Could not delete file: {error_msg}")
     
     # Update member
     member.profile_photo_url = None

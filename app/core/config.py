@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
 
     DATABASE_URL: str
+    
+    # Supabase settings
+    SUPABASE_URL: str
+    SUPABASE_ANON_KEY: str
 
     BACKEND_CORS_ORIGINS: List[str] = []
 
