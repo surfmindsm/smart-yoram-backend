@@ -134,9 +134,30 @@ docker-compose logs -f
 curl http://localhost:8000/
 ```
 
-## 5. Nginx 설정 (도메인이 있는 경우)
+## 5. Nginx 설정
 
-### Nginx 설정 복사
+### 방법 1: 간단한 프록시 설정 (도메인 없이 IP로 접속)
+```bash
+# Nginx 설치
+sudo apt update && sudo apt install -y nginx
+
+# 간단한 프록시 설정 복사
+sudo cp deploy/nginx-simple.conf /etc/nginx/sites-available/smartyoram
+
+# 심볼릭 링크 생성
+sudo ln -s /etc/nginx/sites-available/smartyoram /etc/nginx/sites-enabled/
+
+# 기본 설정 제거
+sudo rm /etc/nginx/sites-enabled/default
+
+# Nginx 테스트 및 재시작
+sudo nginx -t
+sudo systemctl restart nginx
+
+# 이제 http://your-ec2-ip 로 접속 가능 (80포트)
+```
+
+### 방법 2: 도메인이 있는 경우 (HTTPS 설정)
 ```bash
 # Nginx 설정 파일 복사
 sudo cp deploy/nginx.conf /etc/nginx/sites-available/smartyoram
