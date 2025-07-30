@@ -1,0 +1,27 @@
+# Quick fix commands to run on EC2
+
+# 1. SSH into EC2
+ssh -i ~/.ssh/your-key.pem ubuntu@your-ec2-ip
+
+# 2. Navigate to project
+cd /home/ubuntu/smart-yoram/smart-yoram-backend
+
+# 3. Pull latest code
+git pull origin main
+
+# 4. Rebuild and restart Docker
+docker-compose build
+docker-compose down
+docker-compose up -d
+
+# 5. Check if it's running
+docker-compose ps
+docker-compose logs --tail=20
+
+# 6. Test the API
+curl http://localhost:8000/api/v1/
+
+# If CloudFlare tunnel is down, restart it:
+ps aux | grep cloudflared
+# If not running:
+nohup cloudflared tunnel --url http://localhost:8000 > cloudflare.log 2>&1 &
