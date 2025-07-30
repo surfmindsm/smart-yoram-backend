@@ -1,0 +1,18 @@
+[Unit]
+Description=Smart Yoram Backend
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=10
+User=ubuntu
+WorkingDirectory=/home/ubuntu/smart-yoram/smart-yoram-backend
+ExecStart=/usr/bin/docker-compose up
+ExecStop=/usr/bin/docker-compose down
+StandardOutput=append:/var/log/smartyoram/backend.log
+StandardError=append:/var/log/smartyoram/backend.error.log
+
+[Install]
+WantedBy=multi-user.target
