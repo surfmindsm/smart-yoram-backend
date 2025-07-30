@@ -257,8 +257,7 @@ def create_sample_data():
 - 다음 주 전교인 신년 윷놀이 대회
 - 주일학교 겨울 성경학교 등록 받습니다
 """,
-                "date": today - timedelta(weeks=2),
-                "bulletin_type": "주일예배"
+                "date": today - timedelta(weeks=2)
             }
         ]
         
@@ -268,7 +267,6 @@ def create_sample_data():
                 title=bulletin_data["title"],
                 content=bulletin_data["content"],
                 date=bulletin_data["date"],
-                bulletin_type=bulletin_data["bulletin_type"],
                 created_by=admin_user.id
             )
             db.add(bulletin)
