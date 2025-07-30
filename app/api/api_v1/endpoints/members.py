@@ -1,9 +1,11 @@
-from typing import Any, List
-from fastapi import APIRouter, Depends, HTTPException
+from typing import Any, List, Optional
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 
 from app import models, schemas
 from app.api import deps
+from app.utils.korean import is_korean_initial_search, match_initial_consonants
 
 router = APIRouter()
 
@@ -13,20 +15,43 @@ def read_members(
     db: Session = Depends(deps.get_db),
     skip: int = 0,
     limit: int = 100,
+    search: Optional[str] = Query(None, description="Search by name or phone"),
+    member_status: Optional[str] = Query(None, description="Filter by member status"),
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
     if current_user.church_id:
-        members = (
-            db.query(models.Member)
-            .filter(models.Member.church_id == current_user.church_id)
-            .offset(skip)
-            .limit(limit)
-            .all()
+        query = db.query(models.Member).filter(
+            models.Member.church_id == current_user.church_id
         )
     elif current_user.is_superuser:
-        members = db.query(models.Member).offset(skip).limit(limit).all()
+        query = db.query(models.Member)
     else:
         raise HTTPException(status_code=403, detail="Not enough permissions")
+    
+    # Apply search filter
+    if search:
+        if is_korean_initial_search(search):
+            # Korean initial consonant search
+            all_members = query.all()
+            filtered_members = [
+                member for member in all_members 
+                if match_initial_consonants(member.name, search.replace(' ', ''))
+            ]
+            return filtered_members[skip:skip + limit]
+        else:
+            # Regular search
+            query = query.filter(
+                or_(
+                    models.Member.name.contains(search),
+                    models.Member.phone_number.contains(search)
+                )
+            )
+    
+    # Apply status filter
+    if member_status:
+        query = query.filter(models.Member.member_status == member_status)
+    
+    members = query.offset(skip).limit(limit).all()
     return members
 
 

@@ -43,6 +43,15 @@ class Member(Base):
 
     status = Column(String, default="active")  # active, inactive, transferred
     notes = Column(Text)
+    
+    # New fields for enhanced features
+    profile_photo_url = Column(String)
+    member_status = Column(String, default="active")  # active, inactive, transferred, absent, visiting
+    transfer_church = Column(String)
+    transfer_date = Column(Date)
+    memo = Column(Text)
+    invitation_sent = Column(Boolean, default=False)
+    invitation_sent_at = Column(DateTime(timezone=True))
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
