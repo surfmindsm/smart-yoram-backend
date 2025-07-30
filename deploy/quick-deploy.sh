@@ -55,7 +55,15 @@ fi
 cd smart-yoram
 
 if [ ! -d "smart-yoram-backend" ]; then
-    git clone https://github.com/surfmindsm/smart-yoram-backend.git
+    # SSH 키가 있는지 확인
+    if [ -f ~/.ssh/surfmind_github ] || [ -f ~/.ssh/deploy_key ]; then
+        echo "Using SSH to clone..."
+        git clone git@github.com:surfmindsm/smart-yoram-backend.git
+    else
+        echo "Using HTTPS to clone (public repository only)..."
+        git clone https://github.com/surfmindsm/smart-yoram-backend.git
+        echo -e "${YELLOW}Note: For private repositories, setup SSH keys first${NC}"
+    fi
 fi
 cd smart-yoram-backend
 

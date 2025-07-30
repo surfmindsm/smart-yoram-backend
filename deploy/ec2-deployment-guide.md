@@ -27,15 +27,70 @@ chmod +x setup_ec2.sh
 ./setup_ec2.sh
 ```
 
-### Git 설정 및 코드 클론
+### Git SSH 설정 (Private Repository 접근)
+
+#### 옵션 1: 로컬 SSH 키 재사용
 ```bash
-# Git 설정
+# 1. 로컬에서 EC2로 SSH 키 복사 (로컬 터미널에서 실행)
+EC2_IP="your-ec2-ip"
+KEY_PATH="your-key.pem"
+scp -i $KEY_PATH ~/.ssh/surfmind_github* ubuntu@$EC2_IP:~/
+
+# 2. EC2에서 SSH 키 설정 (EC2 터미널에서 실행)
+mkdir -p ~/.ssh
+mv ~/surfmind_github* ~/.ssh/
+chmod 600 ~/.ssh/surfmind_github
+chmod 644 ~/.ssh/surfmind_github.pub
+
+# 3. SSH config 설정
+cat >> ~/.ssh/config << 'EOF'
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/surfmind_github
+    IdentitiesOnly yes
+    StrictHostKeyChecking no
+EOF
+chmod 600 ~/.ssh/config
+
+# 4. Git 설정
 git config --global user.name "Surfmind"
 git config --global user.email "surfmind.sm@gmail.com"
 
-# 프로젝트 클론
+# 5. SSH 연결 테스트
+ssh -T git@github.com
+
+# 6. 프로젝트 클론 (SSH 사용)
 cd ~/smart-yoram
-git clone https://github.com/surfmindsm/smart-yoram-backend.git
+git clone git@github.com:surfmindsm/smart-yoram-backend.git
+cd smart-yoram-backend
+```
+
+#### 옵션 2: Deploy Key 사용 (권장)
+```bash
+# 1. EC2에서 새 SSH 키 생성
+ssh-keygen -t ed25519 -C "ec2-deploy@smartyoram.com" -f ~/.ssh/deploy_key -N ""
+
+# 2. 공개 키 확인
+cat ~/.ssh/deploy_key.pub
+
+# 3. GitHub Repository Settings > Deploy keys에 추가
+# - https://github.com/surfmindsm/smart-yoram-backend/settings/keys
+# - "Add deploy key" 클릭
+# - 위의 공개 키 붙여넣기
+
+# 4. SSH config 설정
+cat >> ~/.ssh/config << 'EOF'
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/deploy_key
+    IdentitiesOnly yes
+EOF
+
+# 5. 프로젝트 클론
+cd ~/smart-yoram
+git clone git@github.com:surfmindsm/smart-yoram-backend.git
 cd smart-yoram-backend
 ```
 
