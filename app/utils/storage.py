@@ -104,6 +104,10 @@ def upload_member_photo(
         # Get public URL
         public_url = supabase.storage.from_(MEMBER_PHOTOS_BUCKET).get_public_url(unique_filename)
         
+        # Remove trailing '?' if present
+        if public_url.endswith('?'):
+            public_url = public_url[:-1]
+        
         return True, public_url, None
         
     except Exception as e:
