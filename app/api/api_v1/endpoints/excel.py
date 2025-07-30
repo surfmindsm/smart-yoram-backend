@@ -52,20 +52,20 @@ async def upload_members_excel(
                 # Check if member exists by phone number
                 existing_member = db.query(models.Member).filter(
                     models.Member.church_id == current_user.church_id,
-                    models.Member.phone_number == str(row.get('전화번호', '')).strip()
+                    models.Member.phone == str(row.get('전화번호', '')).strip()
                 ).first()
                 
                 member_data = {
                     'name': str(row.get('이름', '')).strip(),
                     'gender': str(row.get('성별', '')).strip(),
-                    'phone_number': str(row.get('전화번호', '')).strip(),
+                    'phone': str(row.get('전화번호', '')).strip(),
                     'church_id': current_user.church_id
                 }
                 
                 # Optional fields
                 if pd.notna(row.get('생년월일')):
                     try:
-                        member_data['date_of_birth'] = pd.to_datetime(row['생년월일']).date()
+                        member_data['birthdate'] = pd.to_datetime(row['생년월일']).date()
                     except:
                         pass
                 
@@ -126,8 +126,8 @@ def download_members_excel(
         data.append({
             '이름': member.name,
             '성별': member.gender,
-            '생년월일': member.date_of_birth,
-            '전화번호': member.phone_number,
+            '생년월일': member.birthdate,
+            '전화번호': member.phone,
             '주소': member.address or '',
             '직분': member.position or '',
             '구역': member.district or '',
@@ -221,9 +221,9 @@ def download_attendance_excel(
     )
     
     if start_date:
-        query = query.filter(models.Attendance.attendance_date >= start_date)
+        query = query.filter(models.Attendance.service_date >= start_date)
     if end_date:
-        query = query.filter(models.Attendance.attendance_date <= end_date)
+        query = query.filter(models.Attendance.service_date <= end_date)
     
     attendances = query.all()
     
@@ -236,10 +236,10 @@ def download_attendance_excel(
     data = []
     for att in attendances:
         data.append({
-            '날짜': att.attendance_date,
+            '날짜': att.service_date,
             '이름': member_dict.get(att.member_id, ''),
-            '예배구분': att.attendance_type,
-            '출석여부': '출석' if att.is_present else '결석',
+            '예배구분': att.service_type,
+            '출석여부': '출석' if att.present else '결석',
             '비고': att.notes or ''
         })
     
