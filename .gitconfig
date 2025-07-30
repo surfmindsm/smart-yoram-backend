@@ -1,0 +1,6 @@
+[user]
+    name = Surfmind
+    email = surfmind.sm@gmail.com
+
+[core]
+    sshCommand = ssh -i ~/.ssh/surfmind_github -o IdentitiesOnly=yes

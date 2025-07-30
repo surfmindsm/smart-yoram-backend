@@ -59,3 +59,21 @@ Thumbs.db
 # Uploads
 uploads/
 media/
+
+# Project specific
+server.log
+test_*.py
+!test_api.py
+create_simple_migration.py
+check_supabase.py
+test_connection.py
+test_final_connection.py
+test_supabase_db.py
+verify_supabase.py
+test_api_endpoints.py
+.env.backup
+.env.supabase
+.env.production
+migrate_to_supabase.md
+supabase_schema.sql
+setup_supabase.py
