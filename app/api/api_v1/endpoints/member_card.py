@@ -78,10 +78,10 @@ def get_member_card_data(
     
     # Calculate age if birth date exists
     age = None
-    if member.date_of_birth:
+    if member.birthdate:
         today = datetime.now().date()
-        age = today.year - member.date_of_birth.year
-        if today < member.date_of_birth.replace(year=today.year):
+        age = today.year - member.birthdate.year
+        if today < member.birthdate.replace(year=today.year):
             age -= 1
     
     # Get recent attendance count (last 30 days)
@@ -90,8 +90,8 @@ def get_member_card_data(
     
     recent_attendance_count = db.query(models.Attendance).filter(
         models.Attendance.member_id == member_id,
-        models.Attendance.attendance_date >= thirty_days_ago,
-        models.Attendance.is_present == True
+        models.Attendance.service_date >= thirty_days_ago,
+        models.Attendance.present == True
     ).count()
     
     return {
@@ -99,7 +99,7 @@ def get_member_card_data(
             "id": member.id,
             "name": member.name,
             "profile_photo_url": member.profile_photo_url,
-            "phone_number": member.phone_number,
+            "phone_number": member.phone,
             "position": member.position,
             "district": member.district,
             "registration_date": member.registration_date,
@@ -109,7 +109,7 @@ def get_member_card_data(
         "church": {
             "name": church.name if church else "교회",
             "address": church.address if church else "",
-            "phone": church.phone_number if church else ""
+            "phone": church.phone if church else ""
         },
         "qr_code": {
             "code": qr_code.code,

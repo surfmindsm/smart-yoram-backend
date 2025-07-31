@@ -63,7 +63,7 @@ def send_bulk_sms(
     
     for member_id in sms_in.recipient_member_ids:
         member = db.query(models.Member).filter(models.Member.id == member_id).first()
-        if not member or not member.phone_number:
+        if not member or not member.phone:
             continue
         
         if member.church_id != current_user.church_id:
@@ -73,7 +73,7 @@ def send_bulk_sms(
         sms_history = models.SMSHistory(
             church_id=current_user.church_id,
             sender_id=current_user.id,
-            recipient_phone=member.phone_number,
+            recipient_phone=member.phone,
             recipient_member_id=member_id,
             message=sms_in.message,
             sms_type=sms_in.sms_type,
@@ -84,7 +84,7 @@ def send_bulk_sms(
         
         # Send SMS (placeholder)
         try:
-            # result = sms_utils.send_sms(member.phone_number, sms_in.message)
+            # result = sms_utils.send_sms(member.phone, sms_in.message)
             sms_history.status = "sent"
             sms_history.sent_at = datetime.utcnow()
         except Exception as e:

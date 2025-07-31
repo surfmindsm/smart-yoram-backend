@@ -126,27 +126,27 @@ def get_upcoming_birthdays(
     
     members = db.query(models.Member).filter(
         models.Member.church_id == current_user.church_id,
-        models.Member.date_of_birth.isnot(None)
+        models.Member.birthdate.isnot(None)
     ).all()
     
     upcoming_birthdays = []
     
     for member in members:
-        if not member.date_of_birth:
+        if not member.birthdate:
             continue
         
         # Calculate this year's birthday
-        this_year_birthday = member.date_of_birth.replace(year=today.year)
+        this_year_birthday = member.birthdate.replace(year=today.year)
         
         # If birthday already passed this year, check next year
         if this_year_birthday < today:
-            next_year_birthday = member.date_of_birth.replace(year=today.year + 1)
+            next_year_birthday = member.birthdate.replace(year=today.year + 1)
             if next_year_birthday <= end_date:
                 upcoming_birthdays.append({
                     "member_id": member.id,
                     "member_name": member.name,
                     "birthday": next_year_birthday,
-                    "age": today.year + 1 - member.date_of_birth.year,
+                    "age": today.year + 1 - member.birthdate.year,
                     "days_until": (next_year_birthday - today).days
                 })
         elif this_year_birthday <= end_date:
@@ -154,7 +154,7 @@ def get_upcoming_birthdays(
                 "member_id": member.id,
                 "member_name": member.name,
                 "birthday": this_year_birthday,
-                "age": today.year - member.date_of_birth.year,
+                "age": today.year - member.birthdate.year,
                 "days_until": (this_year_birthday - today).days
             })
     
@@ -175,13 +175,13 @@ def create_birthday_events(
     """
     members = db.query(models.Member).filter(
         models.Member.church_id == current_user.church_id,
-        models.Member.date_of_birth.isnot(None)
+        models.Member.birthdate.isnot(None)
     ).all()
     
     created_count = 0
     
     for member in members:
-        if not member.date_of_birth:
+        if not member.birthdate:
             continue
         
         # Check if birthday event already exists
@@ -198,7 +198,7 @@ def create_birthday_events(
                 title=f"{member.name}님 생일",
                 description=f"{member.name}님의 생일입니다.",
                 event_type="birthday",
-                event_date=member.date_of_birth,
+                event_date=member.birthdate,
                 is_recurring=True,
                 recurrence_pattern="yearly",
                 related_member_id=member.id,

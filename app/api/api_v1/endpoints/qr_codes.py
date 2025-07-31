@@ -129,8 +129,8 @@ def verify_qr_code(
     today = datetime.utcnow().date()
     existing_attendance = db.query(models.Attendance).filter(
         models.Attendance.member_id == qr_code.member_id,
-        models.Attendance.attendance_date == today,
-        models.Attendance.attendance_type == attendance_type
+        models.Attendance.service_date == today,
+        models.Attendance.service_type == attendance_type
     ).first()
     
     if existing_attendance:
@@ -145,9 +145,10 @@ def verify_qr_code(
     attendance = models.Attendance(
         church_id=qr_code.church_id,
         member_id=qr_code.member_id,
-        attendance_date=today,
-        attendance_type=attendance_type,
-        is_present=True
+        service_date=today,
+        service_type=attendance_type,
+        present=True,
+        check_in_method='qr_code'
     )
     db.add(attendance)
     db.commit()
