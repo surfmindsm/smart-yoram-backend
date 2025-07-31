@@ -9,7 +9,13 @@ from app.api import deps
 from app.core import security
 from app.core.config import settings
 from app.core.security import get_password_hash, verify_password
-from app.utils.qr_code import generate_member_qr_code
+
+try:
+    from app.utils.qr_code import generate_member_qr_code
+except ImportError:
+    # QR code generation is optional
+    def generate_member_qr_code(member):
+        return None
 
 
 router = APIRouter()
