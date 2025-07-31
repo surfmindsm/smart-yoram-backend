@@ -8,7 +8,6 @@ class QRCodeBase(BaseModel):
 
 
 class QRCodeCreate(QRCodeBase):
-    member_id: int
     expires_at: Optional[datetime] = None
 
 
