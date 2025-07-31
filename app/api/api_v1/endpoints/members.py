@@ -2,10 +2,16 @@ from typing import Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
+from datetime import datetime
 
 from app import models, schemas
 from app.api import deps
 from app.utils.korean import is_korean_initial_search, match_initial_consonants
+from app.utils.password import generate_temporary_password
+from app.utils.encryption import encrypt_password, decrypt_password
+from app.utils.email import send_temporary_password_email
+from app.utils.sms import send_temporary_password_sms
+from app.core.security import get_password_hash
 
 router = APIRouter()
 
@@ -65,10 +71,85 @@ def create_member(
     if not current_user.is_superuser and current_user.church_id != member_in.church_id:
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
+    # Check if email is provided
+    if not member_in.email:
+        raise HTTPException(status_code=400, detail="Email is required for member registration")
+
+    # Check if user with this email already exists
+    existing_user = db.query(models.User).filter(models.User.email == member_in.email).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="User with this email already exists")
+
+    # Create member
     member = models.Member(**member_in.dict())
     db.add(member)
+    db.flush()  # Flush to get member.id without committing
+
+    # Generate temporary password
+    temp_password = generate_temporary_password()
+    
+    # Create user account for member
+    user = models.User(
+        email=member_in.email,
+        username=member_in.email,  # Use email as username
+        hashed_password=get_password_hash(temp_password),
+        encrypted_password=encrypt_password(temp_password),
+        full_name=member_in.name,
+        phone=member_in.phone,
+        church_id=member_in.church_id,
+        role="member",
+        is_active=True
+    )
+    db.add(user)
+    db.flush()
+
+    # Link member to user
+    member.user_id = user.id
+    
+    # Try to send temporary password via email and SMS
+    church = db.query(models.Church).filter(models.Church.id == member.church_id).first()
+    church_name = church.name if church else "교회"
+    
+    # Try email first
+    email_sent = False
+    try:
+        email_sent = send_temporary_password_email(
+            to_email=member.email,
+            member_name=member.name,
+            church_name=church_name,
+            temp_password=temp_password
+        )
+        
+        if email_sent:
+            print(f"Temporary password sent to {member.email}")
+    except Exception as e:
+        print(f"Failed to send email: {str(e)}")
+    
+    # Try SMS if phone number is available
+    sms_sent = False
+    if member.phone:
+        try:
+            sms_sent = send_temporary_password_sms(
+                phone_number=member.phone,
+                member_name=member.name,
+                church_name=church_name,
+                temp_password=temp_password
+            )
+            
+            if sms_sent:
+                print(f"Temporary password sent to {member.phone}")
+        except Exception as e:
+            print(f"Failed to send SMS: {str(e)}")
+    
+    # Log the result
+    print(f"Created user for member {member.name} (email: {member.email})")
+    if not email_sent and not sms_sent:
+        print(f"Warning: Could not send temporary password via email or SMS")
+        print(f"Temporary password: {temp_password}")  # Log for manual delivery
+    
     db.commit()
     db.refresh(member)
+    
     return member
 
 
@@ -131,3 +212,39 @@ def delete_member(
     db.delete(member)
     db.commit()
     return {"message": "Member deleted successfully"}
+
+
+@router.get("/{member_id}/password", response_model=dict)
+def get_member_password(
+    *,
+    db: Session = Depends(deps.get_db),
+    member_id: int,
+    current_user: models.User = Depends(deps.get_current_active_superuser),
+) -> Any:
+    """
+    Get decrypted password for a member (admin only).
+    """
+    member = db.query(models.Member).filter(models.Member.id == member_id).first()
+    if not member:
+        raise HTTPException(status_code=404, detail="Member not found")
+    
+    if not member.user_id:
+        raise HTTPException(status_code=404, detail="Member has no user account")
+    
+    user = db.query(models.User).filter(models.User.id == member.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User account not found")
+    
+    if not user.encrypted_password:
+        raise HTTPException(status_code=404, detail="Password not available")
+    
+    decrypted_password = decrypt_password(user.encrypted_password)
+    if not decrypted_password:
+        raise HTTPException(status_code=500, detail="Failed to decrypt password")
+    
+    return {
+        "member_id": member_id,
+        "member_name": member.name,
+        "email": user.email,
+        "password": decrypted_password
+    }

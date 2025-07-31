@@ -11,6 +11,7 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     username = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
+    encrypted_password = Column(String)  # Store encrypted password for admin decryption
     full_name = Column(String)
     phone = Column(String)
 

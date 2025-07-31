@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 import qrcode
 import io
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from app import models, schemas
 from app.api import deps
@@ -44,7 +44,7 @@ def generate_qr_code(
     unique_code = f"{member.church_id}:{member_id}:{uuid.uuid4().hex}"
     
     # Set expiration (default 1 year)
-    expires_at = qr_in.expires_at or datetime.utcnow() + timedelta(days=365)
+    expires_at = qr_in.expires_at or datetime.now(timezone.utc) + timedelta(days=365)
     
     # Create QR code record
     qr_code = models.QRCode(
@@ -80,8 +80,10 @@ def get_qr_code_image(
         raise HTTPException(status_code=404, detail="QR code not found")
     
     # Check expiration
-    if qr_code.expires_at and qr_code.expires_at < datetime.utcnow():
-        raise HTTPException(status_code=400, detail="QR code has expired")
+    if qr_code.expires_at:
+        expires_at_utc = qr_code.expires_at.replace(tzinfo=timezone.utc) if qr_code.expires_at.tzinfo is None else qr_code.expires_at
+        if expires_at_utc < datetime.now(timezone.utc):
+            raise HTTPException(status_code=400, detail="QR code has expired")
     
     # Generate QR code image
     qr = qrcode.QRCode(
@@ -122,11 +124,13 @@ def verify_qr_code(
         raise HTTPException(status_code=404, detail="Invalid QR code")
     
     # Check expiration
-    if qr_code.expires_at and qr_code.expires_at < datetime.utcnow():
-        raise HTTPException(status_code=400, detail="QR code has expired")
+    if qr_code.expires_at:
+        expires_at_utc = qr_code.expires_at.replace(tzinfo=timezone.utc) if qr_code.expires_at.tzinfo is None else qr_code.expires_at
+        if expires_at_utc < datetime.now(timezone.utc):
+            raise HTTPException(status_code=400, detail="QR code has expired")
     
     # Check if already marked attendance today
-    today = datetime.utcnow().date()
+    today = datetime.now(timezone.utc).date()
     existing_attendance = db.query(models.Attendance).filter(
         models.Attendance.member_id == qr_code.member_id,
         models.Attendance.service_date == today,
@@ -212,8 +216,10 @@ def get_qr_code_info(
         raise HTTPException(status_code=404, detail="QR code not found")
     
     # Check expiration
-    if qr_code.expires_at and qr_code.expires_at < datetime.utcnow():
-        raise HTTPException(status_code=400, detail="QR code has expired")
+    if qr_code.expires_at:
+        expires_at_utc = qr_code.expires_at.replace(tzinfo=timezone.utc) if qr_code.expires_at.tzinfo is None else qr_code.expires_at
+        if expires_at_utc < datetime.now(timezone.utc):
+            raise HTTPException(status_code=400, detail="QR code has expired")
     
     # Get member info
     member = db.query(models.Member).filter(models.Member.id == qr_code.member_id).first()
