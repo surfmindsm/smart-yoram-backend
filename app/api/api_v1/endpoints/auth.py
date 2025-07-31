@@ -32,7 +32,16 @@ def login_access_token(
             user.id, expires_delta=access_token_expires
         ),
         "token_type": "bearer",
-        "user": user
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "username": user.username,
+            "full_name": user.full_name,
+            "church_id": user.church_id,
+            "role": user.role,
+            "is_active": user.is_active,
+            "is_superuser": user.is_superuser
+        }
     }
 
 
