@@ -70,12 +70,16 @@ def create_member(
 ) -> Any:
     # Use the current user's church_id
     church_id = current_user.church_id
+    print(f"Current user: {current_user.username}, Church ID: {church_id}")
+    
     if not church_id:
         raise HTTPException(status_code=400, detail="User has no church assigned")
     
     # Override church_id with current user's church_id
     member_dict = member_in.dict()
+    print(f"Original member data: {member_dict}")
     member_dict['church_id'] = church_id
+    print(f"Updated church_id to: {church_id}")
 
     # Check if email is provided
     if not member_in.email:

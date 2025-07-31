@@ -5,7 +5,7 @@ Create initial church data for testing
 from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
 from app import models
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 def create_test_church():
     db = SessionLocal()
@@ -25,7 +25,7 @@ def create_test_church():
             email="admin@testchurch.com",
             pastor_name="홍길동 목사",
             subscription_status="active",
-            subscription_end_date=datetime.utcnow() + timedelta(days=365),
+            subscription_end_date=datetime.now(timezone.utc) + timedelta(days=365),
             member_limit=1000,
             is_active=True
         )
