@@ -73,34 +73,55 @@ def read_user_me(
 def update_user_me(
     *,
     db: Session = Depends(deps.get_db),
-    password: str = Body(None),
-    full_name: str = Body(None),
-    email: EmailStr = Body(None),
-    is_first: bool = Body(None),
+    user_in: schemas.UserUpdate,
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
-    current_user_data = jsonable_encoder(current_user)
-    user_in = schemas.UserUpdate(**current_user_data)
-    if password is not None:
-        user_in.password = password
-    if full_name is not None:
-        user_in.full_name = full_name
-    if email is not None:
-        user_in.email = email
-    if is_first is not None:
-        user_in.is_first = is_first
-    if user_in.password:
+    """
+    Update own user.
+    """
+    # Update password if provided
+    if user_in.password is not None:
         current_user.hashed_password = get_password_hash(user_in.password)
-    if user_in.full_name:
-        current_user.full_name = user_in.full_name
-    if user_in.email:
-        current_user.email = user_in.email
-    if hasattr(user_in, 'is_first') and user_in.is_first is not None:
-        current_user.is_first = user_in.is_first
+        # Clear first login flag when password is changed
+        if current_user.is_first:
+            current_user.is_first = False
+    
+    # Update other fields
+    update_data = user_in.dict(exclude_unset=True, exclude={'password'})
+    for field, value in update_data.items():
+        if hasattr(current_user, field):
+            setattr(current_user, field, value)
+    
     db.add(current_user)
     db.commit()
     db.refresh(current_user)
     return current_user
+
+
+@router.post("/me/update-first-login", response_model=dict)
+def update_first_login_status(
+    *,
+    db: Session = Depends(deps.get_db),
+    is_first: bool = Body(..., embed=True),
+    current_user: models.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    Update first login status. Special endpoint for mobile app.
+    """
+    current_user.is_first = is_first
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
+    
+    return {
+        "success": True,
+        "message": f"is_first updated to {is_first}",
+        "data": {
+            "id": current_user.id,
+            "email": current_user.email,
+            "is_first": current_user.is_first
+        }
+    }
 
 
 @router.get("/{user_id}", response_model=schemas.User)

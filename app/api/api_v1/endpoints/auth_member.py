@@ -169,6 +169,14 @@ def change_password(
     if current_user.is_first:
         current_user.is_first = False
     
+    db.add(current_user)
     db.commit()
+    db.refresh(current_user)
     
-    return {"message": "Password changed successfully"}
+    return {
+        "success": True,
+        "message": "Password changed successfully",
+        "data": {
+            "is_first": current_user.is_first
+        }
+    }
