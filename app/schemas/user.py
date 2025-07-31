@@ -11,6 +11,7 @@ class UserBase(BaseModel):
     role: Optional[str] = "member"
     is_active: Optional[bool] = True
     is_superuser: bool = False
+    is_first: Optional[bool] = True
 
 
 class UserCreate(UserBase):

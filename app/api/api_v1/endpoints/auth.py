@@ -8,6 +8,8 @@ from app import models, schemas
 from app.api import deps
 from app.core import security
 from app.core.config import settings
+from app.core.security import get_password_hash, verify_password
+from app.utils.qr_code import generate_member_qr_code
 
 
 router = APIRouter()
@@ -40,7 +42,8 @@ def login_access_token(
             "church_id": user.church_id,
             "role": user.role,
             "is_active": user.is_active,
-            "is_superuser": user.is_superuser
+            "is_superuser": user.is_superuser,
+            "is_first": user.is_first
         }
     }
 
@@ -48,3 +51,87 @@ def login_access_token(
 @router.post("/test-token", response_model=schemas.User)
 def test_token(current_user: models.User = Depends(deps.get_current_user)) -> Any:
     return current_user
+
+
+@router.post("/change-password")
+def change_password(
+    *,
+    db: Session = Depends(deps.get_db),
+    current_password: str = Body(...),
+    new_password: str = Body(...),
+    current_user: models.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    Change password for current user
+    """
+    if not verify_password(current_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Incorrect password")
+    
+    current_user.hashed_password = get_password_hash(new_password)
+    db.add(current_user)
+    db.commit()
+    
+    return {"msg": "Password updated successfully"}
+
+
+@router.post("/complete-first-time-setup", response_model=schemas.User)
+def complete_first_time_setup(
+    *,
+    db: Session = Depends(deps.get_db),
+    new_password: str = Body(..., description="New password to replace temporary password"),
+    current_user: models.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    Complete first-time setup for new users.
+    This endpoint:
+    1. Changes the temporary password to a new password
+    2. Generates QR code for the member
+    3. Sets is_first to False
+    """
+    if not current_user.is_first:
+        raise HTTPException(
+            status_code=400, 
+            detail="First-time setup already completed"
+        )
+    
+    # 1. Update password
+    current_user.hashed_password = get_password_hash(new_password)
+    current_user.encrypted_password = None  # Clear encrypted password
+    
+    # 2. Generate QR code if member exists
+    member = db.query(models.Member).filter(
+        models.Member.user_id == current_user.id
+    ).first()
+    
+    if member and not member.qr_code:
+        try:
+            qr_code_data = generate_member_qr_code(member)
+            member.qr_code = qr_code_data
+            db.add(member)
+        except Exception as e:
+            # Log error but don't fail the whole process
+            print(f"Error generating QR code: {e}")
+    
+    # 3. Mark first-time setup as complete
+    current_user.is_first = False
+    
+    # Save changes
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
+    
+    return current_user
+
+
+@router.get("/check-first-time")
+def check_first_time_status(
+    current_user: models.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    Check if user needs to complete first-time setup
+    """
+    return {
+        "is_first": current_user.is_first,
+        "user_id": current_user.id,
+        "email": current_user.email
+    }

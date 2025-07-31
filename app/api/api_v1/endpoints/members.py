@@ -283,3 +283,101 @@ def get_member_password(
         "email": user.email,
         "password": decrypted_password
     }
+
+
+@router.post("/{member_id}/create-account")
+def create_member_account(
+    *,
+    db: Session = Depends(deps.get_db),
+    member_id: int,
+    current_user: models.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    Create user account for a member with temporary password.
+    Returns the temporary password and account details.
+    Only church admins or ministers can create accounts.
+    """
+    # Check permissions
+    if current_user.role not in ["admin", "minister"]:
+        raise HTTPException(
+            status_code=403, 
+            detail="Only church admins and ministers can create member accounts"
+        )
+    
+    # Get member
+    member = db.query(models.Member).filter(models.Member.id == member_id).first()
+    if not member:
+        raise HTTPException(status_code=404, detail="Member not found")
+    
+    # Check church permission
+    if not current_user.is_superuser and member.church_id != current_user.church_id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    
+    # Check if already has account
+    if member.user_id:
+        user = db.query(models.User).filter(models.User.id == member.user_id).first()
+        if user:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Member already has an account with email: {user.email}"
+            )
+    
+    # Check if email is required
+    if not member.email:
+        raise HTTPException(
+            status_code=400, 
+            detail="Member must have an email address to create an account"
+        )
+    
+    # Check if user with this email already exists
+    existing_user = db.query(models.User).filter(
+        models.User.email == member.email
+    ).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"User with email {member.email} already exists"
+        )
+    
+    # Generate temporary password
+    temp_password = generate_temporary_password()
+    
+    # Create user account
+    user = models.User(
+        email=member.email,
+        username=member.email,  # Use email as username
+        hashed_password=get_password_hash(temp_password),
+        encrypted_password=encrypt_password(temp_password),
+        full_name=member.name,
+        phone=member.phone,
+        church_id=member.church_id,
+        role="member",
+        is_active=True,
+        is_first=True  # Mark as first-time user
+    )
+    
+    db.add(user)
+    db.flush()  # Get user ID
+    
+    # Link member to user
+    member.user_id = user.id
+    member.invitation_sent = True
+    member.invitation_sent_at = datetime.utcnow()
+    
+    db.commit()
+    db.refresh(user)
+    db.refresh(member)
+    
+    # TODO: Send email/SMS with temporary password
+    # For now, just return the details
+    
+    return {
+        "member_id": member.id,
+        "member_name": member.name,
+        "user_id": user.id,
+        "email": user.email,
+        "username": user.username,
+        "temporary_password": temp_password,
+        "is_first": user.is_first,
+        "message": "Account created successfully. Please share the temporary password with the member."
+    }
