@@ -165,6 +165,10 @@ def change_password(
     current_user.hashed_password = security.get_password_hash(new_password)
     current_user.encrypted_password = encrypt_password(new_password)
     
+    # If this is the first time password change, set is_first to False
+    if current_user.is_first:
+        current_user.is_first = False
+    
     db.commit()
     
     return {"message": "Password changed successfully"}

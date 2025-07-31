@@ -76,6 +76,7 @@ def update_user_me(
     password: str = Body(None),
     full_name: str = Body(None),
     email: EmailStr = Body(None),
+    is_first: bool = Body(None),
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
     current_user_data = jsonable_encoder(current_user)
@@ -86,12 +87,16 @@ def update_user_me(
         user_in.full_name = full_name
     if email is not None:
         user_in.email = email
+    if is_first is not None:
+        user_in.is_first = is_first
     if user_in.password:
         current_user.hashed_password = get_password_hash(user_in.password)
     if user_in.full_name:
         current_user.full_name = user_in.full_name
     if user_in.email:
         current_user.email = user_in.email
+    if hasattr(user_in, 'is_first') and user_in.is_first is not None:
+        current_user.is_first = user_in.is_first
     db.add(current_user)
     db.commit()
     db.refresh(current_user)
