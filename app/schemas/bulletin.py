@@ -1,11 +1,11 @@
-from typing import Optional
-from datetime import date, datetime
+from typing import Optional, Union
+from datetime import date as DateType, datetime
 from pydantic import BaseModel
 
 
 class BulletinBase(BaseModel):
     title: str
-    date: date
+    date: DateType
     content: Optional[str] = None
     file_url: Optional[str] = None
 
@@ -15,10 +15,10 @@ class BulletinCreate(BulletinBase):
 
 
 class BulletinUpdate(BaseModel):
-    title: Optional[str] = None
-    date: Optional[date] = None
-    content: Optional[str] = None
-    file_url: Optional[str] = None
+    title: Union[str, None] = None
+    date: Union[DateType, None] = None
+    content: Union[str, None] = None
+    file_url: Union[str, None] = None
 
 
 class BulletinInDBBase(BulletinBase):

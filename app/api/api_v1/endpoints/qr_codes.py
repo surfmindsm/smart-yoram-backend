@@ -169,7 +169,13 @@ def verify_qr_code(
             "name": member.name,
             "profile_photo_url": member.profile_photo_url
         },
-        "attendance": attendance
+        "attendance": {
+            "id": attendance.id,
+            "member_id": attendance.member_id,
+            "attendance_date": attendance.attendance_date.isoformat(),
+            "attendance_type": attendance.attendance_type,
+            "is_present": attendance.is_present
+        }
     }
 
 

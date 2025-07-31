@@ -51,7 +51,7 @@ def create_bulletin(
     ):
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
-    bulletin = models.Bulletin(**bulletin_in.dict(), created_by=current_user.id)
+    bulletin = models.Bulletin(**bulletin_in.model_dump(), created_by=current_user.id)
     db.add(bulletin)
     db.commit()
     db.refresh(bulletin)
@@ -94,7 +94,7 @@ def update_bulletin(
     if not current_user.is_superuser and bulletin.church_id != current_user.church_id:
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
-    update_data = bulletin_in.dict(exclude_unset=True)
+    update_data = bulletin_in.model_dump(exclude_unset=True)
     
     # Validate that date is not set to None if it's provided
     # The database requires date to be non-null
