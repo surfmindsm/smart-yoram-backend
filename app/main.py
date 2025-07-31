@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 import os
 
 from app.api.api_v1.api import api_router
+from app.api.web_routes import router as web_router
 from app.core.config import settings
 
 
@@ -26,13 +27,9 @@ if settings.BACKEND_CORS_ORIGINS:
     )
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
+app.include_router(web_router)
 
 # Mount static files only if directory exists
 static_dir = "static"
 if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
-
-
-@app.get("/")
-def root():
-    return {"message": "Welcome to Smart Yoram API", "version": settings.VERSION}

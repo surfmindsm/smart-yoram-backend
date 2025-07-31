@@ -16,6 +16,7 @@ from app.api.api_v1.endpoints import (
     statistics,
     family,
     member_card,
+    announcements,
 )
 
 
@@ -37,3 +38,4 @@ api_router.include_router(excel.router, prefix="/excel", tags=["excel"])
 api_router.include_router(statistics.router, prefix="/statistics", tags=["statistics"])
 api_router.include_router(family.router, prefix="/family", tags=["family"])
 api_router.include_router(member_card.router, prefix="/member-card", tags=["member_card"])
+api_router.include_router(announcements.router, prefix="/announcements", tags=["announcements"])

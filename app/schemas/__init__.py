@@ -9,3 +9,4 @@ from .qr_code import QRCode, QRCodeCreate, QRCodeUpdate, QRCodeInDB
 from .calendar_event import CalendarEvent, CalendarEventCreate, CalendarEventUpdate, CalendarEventInDB
 from .notification import Notification, NotificationCreate, NotificationUpdate, NotificationInDB
 from .family_relationship import FamilyRelationship, FamilyRelationshipCreate, FamilyRelationshipUpdate, FamilyTree, FamilyTreeMember
+from .announcement import Announcement, AnnouncementCreate, AnnouncementUpdate, AnnouncementInDB
