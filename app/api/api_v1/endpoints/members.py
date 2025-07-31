@@ -79,33 +79,57 @@ def create_member(
     # Check if user with this email already exists
     existing_user = db.query(models.User).filter(models.User.email == member_in.email).first()
     if existing_user:
-        raise HTTPException(status_code=400, detail="User with this email already exists")
+        print(f"User with email {member_in.email} already exists (User ID: {existing_user.id})")
+        # Check if this user is already linked to another member
+        existing_member = db.query(models.Member).filter(
+            models.Member.user_id == existing_user.id,
+            models.Member.id != member_in.id if hasattr(member_in, 'id') else True
+        ).first()
+        if existing_member:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"이 이메일은 이미 다른 교인({existing_member.name})이 사용 중입니다."
+            )
+        # If not linked to any member, we can use this user
+        print(f"Linking existing user {existing_user.id} to new member")
 
     # Create member
     member = models.Member(**member_in.dict())
     db.add(member)
     db.flush()  # Flush to get member.id without committing
 
-    # Generate temporary password
-    temp_password = generate_temporary_password()
-    
-    # Create user account for member
-    user = models.User(
-        email=member_in.email,
-        username=member_in.email,  # Use email as username
-        hashed_password=get_password_hash(temp_password),
-        encrypted_password=encrypt_password(temp_password),
-        full_name=member_in.name,
-        phone=member_in.phone,
-        church_id=member_in.church_id,
-        role="member",
-        is_active=True
-    )
-    db.add(user)
-    db.flush()
+    # Handle user account
+    if existing_user:
+        # Use existing user
+        member.user_id = existing_user.id
+        user = existing_user
+        # Get the password if it exists
+        if existing_user.encrypted_password:
+            from app.utils.encryption import decrypt_password
+            temp_password = decrypt_password(existing_user.encrypted_password)
+        else:
+            temp_password = None
+    else:
+        # Generate temporary password
+        temp_password = generate_temporary_password()
+        
+        # Create user account for member
+        user = models.User(
+            email=member_in.email,
+            username=member_in.email,  # Use email as username
+            hashed_password=get_password_hash(temp_password),
+            encrypted_password=encrypt_password(temp_password),
+            full_name=member_in.name,
+            phone=member_in.phone,
+            church_id=member_in.church_id,
+            role="member",
+            is_active=True
+        )
+        db.add(user)
+        db.flush()
 
-    # Link member to user
-    member.user_id = user.id
+        # Link member to user
+        member.user_id = user.id
     
     # Try to send temporary password via email and SMS
     church = db.query(models.Church).filter(models.Church.id == member.church_id).first()
