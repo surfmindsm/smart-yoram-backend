@@ -73,6 +73,7 @@ def create_member(
 
     # Check if email is provided
     if not member_in.email:
+        print(f"Error: Email not provided for member {member_in.name}")
         raise HTTPException(status_code=400, detail="Email is required for member registration")
 
     # Check if user with this email already exists
