@@ -8,6 +8,7 @@ from datetime import datetime
 
 from app import models, schemas
 from app.api import deps
+from app.schemas.enums import Gender
 
 router = APIRouter()
 
@@ -55,9 +56,12 @@ async def upload_members_excel(
                     models.Member.phone == str(row.get('전화번호', '')).strip()
                 ).first()
                 
+                # Convert Korean gender labels to M/F
+                gender_raw = str(row.get('성별', '')).strip()
+                
                 member_data = {
                     'name': str(row.get('이름', '')).strip(),
-                    'gender': str(row.get('성별', '')).strip(),
+                    'gender': gender_raw,  # Will be validated by schema
                     'phone': str(row.get('전화번호', '')).strip(),
                     'church_id': current_user.church_id
                 }
@@ -123,9 +127,15 @@ def download_members_excel(
     # Convert to DataFrame
     data = []
     for member in members:
+        # Convert gender M/F to Korean labels for Excel export
+        gender_display = ''
+        if member.gender:
+            gender_enum = Gender(member.gender)
+            gender_display = gender_enum.to_korean()
+        
         data.append({
             '이름': member.name,
-            '성별': member.gender,
+            '성별': gender_display,
             '생년월일': member.birthdate,
             '전화번호': member.phone,
             '주소': member.address or '',
