@@ -95,6 +95,15 @@ def update_bulletin(
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
     update_data = bulletin_in.dict(exclude_unset=True)
+    
+    # Validate that date is not set to None if it's provided
+    # The database requires date to be non-null
+    if "date" in update_data and update_data["date"] is None:
+        raise HTTPException(
+            status_code=422, 
+            detail="Date field cannot be set to null. Date is required for bulletins."
+        )
+    
     for field, value in update_data.items():
         setattr(bulletin, field, value)
 
@@ -144,6 +153,13 @@ async def upload_bulletin_file(
     
     if bulletin.church_id != current_user.church_id and not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not enough permissions")
+    
+    # Validate that bulletin has a date (required for file storage path)
+    if bulletin.date is None:
+        raise HTTPException(
+            status_code=422, 
+            detail="Cannot upload file to bulletin without a date. Please update the bulletin with a valid date first."
+        )
     
     # Read file content
     file_content = await file.read()
