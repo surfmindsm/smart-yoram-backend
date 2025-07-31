@@ -33,7 +33,7 @@ class MemberBase(BaseModel):
 
 
 class MemberCreate(MemberBase):
-    church_id: int
+    church_id: Optional[int] = None
 
 
 class MemberUpdate(MemberBase):
