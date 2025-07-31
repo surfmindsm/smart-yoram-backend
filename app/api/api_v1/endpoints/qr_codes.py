@@ -155,7 +155,7 @@ def verify_qr_code(
     db.refresh(attendance)
     
     # Get member info
-    member = crud.member.get(db=db, id=qr_code.member_id)
+    member = db.query(models.Member).filter(models.Member.id == qr_code.member_id).first()
     
     return {
         "status": "success",
@@ -192,3 +192,49 @@ def get_member_qr_code(
     ).first()
     
     return qr_code
+
+
+@router.get("/qr_info/{code}")
+def get_qr_code_info(
+    *,
+    db: Session = Depends(deps.get_db),
+    code: str,
+) -> Any:
+    """
+    Get QR code information by code string.
+    """
+    qr_code = db.query(models.QRCode).filter(
+        models.QRCode.code == code,
+        models.QRCode.is_active == True
+    ).first()
+    
+    if not qr_code:
+        raise HTTPException(status_code=404, detail="QR code not found")
+    
+    # Check expiration
+    if qr_code.expires_at and qr_code.expires_at < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="QR code has expired")
+    
+    # Get member info
+    member = db.query(models.Member).filter(models.Member.id == qr_code.member_id).first()
+    
+    if not member:
+        raise HTTPException(status_code=404, detail="Associated member not found")
+    
+    return {
+        "qr_code": {
+            "id": qr_code.id,
+            "code": qr_code.code,
+            "qr_type": qr_code.qr_type,
+            "is_active": qr_code.is_active,
+            "expires_at": qr_code.expires_at.isoformat() if qr_code.expires_at else None,
+            "created_at": qr_code.created_at.isoformat() if hasattr(qr_code, 'created_at') and qr_code.created_at else None
+        },
+        "member": {
+            "id": member.id,
+            "name": member.name,
+            "phone": member.phone,
+            "profile_photo_url": member.profile_photo_url,
+            "church_id": member.church_id
+        }
+    }
