@@ -68,8 +68,14 @@ def create_member(
     member_in: schemas.MemberCreate,
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
-    if not current_user.is_superuser and current_user.church_id != member_in.church_id:
-        raise HTTPException(status_code=403, detail="Not enough permissions")
+    # Use the current user's church_id
+    church_id = current_user.church_id
+    if not church_id:
+        raise HTTPException(status_code=400, detail="User has no church assigned")
+    
+    # Override church_id with current user's church_id
+    member_dict = member_in.dict()
+    member_dict['church_id'] = church_id
 
     # Check if email is provided
     if not member_in.email:
@@ -93,8 +99,8 @@ def create_member(
         # If not linked to any member, we can use this user
         print(f"Linking existing user {existing_user.id} to new member")
 
-    # Create member
-    member = models.Member(**member_in.dict())
+    # Create member with overridden church_id
+    member = models.Member(**member_dict)
     db.add(member)
     db.flush()  # Flush to get member.id without committing
 
@@ -121,7 +127,7 @@ def create_member(
             encrypted_password=encrypt_password(temp_password),
             full_name=member_in.name,
             phone=member_in.phone,
-            church_id=member_in.church_id,
+            church_id=church_id,
             role="member",
             is_active=True
         )
