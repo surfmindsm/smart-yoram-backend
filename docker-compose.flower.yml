@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  # Flower (Celery 모니터링) - 별도 실행
+  flower:
+    build: .
+    command: celery -A app.core.celery_app flower --port=5555
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SECRET_KEY=${SECRET_KEY}
+      - REDIS_URL=redis://redis:6379/0
+    ports:
+      - "5555:5555"
+    restart: unless-stopped
+    networks:
+      - smart-yoram-backend_default
+
+networks:
+  smart-yoram-backend_default:
+    external: true
