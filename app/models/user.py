@@ -26,3 +26,9 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     church = relationship("Church", backref="users")
+    
+    # Push notification relationships
+    devices = relationship("UserDevice", back_populates="user")
+    sent_notifications = relationship("PushNotification", back_populates="sender")
+    received_notifications = relationship("NotificationRecipient", back_populates="user")
+    notification_preference = relationship("NotificationPreference", back_populates="user", uselist=False)

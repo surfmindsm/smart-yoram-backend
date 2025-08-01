@@ -19,6 +19,7 @@ from app.api.api_v1.endpoints import (
     announcements,
     daily_verses,
     worship_schedule,
+    push_notifications,
 )
 
 
@@ -43,3 +44,4 @@ api_router.include_router(member_card.router, prefix="/member-card", tags=["memb
 api_router.include_router(announcements.router, prefix="/announcements", tags=["announcements"])
 api_router.include_router(daily_verses.router, prefix="/daily-verses", tags=["daily_verses"])
 api_router.include_router(worship_schedule.router, prefix="/worship", tags=["worship_schedule"])
+api_router.include_router(push_notifications.router, prefix="/notifications", tags=["push_notifications"])

@@ -25,3 +25,5 @@ class Church(Base):
     # Relationships
     worship_services = relationship("WorshipService", back_populates="church")
     worship_categories = relationship("WorshipServiceCategory", back_populates="church")
+    notification_templates = relationship("NotificationTemplate", back_populates="church")
+    push_notifications = relationship("PushNotification", back_populates="church")
