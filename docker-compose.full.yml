@@ -15,24 +15,38 @@ services:
       timeout: 10s
       retries: 3
 
+  # PostgreSQL (로컬 테스트용, 프로덕션에서는 Supabase 사용)
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=smartyoram
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
   # FastAPI 백엔드
   backend:
     build: .
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/smartyoram}
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
-      - SECRET_KEY=${SECRET_KEY}
-      - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS}
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
+      - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS:-["http://localhost:3000"]}
       - REDIS_URL=redis://redis:6379/0
-      - FIREBASE_CREDENTIALS_PATH=${FIREBASE_CREDENTIALS_PATH:-/app/firebase-credentials.json}
+      - FIREBASE_CREDENTIALS_PATH=/app/firebase-credentials.json
     volumes:
       - ./logs:/app/logs
       - ./firebase-credentials.json:/app/firebase-credentials.json:ro
     depends_on:
       - redis
+      - postgres
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/"]
@@ -46,17 +60,15 @@ services:
     build: .
     command: celery -A app.core.celery_app worker --loglevel=info
     environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
-      - SECRET_KEY=${SECRET_KEY}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/smartyoram}
       - REDIS_URL=redis://redis:6379/0
-      - FIREBASE_CREDENTIALS_PATH=${FIREBASE_CREDENTIALS_PATH:-/app/firebase-credentials.json}
+      - FIREBASE_CREDENTIALS_PATH=/app/firebase-credentials.json
     volumes:
       - ./logs:/app/logs
       - ./firebase-credentials.json:/app/firebase-credentials.json:ro
     depends_on:
       - redis
+      - postgres
     restart: unless-stopped
 
   # Celery Beat (스케줄러)
@@ -64,15 +76,11 @@ services:
     build: .
     command: celery -A app.core.celery_app beat --loglevel=info
     environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
-      - SECRET_KEY=${SECRET_KEY}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/smartyoram}
       - REDIS_URL=redis://redis:6379/0
-    volumes:
-      - ./logs:/app/logs
     depends_on:
       - redis
+      - postgres
     restart: unless-stopped
 
   # Flower (Celery 모니터링) - 선택사항
@@ -80,10 +88,7 @@ services:
     build: .
     command: celery -A app.core.celery_app flower --port=5555
     environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
-      - SECRET_KEY=${SECRET_KEY}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/smartyoram}
       - REDIS_URL=redis://redis:6379/0
     ports:
       - "5555:5555"
@@ -94,3 +99,4 @@ services:
 
 volumes:
   redis_data:
+  postgres_data:
