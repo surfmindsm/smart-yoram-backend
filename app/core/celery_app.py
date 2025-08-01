@@ -28,25 +28,18 @@ try:
     )
 
     # Beat schedule for periodic tasks
+    from celery.schedules import crontab
+    
     celery_app.conf.beat_schedule = {
         # Send worship reminders every Sunday at 8 AM
         "worship-reminder-sunday": {
             "task": "app.tasks.notifications.send_worship_reminders",
-            "schedule": {
-                "type": "crontab",
-                "hour": 8,
-                "minute": 0,
-                "day_of_week": 0,  # Sunday
-            },
+            "schedule": crontab(hour=8, minute=0, day_of_week=0),  # Sunday
         },
         # Send birthday notifications daily at 9 AM
         "birthday-notifications": {
             "task": "app.tasks.notifications.send_birthday_notifications",
-            "schedule": {
-                "type": "crontab",
-                "hour": 9,
-                "minute": 0,
-            },
+            "schedule": crontab(hour=9, minute=0),
         },
         # Process notification queue every minute
         "process-notification-queue": {
@@ -56,11 +49,7 @@ try:
         # Cleanup expired tokens daily at 2 AM
         "cleanup-expired-tokens": {
             "task": "app.tasks.notifications.cleanup_expired_tokens",
-            "schedule": {
-                "type": "crontab",
-                "hour": 2,
-                "minute": 0,
-            },
+            "schedule": crontab(hour=2, minute=0),
         },
     }
     logger.info("Celery app initialized successfully")
