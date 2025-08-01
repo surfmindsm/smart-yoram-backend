@@ -10,6 +10,7 @@ from app.models.push_notification import (
 )
 from app.models.user import User
 from app.core.config import settings
+from app.core.redis import redis_client
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
@@ -34,11 +35,26 @@ class PushNotificationService:
         notification_type: NotificationType = NotificationType.CUSTOM
     ) -> bool:
         """단일 사용자에게 푸시 알림 발송"""
-        # Get user's active devices
-        devices = db.query(UserDevice).filter(
-            UserDevice.user_id == user_id,
-            UserDevice.is_active == True
-        ).all()
+        # Check rate limit
+        if not redis_client.check_rate_limit(user_id):
+            logger.warning(f"Rate limit exceeded for user {user_id}")
+            return False
+        
+        # Get user's active devices from Redis first (faster)
+        device_tokens = redis_client.get_user_device_tokens(user_id)
+        
+        if not device_tokens:
+            # Fallback to database
+            devices = db.query(UserDevice).filter(
+                UserDevice.user_id == user_id,
+                UserDevice.is_active == True
+            ).all()
+        else:
+            # Get device details from DB using tokens
+            devices = db.query(UserDevice).filter(
+                UserDevice.device_token.in_(device_tokens),
+                UserDevice.is_active == True
+            ).all()
         
         if not devices:
             logger.warning(f"No active devices found for user {user_id}")
@@ -353,6 +369,10 @@ class PushNotificationService:
         
         db.commit()
         db.refresh(device)
+        
+        # Store in Redis for fast access
+        redis_client.store_device_token(user_id, device_token, platform)
+        
         return device
     
     @staticmethod
@@ -368,5 +388,9 @@ class PushNotificationService:
         if device:
             device.is_active = False
             db.commit()
+            
+            # Remove from Redis
+            redis_client.remove_device_token(device.user_id, device_token)
+            
             return True
         return False

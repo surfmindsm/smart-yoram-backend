@@ -41,6 +41,12 @@ class Settings(BaseSettings):
 
     FIRST_SUPERUSER: str = "admin@smartyoram.com"
     FIRST_SUPERUSER_PASSWORD: str = "changeme"
+    
+    # Redis Configuration
+    REDIS_URL: str = "redis://localhost:6379/0"
+    
+    # Firebase Configuration
+    FIREBASE_CREDENTIALS_PATH: str = "firebase-credentials.json"
 
     class Config:
         env_file = ".env"
