@@ -10,3 +10,4 @@ from .notification import Notification
 from .family_relationship import FamilyRelationship
 from .announcement import Announcement
 from .daily_verse import DailyVerse
+from .worship_schedule import WorshipService, WorshipServiceCategory
