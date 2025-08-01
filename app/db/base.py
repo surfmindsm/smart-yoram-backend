@@ -9,3 +9,5 @@ from app.models.qr_code import QRCode
 from app.models.calendar_event import CalendarEvent
 from app.models.notification import Notification
 from app.models.family_relationship import FamilyRelationship
+from app.models.announcement import Announcement
+from app.models.daily_verse import DailyVerse
