@@ -29,6 +29,13 @@ def get_worship_schedule(
     if church_id is None:
         church_id = current_user.church_id
     
+    # Check if user has church_id
+    if church_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="사용자에게 교회가 할당되지 않았습니다"
+        )
+    
     if current_user.church_id != church_id and not current_user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -61,6 +68,13 @@ def get_worship_services(
     # If church_id is not provided, use the current user's church_id
     if church_id is None:
         church_id = current_user.church_id
+    
+    # Check if user has church_id
+    if church_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="사용자에게 교회가 할당되지 않았습니다"
+        )
         
     if current_user.church_id != church_id and not current_user.is_superuser:
         raise HTTPException(
@@ -97,6 +111,13 @@ def create_worship_service(
     # If church_id is not provided, use the current user's church_id
     if church_id is None:
         church_id = current_user.church_id
+    
+    # Check if user has church_id
+    if church_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="사용자에게 교회가 할당되지 않았습니다"
+        )
         
     if current_user.church_id != church_id or current_user.role not in ["admin", "pastor"]:
         raise HTTPException(
@@ -201,6 +222,13 @@ def get_worship_categories(
     # If church_id is not provided, use the current user's church_id
     if church_id is None:
         church_id = current_user.church_id
+    
+    # Check if user has church_id
+    if church_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="사용자에게 교회가 할당되지 않았습니다"
+        )
         
     if current_user.church_id != church_id and not current_user.is_superuser:
         raise HTTPException(
@@ -226,6 +254,13 @@ def create_worship_category(
     # If church_id is not provided, use the current user's church_id
     if church_id is None:
         church_id = current_user.church_id
+    
+    # Check if user has church_id
+    if church_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="사용자에게 교회가 할당되지 않았습니다"
+        )
         
     if current_user.church_id != church_id or current_user.role not in ["admin", "pastor"]:
         raise HTTPException(
