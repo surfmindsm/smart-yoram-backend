@@ -20,11 +20,15 @@ router = APIRouter()
 
 @router.get("/schedule", response_model=WorshipScheduleResponse)
 def get_worship_schedule(
-    church_id: int,
+    church_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """교회의 전체 예배 스케줄 조회"""
+    # If church_id is not provided, use the current user's church_id
+    if church_id is None:
+        church_id = current_user.church_id
+    
     if current_user.church_id != church_id and not current_user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -45,7 +49,7 @@ def get_worship_schedule(
 
 @router.get("/services", response_model=List[WorshipServiceSchema])
 def get_worship_services(
-    church_id: int,
+    church_id: Optional[int] = None,
     service_type: Optional[str] = None,
     target_group: Optional[str] = None,
     day_of_week: Optional[int] = None,
@@ -54,6 +58,10 @@ def get_worship_services(
     current_user: User = Depends(get_current_active_user)
 ):
     """예배 서비스 목록 조회"""
+    # If church_id is not provided, use the current user's church_id
+    if church_id is None:
+        church_id = current_user.church_id
+        
     if current_user.church_id != church_id and not current_user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -80,12 +88,16 @@ def get_worship_services(
 
 @router.post("/services", response_model=WorshipServiceSchema)
 def create_worship_service(
-    church_id: int,
     service: WorshipServiceCreate,
+    church_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """예배 서비스 생성"""
+    # If church_id is not provided, use the current user's church_id
+    if church_id is None:
+        church_id = current_user.church_id
+        
     if current_user.church_id != church_id or current_user.role not in ["admin", "pastor"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -181,11 +193,15 @@ def delete_worship_service(
 
 @router.get("/categories", response_model=List[WorshipServiceCategorySchema])
 def get_worship_categories(
-    church_id: int,
+    church_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """예배 카테고리 목록 조회"""
+    # If church_id is not provided, use the current user's church_id
+    if church_id is None:
+        church_id = current_user.church_id
+        
     if current_user.church_id != church_id and not current_user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -201,12 +217,16 @@ def get_worship_categories(
 
 @router.post("/categories", response_model=WorshipServiceCategorySchema)
 def create_worship_category(
-    church_id: int,
     category: WorshipServiceCategoryCreate,
+    church_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """예배 카테고리 생성"""
+    # If church_id is not provided, use the current user's church_id
+    if church_id is None:
+        church_id = current_user.church_id
+        
     if current_user.church_id != church_id or current_user.role not in ["admin", "pastor"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
