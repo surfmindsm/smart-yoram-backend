@@ -17,8 +17,13 @@ from concurrent.futures import ThreadPoolExecutor
 logger = logging.getLogger(__name__)
 
 # Initialize Firebase Admin SDK
-cred = credentials.Certificate(settings.FIREBASE_CREDENTIALS_PATH)
-firebase_admin.initialize_app(cred)
+try:
+    cred = credentials.Certificate(settings.FIREBASE_CREDENTIALS_PATH)
+    firebase_admin.initialize_app(cred)
+    logger.info("Firebase Admin SDK initialized successfully")
+except Exception as e:
+    logger.error(f"Failed to initialize Firebase Admin SDK: {e}")
+    logger.warning("Push notifications will be disabled")
 
 executor = ThreadPoolExecutor(max_workers=10)
 
