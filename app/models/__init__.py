@@ -9,3 +9,4 @@ from .calendar_event import CalendarEvent
 from .notification import Notification
 from .family_relationship import FamilyRelationship
 from .announcement import Announcement
+from .daily_verse import DailyVerse

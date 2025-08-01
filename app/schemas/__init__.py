@@ -10,3 +10,4 @@ from .calendar_event import CalendarEvent, CalendarEventCreate, CalendarEventUpd
 from .notification import Notification, NotificationCreate, NotificationUpdate, NotificationInDB
 from .family_relationship import FamilyRelationship, FamilyRelationshipCreate, FamilyRelationshipUpdate, FamilyTree, FamilyTreeMember
 from .announcement import Announcement, AnnouncementCreate, AnnouncementUpdate, AnnouncementInDB
+from .daily_verse import DailyVerse, DailyVerseCreate, DailyVerseUpdate, DailyVerseInDB

@@ -1,0 +1,1 @@
+from .crud_daily_verse import daily_verse
