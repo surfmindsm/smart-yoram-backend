@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
 from datetime import datetime
@@ -95,7 +95,7 @@ async def send_notification(
             detail="사용자를 찾을 수 없습니다"
         )
     
-    success = await PushNotificationService.send_to_user(
+    result = await PushNotificationService.send_to_user(
         db=db,
         user_id=notification.user_id,
         title=notification.title,
@@ -105,13 +105,10 @@ async def send_notification(
         notification_type=notification.type
     )
     
-    return {
-        "success": success,
-        "message": "알림이 발송되었습니다" if success else "알림 발송에 실패했습니다"
-    }
+    return result
 
 
-@router.post("/send-batch", response_model=Dict[str, int])
+@router.post("/send-batch", response_model=Dict[str, Any])
 async def send_batch_notification(
     notification: NotificationBatchSend,
     db: Session = Depends(get_db),
@@ -150,7 +147,7 @@ async def send_batch_notification(
     return result
 
 
-@router.post("/send-to-church", response_model=Dict[str, int])
+@router.post("/send-to-church", response_model=Dict[str, Any])
 async def send_church_notification(
     notification: NotificationSend,
     db: Session = Depends(get_db),
@@ -305,3 +302,28 @@ def update_notification_preferences(
     db.commit()
     db.refresh(preference)
     return preference
+
+
+@router.post("/test/register-device")
+def test_register_device(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """테스트용 기기 등록 (개발 환경에서만 사용)"""
+    import uuid
+    test_token = f"test_token_{uuid.uuid4().hex[:8]}"
+    
+    device = PushNotificationService.register_device(
+        db=db,
+        user_id=current_user.id,
+        device_token=test_token,
+        platform="android",
+        device_model="Test Device",
+        app_version="1.0.0"
+    )
+    
+    return {
+        "message": "Test device registered",
+        "device_token": device.device_token,
+        "user_id": current_user.id
+    }

@@ -80,9 +80,28 @@ class NotificationHistoryResponse(BaseModel):
     failed_count: int
     sent_at: Optional[datetime]
     created_at: datetime
+    status: str = Field(default="pending")
 
     class Config:
         from_attributes = True
+        
+    @property
+    def calculated_status(self) -> str:
+        """Calculate status based on counts"""
+        if self.total_recipients == 0:
+            return "no_recipients"
+        elif self.sent_count == 0 and self.failed_count == 0:
+            return "pending"
+        elif self.sent_count > 0 and self.failed_count == 0:
+            return "success"
+        elif self.sent_count == 0 and self.failed_count > 0:
+            return "failed"
+        else:
+            return "partial"
+    
+    def model_post_init(self, __context):
+        """Set status after initialization"""
+        self.status = self.calculated_status
 
 
 class NotificationPreferenceUpdate(BaseModel):
