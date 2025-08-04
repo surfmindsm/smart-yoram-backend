@@ -52,3 +52,6 @@ flower==2.0.1
 
 # Firebase
 firebase-admin==6.4.0
+
+# System monitoring
+psutil==5.9.8

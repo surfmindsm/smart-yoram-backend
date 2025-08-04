@@ -77,7 +77,7 @@
 
 4. **Test through CloudFlare**
    ```bash
-   curl https://packs-holds-marc-extended.trycloudflare.com/api/v1/
+   curl https://api.surfmind-team.com/api/v1/
    ```
 
 ## Important Notes

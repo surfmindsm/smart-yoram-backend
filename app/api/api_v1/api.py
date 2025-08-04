@@ -21,6 +21,7 @@ from app.api.api_v1.endpoints import (
     worship_schedule,
     push_notifications,
 )
+from app.api.v1.endpoints import health
 
 
 api_router = APIRouter()
@@ -45,3 +46,4 @@ api_router.include_router(announcements.router, prefix="/announcements", tags=["
 api_router.include_router(daily_verses.router, prefix="/daily-verses", tags=["daily_verses"])
 api_router.include_router(worship_schedule.router, prefix="/worship", tags=["worship_schedule"])
 api_router.include_router(push_notifications.router, prefix="/notifications", tags=["push_notifications"])
+api_router.include_router(health.router, prefix="/health", tags=["health"])

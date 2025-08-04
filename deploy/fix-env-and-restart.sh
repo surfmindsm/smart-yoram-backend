@@ -29,7 +29,7 @@ ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=10080
 
 # CORS
-BACKEND_CORS_ORIGINS=["http://localhost:3000", "http://localhost:8080", "https://smart-yoram-admin.vercel.app", "https://packs-holds-marc-extended.trycloudflare.com"]
+BACKEND_CORS_ORIGINS=["http://localhost:3000", "http://localhost:8080", "https://smart-yoram-admin.vercel.app", "https://api.surfmind-team.com"]
 
 # Application
 PROJECT_NAME="Smart Yoram API"
