@@ -8,7 +8,7 @@ import psutil
 import os
 
 from app.api.deps import get_db
-from app.core.redis import get_redis_client
+from app.core.redis import redis_client
 from app.core.celery_app import celery_app
 
 router = APIRouter()
@@ -49,7 +49,6 @@ async def database_health(db: Session = Depends(get_db)):
 async def redis_health():
     """Check Redis connectivity and health"""
     try:
-        redis_client = get_redis_client()
         
         # Check if Redis is actually connected (not a dummy client)
         if hasattr(redis_client, 'ping'):
@@ -190,7 +189,6 @@ async def all_health_checks(db: Session = Depends(get_db)):
     
     # Redis check
     try:
-        redis_client = get_redis_client()
         if hasattr(redis_client, 'ping'):
             redis_client.ping()
             results["redis"] = {"status": "healthy"}
