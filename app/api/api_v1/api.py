@@ -20,8 +20,8 @@ from app.api.api_v1.endpoints import (
     daily_verses,
     worship_schedule,
     push_notifications,
+    health,
 )
-from app.api.v1.endpoints import health
 
 
 api_router = APIRouter()
