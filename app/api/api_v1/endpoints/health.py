@@ -7,7 +7,7 @@ from datetime import datetime
 import psutil
 import os
 
-from app.db.session import get_db
+from app.api.deps import get_db
 from app.core.redis import get_redis_client
 from app.core.celery_app import celery_app
 
