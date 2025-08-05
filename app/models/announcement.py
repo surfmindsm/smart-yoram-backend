@@ -21,6 +21,10 @@ class Announcement(Base):
     is_active = Column(Boolean, default=True)
     is_pinned = Column(Boolean, default=False)  # Pin important announcements
     
+    # Category fields
+    category = Column(String, nullable=False)  # worship, member_news, event
+    subcategory = Column(String)  # Optional subcategory
+    
     # Target audience
     target_audience = Column(String, default="all")  # all, member, youth, etc.
     

@@ -1,12 +1,27 @@
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Dict
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 
 from app import models, schemas
 from app.api import deps
+from app.core.announcement_categories import (
+    get_categories,
+    validate_category,
+    ANNOUNCEMENT_CATEGORIES
+)
 
 router = APIRouter()
+
+
+@router.get("/categories", response_model=Dict[str, Any])
+def get_announcement_categories(
+    current_user: models.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    Get available announcement categories and subcategories.
+    """
+    return get_categories()
 
 
 @router.get("/", response_model=List[schemas.Announcement])
@@ -17,6 +32,8 @@ def read_announcements(
     limit: int = Query(100, ge=1, le=100),
     is_active: Optional[bool] = Query(None),
     is_pinned: Optional[bool] = Query(None),
+    category: Optional[str] = Query(None),
+    subcategory: Optional[str] = Query(None),
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
@@ -31,6 +48,12 @@ def read_announcements(
     
     if is_pinned is not None:
         query = query.filter(models.Announcement.is_pinned == is_pinned)
+    
+    if category is not None:
+        query = query.filter(models.Announcement.category == category)
+    
+    if subcategory is not None:
+        query = query.filter(models.Announcement.subcategory == subcategory)
     
     # Order by pinned first, then by created date
     announcements = query.order_by(
@@ -56,6 +79,13 @@ def create_announcement(
         raise HTTPException(
             status_code=403,
             detail="Only church admins and ministers can create announcements"
+        )
+    
+    # Validate category and subcategory
+    if not validate_category(announcement_in.category, announcement_in.subcategory):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid category or subcategory combination"
         )
     
     announcement = models.Announcement(
