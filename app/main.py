@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 import os
 
 from app.api.api_v1.api import api_router
+from app.api.spec.api import spec_router
 from app.api.web_routes import router as web_router
 from app.core.config import settings
 
@@ -27,6 +28,7 @@ if settings.BACKEND_CORS_ORIGINS:
     )
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
+app.include_router(spec_router, prefix="/api")
 app.include_router(web_router)
 
 # Mount static files only if directory exists
