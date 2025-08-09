@@ -21,6 +21,10 @@ from app.api.api_v1.endpoints import (
     worship_schedule,
     push_notifications,
     health,
+    ai_agents,
+    chat,
+    church,
+    analytics,
 )
 
 
@@ -47,3 +51,7 @@ api_router.include_router(daily_verses.router, prefix="/daily-verses", tags=["da
 api_router.include_router(worship_schedule.router, prefix="/worship", tags=["worship_schedule"])
 api_router.include_router(push_notifications.router, prefix="/notifications", tags=["push_notifications"])
 api_router.include_router(health.router, prefix="/health", tags=["health"])
+api_router.include_router(ai_agents.router, prefix="/agents", tags=["ai_agents"])
+api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
+api_router.include_router(church.router, prefix="/church", tags=["church"])
+api_router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])

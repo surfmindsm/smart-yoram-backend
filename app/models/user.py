@@ -32,3 +32,6 @@ class User(Base):
     sent_notifications = relationship("PushNotification", back_populates="sender")
     received_notifications = relationship("NotificationRecipient", back_populates="user")
     notification_preference = relationship("NotificationPreference", back_populates="user", uselist=False)
+    
+    # Chat relationships
+    chat_histories = relationship("ChatHistory", back_populates="user")

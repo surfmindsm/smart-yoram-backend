@@ -15,3 +15,7 @@ from .push_notification import (
     UserDevice, NotificationTemplate, PushNotification,
     NotificationRecipient, NotificationPreference
 )
+from .ai_agent import (
+    OfficialAgentTemplate, AIAgent, ChatHistory, 
+    ChatMessage, ChurchDatabaseConfig
+)
