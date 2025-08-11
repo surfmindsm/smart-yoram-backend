@@ -21,7 +21,7 @@ class Church(Base):
     
     # GPT API Configuration
     gpt_api_key = Column(Text)  # Encrypted
-    gpt_model = Column(String(50), default="gpt-4")
+    gpt_model = Column(String(50), default="gpt-4o-mini")
     max_tokens = Column(Integer, default=4000)
     temperature = Column(Float, default=0.7)
     gpt_last_test = Column(DateTime)

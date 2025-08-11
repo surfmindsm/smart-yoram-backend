@@ -66,7 +66,7 @@ def read_church_profile(
     
     total_requests = monthly_messages.total_requests or 0
     total_tokens = monthly_messages.total_tokens or 0
-    total_cost = openai_service.calculate_cost(total_tokens, church.gpt_model or "gpt-4")
+    total_cost = openai_service.calculate_cost(total_tokens, church.gpt_model or "gpt-4o-mini")
     
     return {
         "success": True,
@@ -166,7 +166,7 @@ def read_system_status(
     # GPT API status
     gpt_status = {
         "configured": bool(church.gpt_api_key),
-        "model": church.gpt_model or "gpt-4",
+        "model": church.gpt_model or "gpt-4o-mini",
         "last_test": church.gpt_last_test,
         "status": "active" if church.gpt_api_key else "not_configured"
     }

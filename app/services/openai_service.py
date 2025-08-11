@@ -28,7 +28,7 @@ class OpenAIService:
     async def generate_response(
         self,
         messages: List[Dict[str, str]],
-        model: str = "gpt-4",
+        model: str = "gpt-4o-mini",
         max_tokens: int = 4000,
         temperature: float = 0.7,
         system_prompt: str = None
@@ -89,7 +89,7 @@ class OpenAIService:
     def generate_response_sync(
         self,
         messages: List[Dict[str, str]],
-        model: str = "gpt-4",
+        model: str = "gpt-4o-mini",
         max_tokens: int = 4000,
         temperature: float = 0.7,
         system_prompt: str = None
@@ -123,19 +123,27 @@ class OpenAIService:
             logger.error(f"OpenAI API error: {e}")
             raise
     
-    def calculate_cost(self, tokens: int, model: str = "gpt-4") -> float:
+    def calculate_cost(self, tokens: int, model: str = "gpt-4o-mini") -> float:
         """
         Calculate cost based on token usage
         
-        Pricing (approximate):
+        Pricing (as of 2024):
+        - GPT-4o-mini: $0.00015 per 1K input tokens, $0.0006 per 1K output tokens
+        - GPT-4o: $0.005 per 1K input tokens, $0.015 per 1K output tokens
         - GPT-4: $0.03 per 1K input tokens, $0.06 per 1K output tokens
-        - GPT-3.5-turbo: $0.0015 per 1K input tokens, $0.002 per 1K output tokens
+        - GPT-3.5-turbo: $0.0005 per 1K input tokens, $0.0015 per 1K output tokens
         """
-        if model.startswith("gpt-4"):
+        if model == "gpt-4o-mini":
+            # Average of input and output pricing for GPT-4o-mini
+            cost_per_1k = 0.000375  # ($0.00015 + $0.0006) / 2
+        elif model == "gpt-4o":
+            # Average of input and output pricing for GPT-4o
+            cost_per_1k = 0.01  # ($0.005 + $0.015) / 2
+        elif model.startswith("gpt-4"):
             # Approximate average of input and output pricing
             cost_per_1k = 0.045
         elif model.startswith("gpt-3.5"):
-            cost_per_1k = 0.00175
+            cost_per_1k = 0.001  # ($0.0005 + $0.0015) / 2
         else:
             cost_per_1k = 0.02  # Default fallback
         
@@ -149,7 +157,7 @@ class OpenAIService:
             
             # Simple test request
             response = await openai.ChatCompletion.acreate(
-                model="gpt-3.5-turbo",
+                model="gpt-4o-mini",
                 messages=[{"role": "user", "content": "test"}],
                 max_tokens=5
             )

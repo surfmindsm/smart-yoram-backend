@@ -58,7 +58,7 @@ def read_usage_analytics(
     
     total_tokens = current_period_stats.total_tokens or 0
     total_requests = current_period_stats.total_requests or 0
-    cost_usd = openai_service.calculate_cost(total_tokens, church.gpt_model or "gpt-4")
+    cost_usd = openai_service.calculate_cost(total_tokens, church.gpt_model or "gpt-4o-mini")
     
     # Get daily usage for the period
     daily_usage = []
@@ -83,7 +83,7 @@ def read_usage_analytics(
         for stat in daily_stats:
             daily_cost = openai_service.calculate_cost(
                 stat.tokens or 0, 
-                church.gpt_model or "gpt-4"
+                church.gpt_model or "gpt-4o-mini"
             )
             daily_usage.append({
                 "date": stat.date.isoformat(),
@@ -251,7 +251,7 @@ def read_usage_trends(
     for trend in trends:
         cost = openai_service.calculate_cost(
             trend.tokens or 0,
-            church.gpt_model or "gpt-4"
+            church.gpt_model or "gpt-4o-mini"
         )
         
         trend_data.append({

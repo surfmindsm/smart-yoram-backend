@@ -252,7 +252,7 @@ async def send_message(
         # Generate AI response
         response = await openai_service.generate_response(
             messages=messages,
-            model=church.gpt_model or "gpt-4",
+            model=church.gpt_model or "gpt-4o-mini",
             max_tokens=church.max_tokens or 4000,
             temperature=church.temperature or 0.7,
             system_prompt=agent.system_prompt
@@ -272,14 +272,14 @@ async def send_message(
         agent.total_tokens_used += response["tokens_used"]
         agent.total_cost += openai_service.calculate_cost(
             response["tokens_used"], 
-            church.gpt_model or "gpt-4"
+            church.gpt_model or "gpt-4o-mini"
         )
         
         # Update church usage
         church.current_month_tokens = (church.current_month_tokens or 0) + response["tokens_used"]
         church.current_month_cost = (church.current_month_cost or 0) + openai_service.calculate_cost(
             response["tokens_used"],
-            church.gpt_model or "gpt-4"
+            church.gpt_model or "gpt-4o-mini"
         )
         
         # Update history
