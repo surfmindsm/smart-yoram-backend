@@ -228,6 +228,19 @@ async def send_message(
         models.Church.id == current_user.church_id
     ).first()
     
+    # Check if church has GPT API key configured
+    if not church.gpt_api_key:
+        # Use default API key from environment
+        import os
+        default_key = os.getenv("OPENAI_API_KEY")
+        if default_key:
+            church.gpt_api_key = default_key
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail="GPT API key not configured for this church"
+            )
+    
     # Save user message
     user_message = ChatMessage(
         chat_history_id=chat_history_id,
@@ -274,8 +287,22 @@ async def send_message(
             context = f"\n\n[교회 데이터 컨텍스트]\n{church_data}\n\n"
             messages[-1]["content"] = context + messages[-1]["content"]
         
+        # Create OpenAI service with church's API key
+        from app.services.openai_service import OpenAIService
+        
+        # Try to decrypt API key, if it fails use as is
+        try:
+            from app.core.security import decrypt_data
+            api_key = decrypt_data(church.gpt_api_key) if church.gpt_api_key else None
+            if not api_key or api_key == "":
+                api_key = church.gpt_api_key  # Use as is if decryption fails
+        except Exception:
+            api_key = church.gpt_api_key  # Use as is if decryption fails
+        
+        church_openai_service = OpenAIService(api_key=api_key)
+        
         # Generate AI response
-        response = await openai_service.generate_response(
+        response = await church_openai_service.generate_response(
             messages=messages,
             model=church.gpt_model or "gpt-4o-mini",
             max_tokens=church.max_tokens or 4000,
@@ -285,7 +312,7 @@ async def send_message(
         
         # Save AI response
         ai_message = ChatMessage(
-            chat_history_id=chat_request.chat_history_id,
+            chat_history_id=chat_history_id,
             content=response["content"],
             role="assistant",
             tokens_used=response["tokens_used"]

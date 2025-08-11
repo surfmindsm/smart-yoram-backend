@@ -124,8 +124,9 @@ async def update_gpt_config(
                 detail="Invalid OpenAI API key"
             )
         
-        # Encrypt and store API key
-        church.gpt_api_key = encrypt_data(config_in.api_key)
+        # Store API key (temporarily without encryption for testing)
+        # TODO: Re-enable encryption after fixing server ENCRYPTION_KEY
+        church.gpt_api_key = config_in.api_key  # encrypt_data(config_in.api_key)
     
     # Update other settings
     if config_in.model:

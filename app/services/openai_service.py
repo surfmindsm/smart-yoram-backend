@@ -20,10 +20,21 @@ class OpenAIService:
             self.api_key = api_key
             openai.api_key = api_key
         else:
-            self.api_key = openai.api_key
+            # Try to get from environment
+            env_key = os.getenv("OPENAI_API_KEY")
+            if env_key:
+                self.api_key = env_key
+                openai.api_key = env_key
+            else:
+                self.api_key = openai.api_key
             
         if organization:
             openai.organization = organization
+        else:
+            # Try to get from environment
+            env_org = os.getenv("OPENAI_ORGANIZATION")
+            if env_org:
+                openai.organization = env_org
     
     async def generate_response(
         self,
