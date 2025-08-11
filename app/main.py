@@ -5,12 +5,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
+import logging
 
 from app.api.api_v1.api import api_router
 from app.api.spec.api import spec_router
 from app.api.web_routes import router as web_router
 from app.core.config import settings
 
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title=settings.PROJECT_NAME,

@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Union
 from datetime import datetime
 from pydantic import BaseModel
 
@@ -45,7 +45,7 @@ class AIAgentBase(BaseModel):
 
 
 class AIAgentCreate(AIAgentBase):
-    template_id: Optional[int] = None
+    template_id: Optional[Union[int, str]] = None
 
 
 class AIAgentUpdate(AIAgentBase):
@@ -80,7 +80,7 @@ class ChatHistoryBase(BaseModel):
 
 
 class ChatHistoryCreate(ChatHistoryBase):
-    agent_id: int
+    agent_id: Union[int, str]
 
 
 class ChatHistoryUpdate(ChatHistoryBase):
@@ -127,8 +127,8 @@ class ChatMessage(ChatMessageBase):
 
 
 class ChatRequest(BaseModel):
-    chat_history_id: int
-    agent_id: int
+    chat_history_id: Union[int, str]
+    agent_id: Union[int, str]
     content: str
 
 

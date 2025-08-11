@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 import asyncio
+import logging
 
 from app import models, schemas
 from app.api import deps
@@ -15,6 +16,7 @@ from app.schemas.ai_agent import (
 from app.services.openai_service import openai_service
 from app.services.church_data_service import get_church_data
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -30,6 +32,7 @@ def read_chat_histories(
     """
     Retrieve chat histories for current user.
     """
+    logger.debug(f"Reading chat histories for user {current_user.id}, church {current_user.church_id}")
     query = db.query(ChatHistory).filter(
         ChatHistory.user_id == current_user.id,
         ChatHistory.church_id == current_user.church_id
@@ -86,9 +89,18 @@ def create_chat_history(
     """
     Start new chat session.
     """
+    # Convert string ID to int if needed
+    try:
+        agent_id = int(history_in.agent_id) if isinstance(history_in.agent_id, str) else history_in.agent_id
+    except (ValueError, TypeError):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid agent_id format"
+        )
+    
     # Verify agent exists and belongs to church
     agent = db.query(AIAgent).filter(
-        AIAgent.id == history_in.agent_id,
+        AIAgent.id == agent_id,
         AIAgent.church_id == current_user.church_id
     ).first()
     
@@ -99,8 +111,10 @@ def create_chat_history(
         )
     
     # Create chat history
+    history_data = history_in.dict()
+    history_data['agent_id'] = agent_id  # Use converted int ID
     history = ChatHistory(
-        **history_in.dict(),
+        **history_data,
         church_id=current_user.church_id,
         user_id=current_user.id
     )
@@ -168,9 +182,20 @@ async def send_message(
     """
     Send message and get AI response.
     """
+    # Convert string IDs to int if needed
+    try:
+        chat_history_id = int(chat_request.chat_history_id) if isinstance(chat_request.chat_history_id, str) else chat_request.chat_history_id
+        agent_id = int(chat_request.agent_id) if isinstance(chat_request.agent_id, str) else chat_request.agent_id
+    except (ValueError, TypeError) as e:
+        logger.error(f"Invalid ID format: {e}")
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid ID format in request"
+        )
+    
     # Verify chat history and agent
     history = db.query(ChatHistory).filter(
-        ChatHistory.id == chat_request.chat_history_id,
+        ChatHistory.id == chat_history_id,
         ChatHistory.user_id == current_user.id
     ).first()
     
@@ -181,7 +206,7 @@ async def send_message(
         )
     
     agent = db.query(AIAgent).filter(
-        AIAgent.id == chat_request.agent_id,
+        AIAgent.id == agent_id,
         AIAgent.church_id == current_user.church_id
     ).first()
     
@@ -205,7 +230,7 @@ async def send_message(
     
     # Save user message
     user_message = ChatMessage(
-        chat_history_id=chat_request.chat_history_id,
+        chat_history_id=chat_history_id,
         content=chat_request.content,
         role="user",
         tokens_used=0

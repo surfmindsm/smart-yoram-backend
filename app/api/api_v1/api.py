@@ -25,6 +25,7 @@ from app.api.api_v1.endpoints import (
     chat,
     church,
     analytics,
+    debug,
 )
 
 
@@ -55,3 +56,4 @@ api_router.include_router(ai_agents.router, prefix="/agents", tags=["ai_agents"]
 api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
 api_router.include_router(church.router, prefix="/church", tags=["church"])
 api_router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
+api_router.include_router(debug.router, prefix="/debug", tags=["debug"])
