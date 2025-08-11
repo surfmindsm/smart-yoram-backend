@@ -287,8 +287,8 @@ async def send_message(
             context = f"\n\n[교회 데이터 컨텍스트]\n{church_data}\n\n"
             messages[-1]["content"] = context + messages[-1]["content"]
         
-        # Create OpenAI service with church's API key
-        from app.services.openai_service import OpenAIService
+        # Use test service if no valid API key is configured
+        use_test_service = False
         
         # Try to decrypt API key, if it fails use as is
         try:
@@ -299,7 +299,17 @@ async def send_message(
         except Exception:
             api_key = church.gpt_api_key  # Use as is if decryption fails
         
-        church_openai_service = OpenAIService(api_key=api_key)
+        # Check if we should use test service
+        if not api_key or api_key == "" or "test" in (church.gpt_api_key or "").lower():
+            use_test_service = True
+            logger.warning(f"Using test OpenAI service for church {church.id}")
+        
+        if use_test_service:
+            from app.services.openai_test_service import TestOpenAIService
+            church_openai_service = TestOpenAIService()
+        else:
+            from app.services.openai_service import OpenAIService
+            church_openai_service = OpenAIService(api_key=api_key)
         
         # Generate AI response
         response = await church_openai_service.generate_response(
