@@ -1,11 +1,10 @@
-import openai
+from openai import OpenAI
 import os
 from typing import List, Dict, Optional
 import logging
 from app.core.config import settings
 from app.core.security import decrypt_data, encrypt_data
 import json
-import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -14,24 +13,15 @@ class OpenAIService:
     def __init__(self, api_key: str = None, organization: str = None):
         """Initialize OpenAI service with optional custom API key"""
         if api_key:
-            self.api_key = api_key
-            openai.api_key = api_key
+            self.client = OpenAI(api_key=api_key, organization=organization)
         else:
             # Try to get from environment
             env_key = os.getenv("OPENAI_API_KEY")
-            if env_key:
-                self.api_key = env_key
-                openai.api_key = env_key
-            else:
-                self.api_key = None
-            
-        if organization:
-            openai.organization = organization
-        else:
-            # Try to get from environment
             env_org = os.getenv("OPENAI_ORGANIZATION")
-            if env_org:
-                openai.organization = env_org
+            if env_key:
+                self.client = OpenAI(api_key=env_key, organization=env_org)
+            else:
+                self.client = None
     
     async def generate_response(
         self,
@@ -54,27 +44,20 @@ class OpenAIService:
         Returns:
             Dictionary with response content and metadata
         """
-        if not self.api_key:
-            raise Exception("OpenAI API key not configured. Please provide an API key.")
+        if not self.client:
+            raise Exception("OpenAI client not initialized. Please provide an API key.")
             
         try:
-            # Set the API key for this request
-            openai.api_key = self.api_key
-            
             # Prepare messages
             if system_prompt:
                 messages = [{"role": "system", "content": system_prompt}] + messages
             
-            # Call OpenAI API - using sync version in async context
-            loop = asyncio.get_event_loop()
-            response = await loop.run_in_executor(
-                None,
-                lambda: openai.ChatCompletion.create(
-                    model=model,
-                    messages=messages,
-                    max_tokens=max_tokens,
-                    temperature=temperature
-                )
+            # Call OpenAI API using the new client
+            response = self.client.chat.completions.create(
+                model=model,
+                messages=messages,
+                max_tokens=max_tokens,
+                temperature=temperature
             )
             
             # Extract response
@@ -112,19 +95,16 @@ class OpenAIService:
         system_prompt: str = None
     ) -> Dict:
         """Synchronous version of generate_response"""
-        if not self.api_key:
-            raise Exception("OpenAI API key not configured. Please provide an API key.")
+        if not self.client:
+            raise Exception("OpenAI client not initialized. Please provide an API key.")
             
         try:
-            # Set the API key for this request
-            openai.api_key = self.api_key
-            
             # Prepare messages
             if system_prompt:
                 messages = [{"role": "system", "content": system_prompt}] + messages
             
             # Call OpenAI API
-            response = openai.ChatCompletion.create(
+            response = self.client.chat.completions.create(
                 model=model,
                 messages=messages,
                 max_tokens=max_tokens,
@@ -175,21 +155,16 @@ class OpenAIService:
     async def test_connection(self, api_key: str = None) -> bool:
         """Test if the API key is valid"""
         try:
-            test_key = api_key or self.api_key
-            if not test_key:
+            test_client = OpenAI(api_key=api_key) if api_key else self.client
+            
+            if not test_client:
                 return False
-                
-            openai.api_key = test_key
             
             # Simple test request
-            loop = asyncio.get_event_loop()
-            response = await loop.run_in_executor(
-                None,
-                lambda: openai.ChatCompletion.create(
-                    model="gpt-4o-mini",
-                    messages=[{"role": "user", "content": "test"}],
-                    max_tokens=5
-                )
+            response = test_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": "test"}],
+                max_tokens=5
             )
             return True
             
