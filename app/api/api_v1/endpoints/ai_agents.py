@@ -147,10 +147,13 @@ def create_agent(
         AIAgent.church_id == current_user.church_id
     ).count()
     
-    if current_agents_count >= church.max_agents:
+    # Handle None value for max_agents (default to 10 if not set)
+    max_agents = church.max_agents if church.max_agents is not None else 10
+    
+    if current_agents_count >= max_agents:
         raise HTTPException(
             status_code=400,
-            detail=f"Agent limit reached. Maximum {church.max_agents} agents allowed."
+            detail=f"Agent limit reached. Maximum {max_agents} agents allowed."
         )
     
     # If template_id is provided, copy from template
