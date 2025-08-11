@@ -40,7 +40,7 @@ def read_agents(
         AIAgent.is_active == True
     ).count()
     
-    total_usage = sum(agent.usage_count for agent in agents)
+    total_usage = sum(agent.usage_count or 0 for agent in agents)
     
     # Format response
     agents_data = []

@@ -330,9 +330,9 @@ async def send_message(
         db.add(ai_message)
         
         # Update usage statistics
-        agent.usage_count += 1
-        agent.total_tokens_used += response["tokens_used"]
-        agent.total_cost += openai_service.calculate_cost(
+        agent.usage_count = (agent.usage_count or 0) + 1
+        agent.total_tokens_used = (agent.total_tokens_used or 0) + response["tokens_used"]
+        agent.total_cost = (agent.total_cost or 0) + openai_service.calculate_cost(
             response["tokens_used"], 
             church.gpt_model or "gpt-4o-mini"
         )
