@@ -2,6 +2,7 @@ from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
+import logging
 
 from app import models, schemas
 from app.api import deps
@@ -11,7 +12,50 @@ from app.schemas.ai_agent import (
     AIAgentWithStats, OfficialAgentTemplate as TemplateSchema
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+@router.get("/templates", response_model=dict)
+def read_agent_templates(
+    *,
+    db: Session = Depends(deps.get_db),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=100),
+    current_user: models.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    Retrieve official agent templates.
+    """
+    # For now, return empty templates if table doesn't exist
+    try:
+        templates = db.query(OfficialAgentTemplate).filter(
+            OfficialAgentTemplate.is_active == True
+        ).offset(skip).limit(limit).all()
+    except Exception as e:
+        logger.warning(f"Failed to fetch templates: {e}")
+        templates = []
+    
+    templates_data = []
+    for template in templates:
+        templates_data.append({
+            "id": template.id,
+            "name": template.name,
+            "description": template.description,
+            "category": template.category,
+            "system_prompt": template.system_prompt,
+            "icon": template.icon,
+            "config": {
+                "model": template.model,
+                "temperature": template.temperature,
+                "max_tokens": template.max_tokens
+            }
+        })
+    
+    return {
+        "success": True,
+        "templates": templates_data
+    }
 
 
 @router.get("/", response_model=dict)

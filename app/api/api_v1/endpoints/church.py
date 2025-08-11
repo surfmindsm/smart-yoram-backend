@@ -89,6 +89,39 @@ def read_church_profile(
     }
 
 
+@router.get("/gpt-config", response_model=dict)
+def read_gpt_config(
+    *,
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    Get GPT API configuration.
+    """
+    church = db.query(Church).filter(
+        Church.id == current_user.church_id
+    ).first()
+    
+    if not church:
+        raise HTTPException(
+            status_code=404,
+            detail="Church not found"
+        )
+    
+    return {
+        "success": True,
+        "data": {
+            "api_key": "sk-..." if church.gpt_api_key else None,
+            "database_connected": bool(church.gpt_api_key),
+            "last_sync": church.gpt_last_test,
+            "model": church.gpt_model or "gpt-4o-mini",
+            "max_tokens": church.max_tokens or 2000,
+            "temperature": church.temperature or 0.7,
+            "is_active": bool(church.gpt_api_key)
+        }
+    }
+
+
 @router.put("/gpt-config", response_model=dict)
 async def update_gpt_config(
     *,

@@ -17,7 +17,7 @@ router = APIRouter()
 def read_usage_analytics(
     *,
     db: Session = Depends(deps.get_db),
-    period: str = Query("month", regex="^(day|week|month|year)$"),
+    period: str = Query("month", regex="^(day|week|month|year|current_month)$"),
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
@@ -39,7 +39,7 @@ def read_usage_analytics(
         start_date = now - timedelta(days=1)
     elif period == "week":
         start_date = now - timedelta(weeks=1)
-    elif period == "month":
+    elif period in ["month", "current_month"]:
         start_date = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     else:  # year
         start_date = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -62,7 +62,7 @@ def read_usage_analytics(
     
     # Get daily usage for the period
     daily_usage = []
-    if period == "month":
+    if period in ["month", "current_month"]:
         # Group by day for the current month
         daily_stats = db.query(
             func.date(ChatMessage.created_at).label("date"),
@@ -122,6 +122,20 @@ def read_usage_analytics(
             "tokens": agent_stat.tokens or 0,
             "requests": agent_stat.requests or 0
         })
+    
+    # Return format matching frontend expectations
+    if period == "current_month" or period == "month":
+        return {
+            "success": True,
+            "data": {
+                "total_requests": total_requests,
+                "total_tokens": total_tokens,
+                "total_cost": round(cost_usd, 2),
+                "daily_stats": daily_usage,
+                "period": period,
+                "agent_usage": agent_usage
+            }
+        }
     
     return {
         "success": True,
