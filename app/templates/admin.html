@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Yoram - System Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .admin-container {
+            max-width: 1200px;
+            margin: 50px auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .admin-nav {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 30px;
+        }
+        .admin-nav a {
+            margin: 0 10px;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            color: #333;
+            transition: all 0.3s;
+        }
+        .admin-nav a:hover {
+            background: #667eea;
+            color: white;
+        }
+        .table-container {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <h1 class="mb-4">
+            <i class="bi bi-shield-lock-fill"></i> Smart Yoram System Admin
+        </h1>
+        
+        <div class="admin-nav">
+            <a href="#dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+            <a href="#churches"><i class="bi bi-building"></i> Churches</a>
+            <a href="#users"><i class="bi bi-people"></i> Users</a>
+            <a href="#agents"><i class="bi bi-robot"></i> AI Agents</a>
+            <a href="/docs" target="_blank"><i class="bi bi-file-code"></i> API Docs</a>
+            <a href="#" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Logout</a>
+        </div>
+
+        <!-- Dashboard -->
+        <div id="dashboard-section">
+            <h2 class="mb-4">System Overview</h2>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <h3 id="total-churches">0</h3>
+                        <p>Total Churches</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <h3 id="total-users">0</h3>
+                        <p>Total Users</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <h3 id="total-agents">0</h3>
+                        <p>AI Agents</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <h3 id="total-chats">0</h3>
+                        <p>Chat Sessions</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Churches Management -->
+        <div id="churches-section" class="mt-5">
+            <h2 class="mb-4">Churches Management</h2>
+            <div class="table-container">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Plan</th>
+                            <th>Users</th>
+                            <th>GPT API</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="churches-tbody">
+                        <!-- Churches will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Users Management -->
+        <div id="users-section" class="mt-5">
+            <h2 class="mb-4">Users Management</h2>
+            <div class="table-container">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Email</th>
+                            <th>Name</th>
+                            <th>Church</th>
+                            <th>Role</th>
+                            <th>Active</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-tbody">
+                        <!-- Users will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- AI Agents -->
+        <div id="agents-section" class="mt-5">
+            <h2 class="mb-4">AI Agents</h2>
+            <div class="table-container">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Church</th>
+                            <th>Category</th>
+                            <th>Usage</th>
+                            <th>Active</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="agents-tbody">
+                        <!-- Agents will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE = '/api/v1';
+        let authToken = null;
+
+        // Check authentication
+        async function checkAuth() {
+            authToken = localStorage.getItem('admin_token');
+            if (!authToken) {
+                window.location.href = '/admin/login';
+                return false;
+            }
+            return true;
+        }
+
+        // Logout
+        function logout() {
+            localStorage.removeItem('admin_token');
+            window.location.href = '/admin/login';
+        }
+
+        // Load dashboard data
+        async function loadDashboard() {
+            if (!await checkAuth()) return;
+
+            try {
+                // Load statistics
+                const headers = { 'Authorization': `Bearer ${authToken}` };
+                
+                // Churches
+                const churchesRes = await fetch(`${API_BASE}/churches/`, { headers });
+                const churches = await churchesRes.json();
+                document.getElementById('total-churches').textContent = churches.length || 0;
+                
+                // Populate churches table
+                const churchesTbody = document.getElementById('churches-tbody');
+                churchesTbody.innerHTML = '';
+                churches.forEach(church => {
+                    churchesTbody.innerHTML += `
+                        <tr>
+                            <td>${church.id}</td>
+                            <td>${church.name}</td>
+                            <td>${church.subscription_plan || 'Free'}</td>
+                            <td>${church.member_count || 0}</td>
+                            <td>${church.gpt_api_key ? '✅' : '❌'}</td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" onclick="editChurch(${church.id})">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                // Users
+                const usersRes = await fetch(`${API_BASE}/users/`, { headers });
+                const users = await usersRes.json();
+                document.getElementById('total-users').textContent = users.length || 0;
+                
+                // Populate users table
+                const usersTbody = document.getElementById('users-tbody');
+                usersTbody.innerHTML = '';
+                users.forEach(user => {
+                    usersTbody.innerHTML += `
+                        <tr>
+                            <td>${user.id}</td>
+                            <td>${user.email}</td>
+                            <td>${user.full_name || '-'}</td>
+                            <td>${user.church_id || '-'}</td>
+                            <td>${user.role || 'member'}</td>
+                            <td>${user.is_active ? '✅' : '❌'}</td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" onclick="editUser(${user.id})">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                // AI Agents
+                const agentsRes = await fetch(`${API_BASE}/agents/`, { headers });
+                const agents = await agentsRes.json();
+                document.getElementById('total-agents').textContent = agents.length || 0;
+                
+                // Populate agents table
+                const agentsTbody = document.getElementById('agents-tbody');
+                agentsTbody.innerHTML = '';
+                agents.forEach(agent => {
+                    agentsTbody.innerHTML += `
+                        <tr>
+                            <td>${agent.id}</td>
+                            <td>${agent.name}</td>
+                            <td>${agent.church_id}</td>
+                            <td>${agent.category}</td>
+                            <td>${agent.usage_count || 0}</td>
+                            <td>${agent.is_active ? '✅' : '❌'}</td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" onclick="editAgent(${agent.id})">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+                if (error.status === 401) {
+                    logout();
+                }
+            }
+        }
+
+        // Edit functions (placeholders)
+        function editChurch(id) {
+            alert(`Edit church ${id} - Feature coming soon!`);
+        }
+
+        function editUser(id) {
+            alert(`Edit user ${id} - Feature coming soon!`);
+        }
+
+        function editAgent(id) {
+            alert(`Edit agent ${id} - Feature coming soon!`);
+        }
+
+        // Load on page ready
+        document.addEventListener('DOMContentLoaded', loadDashboard);
+    </script>
+</body>
+</html>
