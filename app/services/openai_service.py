@@ -5,12 +5,9 @@ import logging
 from app.core.config import settings
 from app.core.security import decrypt_data, encrypt_data
 import json
+import asyncio
 
 logger = logging.getLogger(__name__)
-
-# Set default OpenAI configuration from environment
-openai.api_key = os.getenv("OPENAI_API_KEY", "")
-openai.organization = os.getenv("OPENAI_ORGANIZATION", "")
 
 
 class OpenAIService:
@@ -26,7 +23,7 @@ class OpenAIService:
                 self.api_key = env_key
                 openai.api_key = env_key
             else:
-                self.api_key = openai.api_key
+                self.api_key = None
             
         if organization:
             openai.organization = organization
@@ -57,17 +54,27 @@ class OpenAIService:
         Returns:
             Dictionary with response content and metadata
         """
+        if not self.api_key:
+            raise Exception("OpenAI API key not configured. Please provide an API key.")
+            
         try:
+            # Set the API key for this request
+            openai.api_key = self.api_key
+            
             # Prepare messages
             if system_prompt:
                 messages = [{"role": "system", "content": system_prompt}] + messages
             
-            # Call OpenAI API
-            response = await openai.ChatCompletion.acreate(
-                model=model,
-                messages=messages,
-                max_tokens=max_tokens,
-                temperature=temperature
+            # Call OpenAI API - using sync version in async context
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(
+                None,
+                lambda: openai.ChatCompletion.create(
+                    model=model,
+                    messages=messages,
+                    max_tokens=max_tokens,
+                    temperature=temperature
+                )
             )
             
             # Extract response
@@ -106,7 +113,13 @@ class OpenAIService:
         system_prompt: str = None
     ) -> Dict:
         """Synchronous version of generate_response"""
+        if not self.api_key:
+            raise Exception("OpenAI API key not configured. Please provide an API key.")
+            
         try:
+            # Set the API key for this request
+            openai.api_key = self.api_key
+            
             # Prepare messages
             if system_prompt:
                 messages = [{"role": "system", "content": system_prompt}] + messages
@@ -163,14 +176,21 @@ class OpenAIService:
     async def test_connection(self, api_key: str = None) -> bool:
         """Test if the API key is valid"""
         try:
-            if api_key:
-                openai.api_key = api_key
+            test_key = api_key or self.api_key
+            if not test_key:
+                return False
+                
+            openai.api_key = test_key
             
             # Simple test request
-            response = await openai.ChatCompletion.acreate(
-                model="gpt-4o-mini",
-                messages=[{"role": "user", "content": "test"}],
-                max_tokens=5
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(
+                None,
+                lambda: openai.ChatCompletion.create(
+                    model="gpt-4o-mini",
+                    messages=[{"role": "user", "content": "test"}],
+                    max_tokens=5
+                )
             )
             return True
             
@@ -210,5 +230,5 @@ class OpenAIService:
         return required_data
 
 
-# Create a singleton instance
+# Create a singleton instance with environment key if available
 openai_service = OpenAIService()
