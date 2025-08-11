@@ -1,54 +1,58 @@
-import psycopg2
+#!/usr/bin/env python3
+"""
+Check user and church relationships
+"""
+import sys
 import os
-from dotenv import load_dotenv
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Load environment variables
-load_dotenv()
+from sqlalchemy.orm import Session
+from app.db.session import SessionLocal
+from app.models import User, Church
+from app.models.ai_agent import AIAgent
+import logging
 
-# Database connection
-DATABASE_URL = os.getenv("DATABASE_URL")
-conn = psycopg2.connect(DATABASE_URL)
-cur = conn.cursor()
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-print("Checking users and their church assignments:")
-cur.execute("""
-    SELECT id, username, email, church_id, role, is_active 
-    FROM users 
-    ORDER BY id
-""")
+def check_user_church():
+    db = SessionLocal()
+    
+    try:
+        # Check user ID 14
+        user = db.query(User).filter(User.id == 14).first()
+        if user:
+            print(f"User ID 14: {user.email}")
+            print(f"  Church ID: {user.church_id}")
+            
+            # Get church info
+            if user.church_id:
+                church = db.query(Church).filter(Church.id == user.church_id).first()
+                if church:
+                    print(f"  Church Name: {church.name}")
+                    
+                    # Get agents for this church
+                    agents = db.query(AIAgent).filter(AIAgent.church_id == church.id).all()
+                    print(f"  Agents for church {church.id}: {len(agents)}")
+                    for agent in agents:
+                        print(f"    - Agent ID: {agent.id}, Name: {agent.name}")
+                else:
+                    print(f"  Church not found!")
+            else:
+                print(f"  No church assigned!")
+                
+        # Update user's church_id if needed
+        if user and user.church_id != 1:
+            print(f"\nUpdating user's church_id from {user.church_id} to 1...")
+            user.church_id = 1
+            db.commit()
+            print("Updated successfully!")
+            
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        db.rollback()
+    finally:
+        db.close()
 
-users = cur.fetchall()
-for user in users:
-    user_id, username, email, church_id, role, is_active = user
-    print(f"User {user_id}: {username} (email: {email}) - Church ID: {church_id}, Role: {role}, Active: {is_active}")
-
-print("\nChecking churches:")
-cur.execute("""
-    SELECT id, name 
-    FROM churches 
-    ORDER BY id
-""")
-
-churches = cur.fetchall()
-for church in churches:
-    church_id, name = church
-    print(f"Church {church_id}: {name}")
-
-# Check worship services for church 6
-print(f"\nChecking worship services for church 6:")
-cur.execute("""
-    SELECT id, name, location, start_time, service_type, target_group
-    FROM worship_services 
-    WHERE church_id = 6
-    ORDER BY order_index
-""")
-
-services = cur.fetchall()
-print(f"Found {len(services)} worship services:")
-for service in services:
-    service_id, name, location, start_time, service_type, target_group = service
-    print(f"  - {name}: {location} at {start_time}")
-
-# Close the connection
-cur.close()
-conn.close()
+if __name__ == "__main__":
+    check_user_church()

@@ -88,21 +88,20 @@ class OpenAIService:
                 "finish_reason": response.choices[0].finish_reason
             }
             
-        except openai.error.AuthenticationError as e:
-            logger.error(f"OpenAI authentication error: {e}")
-            raise Exception("GPT API 키가 유효하지 않습니다.")
-            
-        except openai.error.RateLimitError as e:
-            logger.error(f"OpenAI rate limit error: {e}")
-            raise Exception("API 요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요.")
-            
-        except openai.error.InvalidRequestError as e:
-            logger.error(f"OpenAI invalid request: {e}")
-            raise Exception(f"잘못된 요청입니다: {str(e)}")
-            
         except Exception as e:
-            logger.error(f"OpenAI API error: {e}")
-            raise Exception(f"AI 응답 생성 중 오류가 발생했습니다: {str(e)}")
+            error_str = str(e).lower()
+            if "authentication" in error_str or "api key" in error_str or "unauthorized" in error_str:
+                logger.error(f"OpenAI authentication error: {e}")
+                raise Exception("GPT API 키가 유효하지 않습니다.")
+            elif "rate limit" in error_str:
+                logger.error(f"OpenAI rate limit error: {e}")
+                raise Exception("API 요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요.")
+            elif "invalid request" in error_str:
+                logger.error(f"OpenAI invalid request: {e}")
+                raise Exception(f"잘못된 요청입니다: {str(e)}")
+            else:
+                logger.error(f"OpenAI API error: {e}")
+                raise Exception(f"AI 응답 생성 중 오류가 발생했습니다: {str(e)}")
     
     def generate_response_sync(
         self,
