@@ -191,8 +191,8 @@ def read_system_status(
     ).all()
     
     active_agents = sum(1 for agent in agents if agent.is_active)
-    total_tokens = sum(agent.total_tokens_used for agent in agents)
-    total_cost = sum(agent.total_cost for agent in agents)
+    total_tokens = sum(agent.total_tokens_used or 0 for agent in agents)
+    total_cost = sum(agent.total_cost or 0 for agent in agents)
     
     agents_status = {
         "total": len(agents),
