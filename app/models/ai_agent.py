@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey, Float
+from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey, Float, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base_class import Base
@@ -14,6 +14,7 @@ class OfficialAgentTemplate(Base):
     detailed_description = Column(Text)
     icon = Column(String(10), default="🤖")
     system_prompt = Column(Text, nullable=False)
+    church_data_sources = Column(JSON, default={})
     is_public = Column(Boolean, default=True)
     version = Column(String(20), default="1.0.0")
     created_by = Column(String(255), default="Smart Yoram Team")
@@ -36,6 +37,7 @@ class AIAgent(Base):
     detailed_description = Column(Text)
     icon = Column(String(10), default="🤖")
     system_prompt = Column(Text)
+    church_data_sources = Column(JSON, default={})
     is_active = Column(Boolean, default=True)
     usage_count = Column(Integer, default=0)
     total_tokens_used = Column(Integer, default=0)

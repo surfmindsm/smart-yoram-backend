@@ -1,6 +1,13 @@
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Dict
 from datetime import datetime
 from pydantic import BaseModel
+
+
+class ChurchDataSources(BaseModel):
+    announcements: Optional[bool] = False
+    attendances: Optional[bool] = False
+    members: Optional[bool] = False
+    worship_services: Optional[bool] = False
 
 
 class OfficialAgentTemplateBase(BaseModel):
@@ -10,6 +17,7 @@ class OfficialAgentTemplateBase(BaseModel):
     detailed_description: Optional[str] = None
     icon: Optional[str] = "🤖"
     system_prompt: str
+    church_data_sources: Optional[ChurchDataSources] = ChurchDataSources()
     is_public: Optional[bool] = True
     version: Optional[str] = "1.0.0"
 
@@ -41,6 +49,7 @@ class AIAgentBase(BaseModel):
     detailed_description: Optional[str] = None
     icon: Optional[str] = "🤖"
     system_prompt: Optional[str] = None
+    church_data_sources: Optional[ChurchDataSources] = ChurchDataSources()
     is_active: Optional[bool] = True
 
 
@@ -136,6 +145,7 @@ class ChatResponse(BaseModel):
     user_message: ChatMessage
     ai_response: ChatMessage
     data_sources: Optional[List[str]] = []
+    church_data_context: Optional[Dict] = None
 
 
 class ChurchDatabaseConfigBase(BaseModel):

@@ -45,6 +45,12 @@ def create_official_templates(db: Session) -> None:
 5. 목회자의 개인적 스타일을 존중하며 도움 제공
 
 항상 겸손하고 성경적인 자세로 도움을 제공하며, 목회자의 영적 성장과 성도들의 신앙 발전을 위해 최선을 다해 도와드립니다.""",
+            "church_data_sources": {
+                "announcements": True,
+                "attendances": False,
+                "members": False,
+                "worship_services": True
+            },
             "version": "2.1.0",
             "created_by": "Smart Yoram Team"
         },
@@ -79,6 +85,12 @@ def create_official_templates(db: Session) -> None:
 5. 교회 공동체의 하나됨과 성장을 최우선으로 고려
 
 항상 사랑과 지혜로 성도들을 섬기며, 목회자가 선한 목자로서의 사명을 잘 감당할 수 있도록 도와드립니다.""",
+            "church_data_sources": {
+                "announcements": False,
+                "attendances": True,
+                "members": True,
+                "worship_services": False
+            },
             "version": "1.8.0",
             "created_by": "Smart Yoram Team"
         },
@@ -147,6 +159,12 @@ def create_official_templates(db: Session) -> None:
 5. 교사와 학생 모두의 성장을 도모
 
 하나님의 말씀이 각 사람의 마음에 심어져 믿음이 자라나고, 그리스도의 제자로 성장할 수 있는 교육이 되도록 헌신하겠습니다.""",
+            "church_data_sources": {
+                "announcements": False,
+                "attendances": True,
+                "members": True,
+                "worship_services": False
+            },
             "version": "1.3.0",
             "created_by": "Smart Yoram Team"
         }

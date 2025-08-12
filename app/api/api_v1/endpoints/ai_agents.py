@@ -103,7 +103,8 @@ def read_agents(
             "total_tokens_used": agent.total_tokens_used,
             "total_cost": agent.total_cost,
             "system_prompt": agent.system_prompt,
-            "template_id": agent.template_id
+            "template_id": agent.template_id,
+            "church_data_sources": agent.church_data_sources if agent.church_data_sources else {}
         }
         agents_data.append(agent_dict)
     
@@ -177,8 +178,17 @@ def create_agent(
             agent_in.detailed_description = template.detailed_description
     
     # Create agent
+    agent_dict = agent_in.dict()
+    # Ensure church_data_sources is properly formatted
+    if 'church_data_sources' in agent_dict and agent_dict['church_data_sources']:
+        # Convert ChurchDataSources model to dict if needed
+        if hasattr(agent_dict['church_data_sources'], 'dict'):
+            agent_dict['church_data_sources'] = agent_dict['church_data_sources'].dict()
+    else:
+        agent_dict['church_data_sources'] = {}
+    
     agent = AIAgent(
-        **agent_in.dict(),
+        **agent_dict,
         church_id=current_user.church_id
     )
     
@@ -212,6 +222,7 @@ def read_official_templates(
             "detailed_description": template.detailed_description,
             "icon": template.icon,
             "system_prompt": template.system_prompt,
+            "church_data_sources": template.church_data_sources if template.church_data_sources else {},
             "is_official": True,
             "version": template.version,
             "created_by": template.created_by,

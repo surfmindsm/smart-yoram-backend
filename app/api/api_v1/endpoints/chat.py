@@ -14,7 +14,7 @@ from app.schemas.ai_agent import (
     ChatRequest, ChatResponse
 )
 from app.services.openai_service import openai_service
-from app.services.church_data_service import get_church_data
+from app.services.church_data_context import get_church_context_data, format_context_for_prompt
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -253,16 +253,14 @@ async def send_message(
     db.refresh(user_message)
     
     try:
-        # Analyze message to determine needed data
-        required_data = openai_service.analyze_message_intent(chat_request.content)
-        
-        # Get church data if needed
-        church_data = {}
-        if required_data:
-            church_data = await get_church_data(
+        # Get church data based on agent's data sources configuration
+        church_context = {}
+        if agent.church_data_sources:
+            church_context = get_church_context_data(
+                db=db,
                 church_id=current_user.church_id,
-                data_types=required_data,
-                db=db
+                church_data_sources=agent.church_data_sources,
+                user_query=chat_request.content
             )
         
         # Get recent conversation history
@@ -283,9 +281,11 @@ async def send_message(
         })
         
         # Add church data context if available
-        if church_data:
-            context = f"\n\n[교회 데이터 컨텍스트]\n{church_data}\n\n"
-            messages[-1]["content"] = context + messages[-1]["content"]
+        if church_context:
+            context_text = format_context_for_prompt(church_context)
+            if context_text:
+                # Add context to the system prompt, not the user message
+                enhanced_system_prompt = agent.system_prompt + "\n\n" + context_text
         
         # Use test service if no valid API key is configured
         use_test_service = False
@@ -312,12 +312,15 @@ async def send_message(
             church_openai_service = OpenAIService(api_key=api_key)
         
         # Generate AI response
+        # Use enhanced system prompt if church context is available
+        final_system_prompt = enhanced_system_prompt if church_context and 'enhanced_system_prompt' in locals() else agent.system_prompt
+        
         response = await church_openai_service.generate_response(
             messages=messages,
             model=church.gpt_model or "gpt-4o-mini",
             max_tokens=church.max_tokens or 4000,
             temperature=church.temperature or 0.7,
-            system_prompt=agent.system_prompt
+            system_prompt=final_system_prompt
         )
         
         # Save AI response
@@ -364,7 +367,8 @@ async def send_message(
                     "content": ai_message.content,
                     "role": ai_message.role,
                     "tokens_used": ai_message.tokens_used,
-                    "data_sources": required_data,
+                    "data_sources": list(church_context.keys()) if church_context else [],
+                    "church_data_context": church_context if church_context else None,
                     "timestamp": ai_message.created_at
                 }
             }
