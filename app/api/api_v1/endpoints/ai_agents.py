@@ -30,7 +30,7 @@ def read_agent_templates(
     # For now, return empty templates if table doesn't exist
     try:
         templates = db.query(OfficialAgentTemplate).filter(
-            OfficialAgentTemplate.is_active == True
+            OfficialAgentTemplate.is_public == True
         ).offset(skip).limit(limit).all()
     except Exception as e:
         logger.warning(f"Failed to fetch templates: {e}")
