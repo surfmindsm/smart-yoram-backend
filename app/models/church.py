@@ -44,3 +44,6 @@ class Church(Base):
     ai_agents = relationship("AIAgent", back_populates="church")
     chat_histories = relationship("ChatHistory", back_populates="church")
     database_config = relationship("ChurchDatabaseConfig", back_populates="church", uselist=False)
+    pastoral_care_requests = relationship("PastoralCareRequest", back_populates="church")
+    prayer_requests = relationship("PrayerRequest", back_populates="church")
+    prayer_participations = relationship("PrayerParticipation", back_populates="church")

@@ -19,3 +19,6 @@ from .ai_agent import (
     OfficialAgentTemplate, AIAgent, ChatHistory, 
     ChatMessage, ChurchDatabaseConfig
 )
+from .pastoral_care import (
+    PastoralCareRequest, PrayerRequest, PrayerParticipation
+)

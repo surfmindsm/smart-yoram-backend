@@ -35,3 +35,8 @@ class User(Base):
     
     # Chat relationships
     chat_histories = relationship("ChatHistory", back_populates="user")
+    
+    # Pastoral care and prayer relationships
+    pastoral_care_requests = relationship("PastoralCareRequest", foreign_keys="PastoralCareRequest.member_id", back_populates="member")
+    prayer_requests = relationship("PrayerRequest", back_populates="member")
+    prayer_participations = relationship("PrayerParticipation", back_populates="member")
