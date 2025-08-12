@@ -6,7 +6,7 @@ import logging
 
 from app.models.announcement import Announcement
 from app.models.user import User
-from app.models.worship_schedule import WorshipSchedule, WorshipAttendance
+from app.models.worship_schedule import WorshipService
 
 logger = logging.getLogger(__name__)
 
@@ -81,50 +81,12 @@ def get_attendance_stats(db: Session, church_id: int) -> Dict:
     Get attendance statistics for the church.
     """
     try:
-        # Get last 4 weeks of attendance data
-        four_weeks_ago = datetime.now() - timedelta(weeks=4)
-        
-        attendances = db.query(
-            WorshipAttendance.worship_date,
-            func.count(WorshipAttendance.id).label('attendance_count')
-        ).join(
-            WorshipSchedule
-        ).filter(
-            WorshipSchedule.church_id == church_id,
-            WorshipAttendance.worship_date >= four_weeks_ago,
-            WorshipAttendance.status == 'present'
-        ).group_by(
-            WorshipAttendance.worship_date
-        ).order_by(
-            desc(WorshipAttendance.worship_date)
-        ).all()
-        
-        # Calculate average attendance
-        total_attendance = sum(att.attendance_count for att in attendances)
-        avg_attendance = total_attendance / len(attendances) if attendances else 0
-        
-        # Get last week's attendance
-        last_week = datetime.now() - timedelta(weeks=1)
-        last_week_attendance = db.query(
-            func.count(WorshipAttendance.id)
-        ).join(
-            WorshipSchedule
-        ).filter(
-            WorshipSchedule.church_id == church_id,
-            WorshipAttendance.worship_date >= last_week,
-            WorshipAttendance.status == 'present'
-        ).scalar() or 0
-        
+        # TODO: Implement when attendance tracking is available
+        # For now, return mock data
         return {
-            "average_weekly_attendance": round(avg_attendance),
-            "last_week_attendance": last_week_attendance,
-            "recent_attendances": [
-                {
-                    "date": att.worship_date.isoformat() if att.worship_date else None,
-                    "count": att.attendance_count
-                }
-                for att in attendances[:4]
-            ]
+            "average_weekly_attendance": 0,
+            "last_week_attendance": 0,
+            "recent_attendances": []
         }
     except Exception as e:
         logger.error(f"Error fetching attendance stats: {e}")
@@ -199,12 +161,12 @@ def get_worship_schedule(db: Session, church_id: int) -> List[Dict]:
         # Get next 2 weeks of worship services
         two_weeks_later = datetime.now() + timedelta(weeks=2)
         
-        services = db.query(WorshipSchedule).filter(
-            WorshipSchedule.church_id == church_id,
-            WorshipSchedule.worship_date >= datetime.now(),
-            WorshipSchedule.worship_date <= two_weeks_later,
-            WorshipSchedule.is_active == True
-        ).order_by(WorshipSchedule.worship_date).all()
+        services = db.query(WorshipService).filter(
+            WorshipService.church_id == church_id,
+            WorshipService.worship_date >= datetime.now(),
+            WorshipService.worship_date <= two_weeks_later,
+            WorshipService.is_active == True
+        ).order_by(WorshipService.worship_date).all()
         
         return [
             {
