@@ -20,3 +20,7 @@ from .pastoral_care import (
     PastoralCareStats, PrayerRequestStats,
     PastoralCareRequestList, PrayerRequestList
 )
+
+# Enhanced schemas
+from . import financial
+from . import member_enhanced
