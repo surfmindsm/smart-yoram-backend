@@ -6,7 +6,6 @@ from sqlalchemy import and_, or_
 
 from app import models, schemas
 from app.api import deps
-from app.core.security import get_current_active_user
 
 router = APIRouter()
 
@@ -16,7 +15,7 @@ router = APIRouter()
 def get_member_enhanced(
     member_id: int,
     db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(get_current_active_user)
+    current_user: models.User = Depends(deps.get_current_active_user)
 ):
     """Get member with all enhanced data (contacts, addresses, ministries, etc.)"""
     member = db.query(models.Member).options(
@@ -47,7 +46,7 @@ def get_member_enhanced(
 def get_member_contacts(
     member_id: int,
     db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(get_current_active_user)
+    current_user: models.User = Depends(deps.get_current_active_user)
 ):
     """Get all contacts for a member"""
     # Verify member belongs to user's church
@@ -75,7 +74,7 @@ def create_member_contact(
     *,
     db: Session = Depends(deps.get_db),
     contact_in: schemas.member_enhanced.MemberContactCreate,
-    current_user: models.User = Depends(get_current_active_user)
+    current_user: models.User = Depends(deps.get_current_active_user)
 ):
     """Create a new contact for a member"""
     # Verify member belongs to user's church
@@ -104,7 +103,7 @@ def create_member_contact(
 def get_member_ministries(
     member_id: int,
     db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(get_current_active_user)
+    current_user: models.User = Depends(deps.get_current_active_user)
 ):
     """Get all ministry positions for a member"""
     # Verify member belongs to user's church
@@ -132,7 +131,7 @@ def create_member_ministry(
     *,
     db: Session = Depends(deps.get_db),
     ministry_in: schemas.member_enhanced.MemberMinistryCreate,
-    current_user: models.User = Depends(get_current_active_user)
+    current_user: models.User = Depends(deps.get_current_active_user)
 ):
     """Create a new ministry position for a member"""
     # Verify member belongs to user's church
@@ -161,7 +160,7 @@ def create_member_ministry(
 def get_member_sacraments(
     member_id: int,
     db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(get_current_active_user)
+    current_user: models.User = Depends(deps.get_current_active_user)
 ):
     """Get all sacraments for a member"""
     # Verify member belongs to user's church
@@ -189,7 +188,7 @@ def create_member_sacrament(
     *,
     db: Session = Depends(deps.get_db),
     sacrament_in: schemas.member_enhanced.SacramentCreate,
-    current_user: models.User = Depends(get_current_active_user)
+    current_user: models.User = Depends(deps.get_current_active_user)
 ):
     """Record a new sacrament for a member"""
     # Verify member belongs to user's church
@@ -218,7 +217,7 @@ def create_member_sacrament(
 def get_member_transfers(
     member_id: int,
     db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(get_current_active_user)
+    current_user: models.User = Depends(deps.get_current_active_user)
 ):
     """Get all transfer records for a member"""
     # Verify member belongs to user's church
@@ -246,7 +245,7 @@ def create_member_transfer(
     *,
     db: Session = Depends(deps.get_db),
     transfer_in: schemas.member_enhanced.TransferCreate,
-    current_user: models.User = Depends(get_current_active_user)
+    current_user: models.User = Depends(deps.get_current_active_user)
 ):
     """Record a new transfer for a member"""
     # Verify member belongs to user's church
@@ -274,7 +273,7 @@ def create_member_transfer(
 @router.get("/codes", response_model=List[schemas.member_enhanced.Code])
 def get_codes(
     db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(get_current_active_user),
+    current_user: models.User = Depends(deps.get_current_active_user),
     type: Optional[str] = Query(None)
 ):
     """Get all codes for the church, optionally filtered by type"""
@@ -294,7 +293,7 @@ def create_code(
     *,
     db: Session = Depends(deps.get_db),
     code_in: schemas.member_enhanced.CodeCreate,
-    current_user: models.User = Depends(get_current_active_user)
+    current_user: models.User = Depends(deps.get_current_active_user)
 ):
     """Create a new code"""
     # Check if code already exists for this church and type

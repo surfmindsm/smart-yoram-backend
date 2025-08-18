@@ -8,7 +8,6 @@ from sqlalchemy import and_, func, extract
 
 from app import models, schemas
 from app.api import deps
-from app.core.security import get_current_active_user
 
 router = APIRouter()
 
@@ -17,7 +16,7 @@ router = APIRouter()
 @router.get("/donors", response_model=List[schemas.financial.Donor])
 def get_donors(
     db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(get_current_active_user),
+    current_user: models.User = Depends(deps.get_current_active_user),
     skip: int = 0,
     limit: int = 100
 ):
@@ -35,7 +34,7 @@ def create_donor(
     *,
     db: Session = Depends(deps.get_db),
     donor_in: schemas.financial.DonorCreate,
-    current_user: models.User = Depends(get_current_active_user)
+    current_user: models.User = Depends(deps.get_current_active_user)
 ):
     """Create a new donor"""
     # Verify member belongs to user's church if member_id is provided
@@ -61,7 +60,7 @@ def create_donor(
 def get_donor(
     donor_id: int,
     db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(get_current_active_user)
+    current_user: models.User = Depends(deps.get_current_active_user)
 ):
     """Get a specific donor"""
     donor = db.query(models.Donor).join(
@@ -83,7 +82,7 @@ def get_donor(
 @router.get("/offerings", response_model=List[schemas.financial.Offering])
 def get_offerings(
     db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(get_current_active_user),
+    current_user: models.User = Depends(deps.get_current_active_user),
     donor_id: Optional[int] = Query(None),
     fund_type: Optional[str] = Query(None),
     start_date: Optional[date] = Query(None),
@@ -114,7 +113,7 @@ def create_offering(
     *,
     db: Session = Depends(deps.get_db),
     offering_in: schemas.financial.OfferingCreate,
-    current_user: models.User = Depends(get_current_active_user)
+    current_user: models.User = Depends(deps.get_current_active_user)
 ):
     """Create a new offering record"""
     # Verify donor exists and belongs to user's church
@@ -144,7 +143,7 @@ def create_offering(
 @router.get("/fund-types", response_model=List[schemas.financial.FundType])
 def get_fund_types(
     db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(get_current_active_user),
+    current_user: models.User = Depends(deps.get_current_active_user),
     is_active: Optional[bool] = Query(True)
 ):
     """Get fund types for the current user's church"""
@@ -164,7 +163,7 @@ def create_fund_type(
     *,
     db: Session = Depends(deps.get_db),
     fund_type_in: schemas.financial.FundTypeCreate,
-    current_user: models.User = Depends(get_current_active_user)
+    current_user: models.User = Depends(deps.get_current_active_user)
 ):
     """Create a new fund type"""
     # Check if code already exists for this church
@@ -192,7 +191,7 @@ def create_fund_type(
 @router.get("/receipts", response_model=List[schemas.financial.Receipt])
 def get_receipts(
     db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(get_current_active_user),
+    current_user: models.User = Depends(deps.get_current_active_user),
     tax_year: Optional[int] = Query(None),
     donor_id: Optional[int] = Query(None),
     skip: int = 0,
@@ -217,7 +216,7 @@ def create_receipt(
     *,
     db: Session = Depends(deps.get_db),
     receipt_in: schemas.financial.ReceiptCreate,
-    current_user: models.User = Depends(get_current_active_user)
+    current_user: models.User = Depends(deps.get_current_active_user)
 ):
     """Create a new receipt"""
     # Verify donor exists and belongs to user's church
@@ -250,7 +249,7 @@ def create_receipt(
 @router.get("/statistics/offerings-summary", response_model=List[schemas.financial.OfferingSummary])
 def get_offerings_summary(
     db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(get_current_active_user),
+    current_user: models.User = Depends(deps.get_current_active_user),
     start_date: date = Query(...),
     end_date: date = Query(...),
     group_by: str = Query("fund_type", regex="^(fund_type|month)$")
@@ -313,7 +312,7 @@ def get_offerings_summary(
 @router.get("/statistics/donor-summary", response_model=List[schemas.financial.DonorSummary])
 def get_donor_summary(
     db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(get_current_active_user),
+    current_user: models.User = Depends(deps.get_current_active_user),
     start_date: date = Query(...),
     end_date: date = Query(...),
     limit: int = Query(50, le=100)
