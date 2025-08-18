@@ -28,6 +28,8 @@ from app.api.api_v1.endpoints import (
     debug,
     pastoral_care,
     prayer_requests,
+    financial,
+    member_enhanced,
 )
 
 
@@ -61,3 +63,5 @@ api_router.include_router(analytics.router, prefix="/analytics", tags=["analytic
 api_router.include_router(debug.router, prefix="/debug", tags=["debug"])
 api_router.include_router(pastoral_care.router, prefix="/pastoral-care", tags=["pastoral_care"])
 api_router.include_router(prayer_requests.router, prefix="/prayer-requests", tags=["prayer_requests"])
+api_router.include_router(financial.router, prefix="/financial", tags=["financial"])
+api_router.include_router(member_enhanced.router, prefix="/members", tags=["member_enhanced"])

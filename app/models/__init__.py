@@ -22,3 +22,20 @@ from .ai_agent import (
 from .pastoral_care import (
     PastoralCareRequest, PrayerRequest, PrayerParticipation
 )
+
+# Enhanced models
+from .member_enhanced import (
+    Code, Address, File, AuditLog, MemberContact, MemberAddress,
+    MemberVehicle, MemberFamily, MemberStatusHistory, MemberMinistry,
+    MemberChurchSchool, Sacrament, Marriage, Transfer, EducationNote
+)
+from .financial import (
+    Donor, Offering, Receipt, ReceiptItem, ReceiptSnapshot,
+    FundType, FinancialReport
+)
+from .visit import (
+    Visit, VisitPeople, VisitIndex, DailyMinistryReport, DailyMinistryLink
+)
+from .system import (
+    Service, SearchPreset, PrintJob, StatsSnapshot
+)

@@ -8,11 +8,14 @@ class Church(Base):
     __tablename__ = "churches"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False)
-    address = Column(String)
+    name = Column(String, nullable=False)  # 단체명
+    business_no = Column(String)  # 사업자등록번호
+    rrn_encrypted = Column(String)  # 주민등록번호 (단체용, 암호화)
+    address = Column(String)  # 소재지
     phone = Column(String)
     email = Column(String)
     pastor_name = Column(String)
+    district_scheme = Column(String)  # 구역/교구 체계 명칭
 
     subscription_status = Column(String, default="trial")  # trial, active, expired
     subscription_end_date = Column(DateTime)
