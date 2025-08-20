@@ -24,40 +24,53 @@ class Settings(BaseSettings):
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
-        if isinstance(v, str):
-            # Handle empty string
-            if not v or v.strip() == "":
-                return []
+        try:
+            if isinstance(v, str):
+                # Handle empty string
+                if not v or v.strip() == "":
+                    return ["*"]  # Allow all origins as fallback
 
-            # Fix smart quotes to regular quotes
-            v = (
-                v.replace('"', '"')
-                .replace('"', '"')
-                .replace("'", "'")
-                .replace("'", "'")
-            )
+                # Fix smart quotes to regular quotes
+                v = (
+                    v.replace('"', '"')
+                    .replace('"', '"')
+                    .replace("'", "'")
+                    .replace("'", "'")
+                    .replace("\\n", "")  # Remove newlines
+                    .replace("\\r", "")  # Remove carriage returns
+                    .strip()
+                )
 
-            # Handle JSON array format
-            if v.startswith("["):
-                # Try to parse as JSON
-                try:
-                    return json.loads(v)
-                except json.JSONDecodeError as e:
-                    print(f"Warning: Failed to parse BACKEND_CORS_ORIGINS as JSON: {e}")
-                    print(f"Value: {v[:100]}...")
-                    # If JSON parsing fails, try to clean and split
-                    v = v.strip("[]")
-                    return [
-                        i.strip().strip('"').strip("'")
-                        for i in v.split(",")
-                        if i.strip()
-                    ]
-            else:
-                # Split by comma
-                return [i.strip() for i in v.split(",") if i.strip()]
-        elif isinstance(v, list):
-            return v
-        return []
+                # Handle JSON array format
+                if v.startswith("["):
+                    # Try to parse as JSON
+                    try:
+                        result = json.loads(v)
+                        if isinstance(result, list):
+                            return result
+                    except json.JSONDecodeError:
+                        # If JSON parsing fails, try to clean and split
+                        v = v.strip("[]")
+                        origins = []
+                        for item in v.split(","):
+                            cleaned = item.strip().strip('"').strip("'").strip()
+                            if cleaned:
+                                origins.append(cleaned)
+                        return origins if origins else ["*"]
+                else:
+                    # Split by comma
+                    origins = []
+                    for item in v.split(","):
+                        cleaned = item.strip()
+                        if cleaned:
+                            origins.append(cleaned)
+                    return origins if origins else ["*"]
+            elif isinstance(v, list):
+                return v
+            return ["*"]  # Allow all origins as fallback
+        except Exception as e:
+            print(f"Error parsing BACKEND_CORS_ORIGINS: {e}, using wildcard")
+            return ["*"]  # Allow all origins on error
 
     FIRST_SUPERUSER: str = "admin@smartyoram.com"
     FIRST_SUPERUSER_PASSWORD: str = "changeme"
