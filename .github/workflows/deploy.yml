@@ -98,14 +98,26 @@ jobs:
           --exclude='private_key.pem' \
           ./ ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:${{ env.DEPLOY_PATH }}/
         
-        # Decode base64 ENV_FILE and write to a temporary file
-        echo "${{ vars.ENV_FILE_BASE64 }}" | base64 -d > env_temp.txt
-        
-        # Copy the env file to EC2
-        scp -i private_key.pem -o StrictHostKeyChecking=no env_temp.txt ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:/home/ubuntu/smart-yoram-backend/.env
-        
-        # Remove temporary file
-        rm -f env_temp.txt
+        # Check if ENV_FILE_BASE64 is set
+        if [ -z "${{ vars.ENV_FILE_BASE64 }}" ]; then
+          echo "Warning: ENV_FILE_BASE64 is not set in GitHub Environment Variables"
+          echo "Using existing .env file on server or creating from template"
+        else
+          # Decode base64 ENV_FILE and write to a temporary file
+          echo "${{ vars.ENV_FILE_BASE64 }}" | base64 -d > env_temp.txt 2>/dev/null || {
+            echo "Error: Failed to decode ENV_FILE_BASE64"
+            echo "Please ensure ENV_FILE_BASE64 contains valid base64 encoded content"
+            exit 1
+          }
+          
+          # Copy the env file to EC2
+          scp -i private_key.pem -o StrictHostKeyChecking=no env_temp.txt ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:/home/ubuntu/smart-yoram-backend/.env
+          
+          # Remove temporary file
+          rm -f env_temp.txt
+          
+          echo "✅ .env file successfully transferred to EC2"
+        fi
         
         # Deploy script on EC2
         ssh -i private_key.pem -o StrictHostKeyChecking=no ${{ env.EC2_USER }}@${{ env.EC2_HOST }} << 'ENDSSH'
@@ -114,9 +126,26 @@ jobs:
           echo "Starting deployment..."
           cd /home/ubuntu/smart-yoram-backend
           
-          # Set proper permissions for .env file
-          chmod 600 .env
-          echo "✅ .env file transferred and permissions set"
+          # Check if .env file exists
+          if [ -f .env ]; then
+            chmod 600 .env
+            echo "✅ .env file found and permissions set"
+          else
+            echo "WARNING: .env file not found!"
+            echo "Please set ENV_FILE_BASE64 in GitHub Environment Variables"
+            echo "Or create .env file manually on the server"
+            
+            # Try to use .env.example as template
+            if [ -f .env.example ]; then
+              echo "Creating .env from .env.example template..."
+              cp .env.example .env
+              chmod 600 .env
+              echo "⚠️  Using template .env file - please update with actual values"
+            else
+              echo "ERROR: No .env file and no template found!"
+              exit 1
+            fi
+          fi
           
           # Check if using Docker
           if [ -f "docker-compose.yml" ]; then
