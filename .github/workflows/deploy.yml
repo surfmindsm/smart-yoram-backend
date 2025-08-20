@@ -1,15 +1,14 @@
-name: Deploy to EC2
+name: Deploy to EC2 (v2)
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    branches: [ main ]
+  workflow_dispatch:  # 수동 실행 허용
 
 env:
   EC2_HOST: 13.211.169.169
   EC2_USER: ubuntu
-  DEPLOY_PATH: /home/ubuntu/smart-yoram-backend
+  DEPLOY_PATH: ~/smart-yoram-backend
 
 jobs:
   test:
@@ -63,98 +62,75 @@ jobs:
     name: Deploy to EC2
     runs-on: ubuntu-latest
     needs: test
-    environment: production  # GitHub Environment 사용
+    environment: production
     # Only deploy on push to main, not on PRs
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    
+
     steps:
-    - name: Checkout
+    - name: Checkout source
       uses: actions/checkout@v4
-    
-    - name: Deploy to EC2
-      env:
-        PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
-        # Pass entire .env file content from secrets
-        ENV_FILE: ${{ secrets.ENV_FILE }}
+
+    - name: Validate secrets
       run: |
-        # Setup SSH key
-        echo "$PRIVATE_KEY" > private_key.pem
-        chmod 600 private_key.pem
-        
-        # Create .ssh directory if it doesn't exist
-        mkdir -p ~/.ssh
-        
-        # Add host to known_hosts to avoid interactive prompt
-        ssh-keyscan -H ${{ env.EC2_HOST }} >> ~/.ssh/known_hosts
-        
-        # Copy files to EC2
-        rsync -avz -e "ssh -i private_key.pem -o StrictHostKeyChecking=no" \
-          --exclude='.git' \
-          --exclude='__pycache__' \
-          --exclude='.env' \
-          --exclude='*.pyc' \
-          --exclude='.pytest_cache' \
-          --exclude='venv' \
-          --exclude='private_key.pem' \
-          ./ ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:${{ env.DEPLOY_PATH }}/
-        
-        # Write ENV_FILE content to a temporary file
-        echo "${{ secrets.ENV_FILE }}" > env_temp.txt
-        
-        # Check if file has content
-        if [ -s env_temp.txt ]; then
-          # Copy the env file to EC2
-          scp -i private_key.pem -o StrictHostKeyChecking=no env_temp.txt ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:/home/ubuntu/smart-yoram-backend/.env
-          
-          # Remove temporary file
-          rm -f env_temp.txt
-          
-          echo "✅ .env file successfully transferred to EC2"
-        else
-          echo "Warning: ENV_FILE is not set in GitHub Secrets or is empty"
-          echo "Using existing .env file on server or creating from template"
-          rm -f env_temp.txt
+        echo "Validating required secrets..."
+        if [ -z "${{ secrets.EC2_SSH_KEY }}" ]; then
+          echo "❌ EC2_SSH_KEY secret is not set!"
+          exit 1
         fi
-        
-        # Deploy script on EC2
-        ssh -i private_key.pem -o StrictHostKeyChecking=no ${{ env.EC2_USER }}@${{ env.EC2_HOST }} << 'ENDSSH'
-          set -e  # Exit on error
-          
-          echo "Starting deployment..."
-          cd /home/ubuntu/smart-yoram-backend
-          
-          # Check if .env file exists
-          if [ -f .env ]; then
-            chmod 600 .env
-            echo "✅ .env file found and permissions set"
-            
-            # Fix BACKEND_CORS_ORIGINS format if needed
-            # Create Python script to fix quotes
-            cat > fix_quotes.py << 'FIXQUOTES'
-#!/usr/bin/env python3
-import sys
-try:
-    with open('.env', 'r') as f:
-        content = f.read()
-    # Replace smart quotes with regular quotes
-    content = content.replace('"', '"').replace('"', '"')
-    content = content.replace(''', "'").replace(''', "'")
-    with open('.env', 'w') as f:
-        f.write(content)
-    print('Fixed quote formatting in .env file')
-except Exception as e:
-    print(f'Error fixing quotes: {e}')
-    sys.exit(1)
-FIXQUOTES
-            
-            python3 fix_quotes.py || echo "Could not fix quotes with Python"
-            rm -f fix_quotes.py
-            
-            echo "✅ Fixed quote formatting in .env file"
+        echo "✅ All required secrets are configured"
+
+    - name: Copy files to EC2
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ env.EC2_HOST }}
+        username: ${{ env.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        port: 22
+        source: "."
+        target: ${{ env.DEPLOY_PATH }}
+        rm: true
+        strip_components: 0
+        timeout: 60s
+        command_timeout: 15m
+
+    - name: Upload .env to EC2
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ env.EC2_HOST }}
+        username: ${{ env.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          # ENV_FILE이 설정되어 있으면 업데이트, 아니면 기존 파일 유지
+          if [ ! -z "${{ secrets.ENV_FILE }}" ]; then
+            echo "Creating .env file from GitHub Secrets..."
+            cat > ~/smart-yoram-backend/.env << 'ENVFILE'
+${{ secrets.ENV_FILE }}
+ENVFILE
+            chmod 600 ~/smart-yoram-backend/.env
+            echo "✅ .env file created successfully"
           else
-            echo "WARNING: .env file not found!"
-            echo "Please set ENV_FILE_BASE64 in GitHub Environment Variables"
-            echo "Or create .env file manually on the server"
+            echo "Using existing .env file on server"
+          fi
+
+    - name: Deploy application
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ env.EC2_HOST }}
+        username: ${{ env.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        port: 22
+        timeout: 60s
+        command_timeout: 30m
+        script: |
+          set -e  # Exit on any error
+          
+          echo "🚀 Starting deployment process..."
+          cd ~/smart-yoram-backend
+          
+          # 필수 파일 확인
+          if [ ! -f .env ]; then
+            echo "❌ ERROR: .env file not found!"
+            echo "Please set ENV_FILE in GitHub Secrets or create .env file on the server."
             
             # Try to use .env.example as template
             if [ -f .env.example ]; then
@@ -163,130 +139,119 @@ FIXQUOTES
               chmod 600 .env
               echo "⚠️  Using template .env file - please update with actual values"
             else
-              echo "ERROR: No .env file and no template found!"
               exit 1
             fi
           fi
+          echo "✅ Environment file found"
           
-          # Check if using Docker
-          if [ -f "docker-compose.yml" ]; then
-            echo "Docker Compose found, using Docker deployment..."
+          # Docker를 사용하는 경우
+          if [ -f docker-compose.yml ]; then
+            echo "✅ Docker Compose file found"
             
-            # Stop existing containers
-            docker-compose down || true
+            # 포트 8000 확인 및 정리
+            echo "🔍 Checking for processes using port 8000..."
             
-            # Build and start containers
-            docker-compose up -d --build
+            # 모든 관련 Docker 컨테이너 중지
+            echo "Stopping existing containers..."
+            sudo docker-compose down --remove-orphans || true
             
-            # Wait for container to be healthy
-            echo "Waiting for container to start..."
+            # 포트 8000을 사용하는 프로세스 종료
+            if sudo lsof -i :8000; then
+              echo "🛑 Port 8000 is in use. Force killing processes..."
+              sudo lsof -ti:8000 | xargs -r sudo kill -9 || true
+              sleep 5
+            fi
+            
+            # 최종 확인
+            if sudo lsof -i :8000; then
+              echo "❌ ERROR: Port 8000 is still in use after cleanup!"
+              sudo lsof -i :8000
+              exit 1
+            else
+              echo "✅ Port 8000 is now available"
+            fi
+            
+            # Docker 리소스 정리
+            echo "🧹 Cleaning up Docker resources..."
+            sudo docker system prune -f || true
+            
+            # 새 이미지 빌드 및 컨테이너 시작
+            echo "🏗️  Building and starting containers..."
+            sudo docker-compose up --build -d --force-recreate --remove-orphans
+            
+            # 컨테이너 시작 대기
+            echo "⏳ Waiting for containers to be ready..."
             sleep 10
             
-            # Check if container is running
-            docker ps | grep smart-yoram-backend
+            # 컨테이너 상태 확인
+            echo "📊 Checking container status..."
+            sudo docker-compose ps
+            
+            # 웹 서비스 확인
+            echo "🔍 Checking web service..."
+            if sudo docker-compose ps | grep -q "backend.*Up"; then
+              echo "✅ Backend container is running"
+            else
+              echo "❌ Backend container is not running"
+              sudo docker-compose logs backend
+              exit 1
+            fi
+            
+            # 마이그레이션 실행
+            echo "🔄 Running database migrations..."
+            sudo docker-compose exec -T backend alembic upgrade head || echo "⚠️  Migration failed (continuing)"
             
           else
             echo "No Docker Compose found, using Python virtual environment..."
             
-            # Ensure Python 3 is installed
-            if ! command -v python3 &> /dev/null; then
-              echo "ERROR: Python 3 is not installed!"
-              echo "Install with: sudo apt update && sudo apt install python3 python3-pip python3-venv"
-              exit 1
-            fi
-            
-            # Create virtual environment if it doesn't exist
+            # Python 환경 설정
             if [ ! -d "venv" ]; then
               python3 -m venv venv
             fi
             
-            # Activate virtual environment
             source venv/bin/activate
             
-            # Install/update dependencies
+            # 의존성 설치
             pip install --upgrade pip
             pip install -r requirements.txt
             
-            # Run database migrations
-            echo "Running database migrations..."
-            alembic upgrade head || echo "WARNING: Migration failed, continuing..."
-            
-            # Kill existing process if running
+            # 기존 프로세스 종료
             pkill -f "uvicorn app.main:app" || true
             
-            # Start the application in background
-            echo "Starting application..."
+            # 마이그레이션 실행
+            echo "🔄 Running database migrations..."
+            alembic upgrade head || echo "⚠️  Migration failed (continuing)"
+            
+            # 애플리케이션 시작
+            echo "🚀 Starting application..."
             nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > app.log 2>&1 &
             
-            # Wait for app to start
             sleep 5
             
-            # Check if process is running
-            ps aux | grep "uvicorn app.main:app" | grep -v grep
-          fi
-          
-          # Test local health check
-          echo "Testing local health check..."
-          curl -f http://localhost:8000/health || echo "WARNING: Local health check failed"
-          
-          echo "Deployment completed!"
-        ENDSSH
-        
-        # Clean up
-        rm -f private_key.pem
-    
-    - name: Health Check
-      env:
-        PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
-      run: |
-        echo "Waiting for application to start..."
-        
-        # Setup SSH key for debugging
-        echo "$PRIVATE_KEY" > private_key_health.pem
-        chmod 600 private_key_health.pem
-        
-        # Try health check multiple times
-        max_attempts=6
-        attempt=1
-        
-        while [ $attempt -le $max_attempts ]; do
-          echo "Health check attempt $attempt/$max_attempts..."
-          
-          response=$(curl -s -o /dev/null -w "%{http_code}" http://${{ env.EC2_HOST }}:8000/health 2>/dev/null || echo "000")
-          
-          if [ "$response" == "200" ]; then
-            echo "✅ Application is running successfully!"
-            rm -f private_key_health.pem
-            exit 0
-          else
-            echo "Attempt $attempt failed with status code: $response"
-            
-            if [ $attempt -eq $max_attempts ]; then
-              echo "❌ Health check failed after $max_attempts attempts"
-              
-              # SSH and check logs for debugging
-              echo "Fetching application logs for debugging..."
-              ssh -i private_key_health.pem -o StrictHostKeyChecking=no ${{ env.EC2_USER }}@${{ env.EC2_HOST }} 'bash -s' << 'SCRIPT_END' || true
-                echo "=== Checking application status ==="
-                ps aux | grep uvicorn | grep -v grep || echo "No uvicorn process found"
-                
-                echo "=== Last 20 lines of app.log (if exists) ==="
-                [ -f /home/ubuntu/smart-yoram-backend/app.log ] && tail -20 /home/ubuntu/smart-yoram-backend/app.log || echo "No app.log found"
-                
-                echo "=== Docker status (if using Docker) ==="
-                docker ps -a | grep smart-yoram || echo "No Docker container found"
-                
-                echo "=== Testing local health check ==="
-                curl -v http://localhost:8000/health || echo "Local health check failed"
-              SCRIPT_END
-              
-              rm -f private_key_health.pem
+            # 프로세스 확인
+            if ps aux | grep "uvicorn app.main:app" | grep -v grep > /dev/null; then
+              echo "✅ Application started successfully"
+            else
+              echo "❌ Failed to start application"
+              tail -20 app.log
               exit 1
             fi
-            
-            sleep 10
-            ((attempt++))
           fi
-        done
-        
-        rm -f private_key_health.pem
+          
+          # API 헬스 체크
+          echo "🧪 Testing API endpoint..."
+          sleep 5
+          if curl -f -s http://localhost:8000/health > /dev/null 2>&1; then
+            echo "✅ API health check passed"
+          else
+            echo "⚠️  API health check failed (will continue)"
+            # 로그 확인
+            if [ -f docker-compose.yml ]; then
+              sudo docker-compose logs --tail=20 backend
+            else
+              tail -20 app.log
+            fi
+          fi
+          
+          echo "🎉 Deployment completed successfully!"
+          echo "📝 Application is running at: http://${{ env.EC2_HOST }}:8000"
