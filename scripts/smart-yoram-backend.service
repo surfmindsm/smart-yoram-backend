@@ -1,0 +1,26 @@
+[Unit]
+Description=Smart Yoram Backend API
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/smart-yoram-backend
+Environment="PATH=/home/ubuntu/smart-yoram-backend/venv/bin"
+EnvironmentFile=/home/ubuntu/smart-yoram-backend/.env
+ExecStart=/home/ubuntu/smart-yoram-backend/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
+Restart=always
+RestartSec=10
+
+# Logging
+StandardOutput=append:/home/ubuntu/logs/smart-yoram-backend.log
+StandardError=append:/home/ubuntu/logs/smart-yoram-backend-error.log
+
+# Process management
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
