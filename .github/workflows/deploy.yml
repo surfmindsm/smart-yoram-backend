@@ -98,13 +98,11 @@ jobs:
           --exclude='private_key.pem' \
           ./ ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:${{ env.DEPLOY_PATH }}/
         
-        # Check if ENV_FILE is set
-        if [ -n "${{ secrets.ENV_FILE }}" ]; then
-          # Write ENV_FILE content to a temporary file
-          cat > env_temp.txt << 'ENVFILE'
-${{ secrets.ENV_FILE }}
-ENVFILE
-          
+        # Write ENV_FILE content to a temporary file
+        echo "${{ secrets.ENV_FILE }}" > env_temp.txt
+        
+        # Check if file has content
+        if [ -s env_temp.txt ]; then
           # Copy the env file to EC2
           scp -i private_key.pem -o StrictHostKeyChecking=no env_temp.txt ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:/home/ubuntu/smart-yoram-backend/.env
           
@@ -113,8 +111,9 @@ ENVFILE
           
           echo "✅ .env file successfully transferred to EC2"
         else
-          echo "Warning: ENV_FILE is not set in GitHub Secrets"
+          echo "Warning: ENV_FILE is not set in GitHub Secrets or is empty"
           echo "Using existing .env file on server or creating from template"
+          rm -f env_temp.txt
         fi
         
         # Deploy script on EC2
