@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     # CORS settings - completely optional with safe defaults
     BACKEND_CORS_ORIGINS: Optional[Union[List[str], str]] = Field(
         default=["*"],  # Allow all origins by default
-        description="List of allowed CORS origins"
+        description="List of allowed CORS origins",
     )
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
@@ -32,18 +32,18 @@ class Settings(BaseSettings):
         # If nothing provided, use default
         if v is None:
             return ["*"]
-        
+
         # If already a list, return it
         if isinstance(v, list):
             return v if v else ["*"]
-        
+
         # If string, try simple comma-separated parsing
         if isinstance(v, str):
             # Handle empty or whitespace-only string
             v = v.strip()
             if not v:
                 return ["*"]
-            
+
             # Simple comma-separated parsing (no JSON)
             # This avoids all the JSON parsing issues
             origins = []
@@ -54,9 +54,9 @@ class Settings(BaseSettings):
                     cleaned = cleaned.strip('"').strip("'")
                     if cleaned:
                         origins.append(cleaned)
-            
+
             return origins if origins else ["*"]
-        
+
         # Fallback to wildcard
         return ["*"]
 
