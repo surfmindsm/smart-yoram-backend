@@ -100,17 +100,11 @@ jobs:
         username: ${{ env.EC2_USER }}
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
-          # ENV_FILE이 설정되어 있으면 업데이트, 아니면 기존 파일 유지
-          if [ ! -z "${{ secrets.ENV_FILE }}" ]; then
-            echo "Creating .env file from GitHub Secrets..."
-            cat > ~/smart-yoram-backend/.env << 'ENVFILE'
-${{ secrets.ENV_FILE }}
-ENVFILE
-            chmod 600 ~/smart-yoram-backend/.env
-            echo "✅ .env file created successfully"
-          else
-            echo "Using existing .env file on server"
-          fi
+          cd ~/smart-yoram-backend
+          # Create .env file from GitHub Secrets
+          echo "${{ secrets.ENV_FILE }}" > .env
+          chmod 600 .env
+          echo "✅ .env file created successfully"
 
     - name: Deploy application
       uses: appleboy/ssh-action@v1.0.3
