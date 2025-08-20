@@ -4,14 +4,15 @@
 
 ## 설정 방법
 
-### 1. GitHub Repository 설정
+### 방법 1: Repository Secrets 사용 (권장)
 
 1. GitHub 저장소로 이동
-2. **Settings** → **Environments** 클릭
-3. **New environment** 버튼 클릭하여 `production` 환경 생성 (또는 기존 환경 사용)
-4. 생성된 환경 클릭
+2. **Settings** → **Secrets and variables** → **Actions** 클릭
+3. **New repository secret** 클릭
+4. **Name**: `ENV_FILE`
+5. **Value**: 전체 .env 파일 내용을 그대로 복사하여 붙여넣기
 
-### 2. Environment Variables 추가 (Base64 인코딩)
+### 방법 2: Environment Variables 사용 (Base64 인코딩)
 
 먼저 .env 파일을 base64로 인코딩:
 

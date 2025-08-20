@@ -74,8 +74,8 @@ jobs:
     - name: Deploy to EC2
       env:
         PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
-        # Pass entire .env file content as base64 encoded variable
-        ENV_FILE_BASE64: ${{ vars.ENV_FILE_BASE64 }}
+        # Pass entire .env file content from secrets
+        ENV_FILE: ${{ secrets.ENV_FILE }}
       run: |
         # Setup SSH key
         echo "$PRIVATE_KEY" > private_key.pem
@@ -98,17 +98,12 @@ jobs:
           --exclude='private_key.pem' \
           ./ ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:${{ env.DEPLOY_PATH }}/
         
-        # Check if ENV_FILE_BASE64 is set
-        if [ -z "${{ vars.ENV_FILE_BASE64 }}" ]; then
-          echo "Warning: ENV_FILE_BASE64 is not set in GitHub Environment Variables"
-          echo "Using existing .env file on server or creating from template"
-        else
-          # Decode base64 ENV_FILE and write to a temporary file
-          echo "${{ vars.ENV_FILE_BASE64 }}" | base64 -d > env_temp.txt 2>/dev/null || {
-            echo "Error: Failed to decode ENV_FILE_BASE64"
-            echo "Please ensure ENV_FILE_BASE64 contains valid base64 encoded content"
-            exit 1
-          }
+        # Check if ENV_FILE is set
+        if [ -n "${{ secrets.ENV_FILE }}" ]; then
+          # Write ENV_FILE content to a temporary file
+          cat > env_temp.txt << 'ENVFILE'
+${{ secrets.ENV_FILE }}
+ENVFILE
           
           # Copy the env file to EC2
           scp -i private_key.pem -o StrictHostKeyChecking=no env_temp.txt ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:/home/ubuntu/smart-yoram-backend/.env
@@ -117,6 +112,9 @@ jobs:
           rm -f env_temp.txt
           
           echo "✅ .env file successfully transferred to EC2"
+        else
+          echo "Warning: ENV_FILE is not set in GitHub Secrets"
+          echo "Using existing .env file on server or creating from template"
         fi
         
         # Deploy script on EC2
