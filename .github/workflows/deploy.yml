@@ -98,22 +98,25 @@ jobs:
           --exclude='private_key.pem' \
           ./ ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:${{ env.DEPLOY_PATH }}/
         
-        # Deploy script on EC2 with environment file
+        # Write ENV_FILE to a temporary file
+        echo "${{ vars.ENV_FILE }}" > env_temp.txt
+        
+        # Copy the env file to EC2
+        scp -i private_key.pem -o StrictHostKeyChecking=no env_temp.txt ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:/home/ubuntu/smart-yoram-backend/.env
+        
+        # Remove temporary file
+        rm -f env_temp.txt
+        
+        # Deploy script on EC2
         ssh -i private_key.pem -o StrictHostKeyChecking=no ${{ env.EC2_USER }}@${{ env.EC2_HOST }} << 'ENDSSH'
           set -e  # Exit on error
           
           echo "Starting deployment..."
           cd /home/ubuntu/smart-yoram-backend
           
-          # Create .env file from ENV_FILE variable
-          echo "Creating .env file from GitHub Environment Variable..."
-          cat > .env << 'ENDENV'
-${{ vars.ENV_FILE }}
-ENDENV
-          
-          # Set proper permissions
+          # Set proper permissions for .env file
           chmod 600 .env
-          echo "✅ .env file created successfully"
+          echo "✅ .env file transferred and permissions set"
           
           # Check if using Docker
           if [ -f "docker-compose.yml" ]; then
