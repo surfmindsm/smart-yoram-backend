@@ -73,6 +73,16 @@ jobs:
     - name: Deploy to EC2
       env:
         PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+        # Pass all environment variables to EC2
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        BACKEND_CORS_ORIGINS: ${{ secrets.BACKEND_CORS_ORIGINS }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        OPENAI_ORGANIZATION: ${{ secrets.OPENAI_ORGANIZATION }}
+        API_KEYS: ${{ secrets.API_KEYS }}
+        ACCESS_TOKEN_EXPIRE_MINUTES: ${{ secrets.ACCESS_TOKEN_EXPIRE_MINUTES }}
       run: |
         # Setup SSH key
         echo "$PRIVATE_KEY" > private_key.pem
@@ -95,17 +105,31 @@ jobs:
           --exclude='private_key.pem' \
           ./ ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:${{ env.DEPLOY_PATH }}/
         
-        # Deploy script on EC2
-        ssh -i private_key.pem -o StrictHostKeyChecking=no ${{ env.EC2_USER }}@${{ env.EC2_HOST }} << 'EOF'
+        # Deploy script on EC2 with environment variables
+        ssh -i private_key.pem -o StrictHostKeyChecking=no ${{ env.EC2_USER }}@${{ env.EC2_HOST }} << EOF
           set -e  # Exit on error
           
           echo "Starting deployment..."
           cd /home/ubuntu/smart-yoram-backend
           
-          # Check if .env file exists
-          if [ ! -f ".env" ]; then
-            echo "ERROR: .env file not found. Please create it with required environment variables."
-            echo "Copy .env.example to .env and update with your values."
+          # Export environment variables passed from GitHub Secrets
+          export DATABASE_URL="${DATABASE_URL}"
+          export SUPABASE_URL="${SUPABASE_URL}"
+          export SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY}"
+          export SECRET_KEY="${SECRET_KEY}"
+          export BACKEND_CORS_ORIGINS="${BACKEND_CORS_ORIGINS}"
+          export OPENAI_API_KEY="${OPENAI_API_KEY}"
+          export OPENAI_ORGANIZATION="${OPENAI_ORGANIZATION}"
+          export API_KEYS="${API_KEYS}"
+          export ACCESS_TOKEN_EXPIRE_MINUTES="${ACCESS_TOKEN_EXPIRE_MINUTES}"
+          
+          # Create or update .env file from GitHub Secrets
+          echo "Creating .env file from GitHub Secrets..."
+          if [ -f "scripts/setup_ec2_env_from_github.sh" ]; then
+            chmod +x scripts/setup_ec2_env_from_github.sh
+            ./scripts/setup_ec2_env_from_github.sh
+          else
+            echo "ERROR: setup_ec2_env_from_github.sh not found!"
             exit 1
           fi
           
@@ -128,6 +152,13 @@ jobs:
             
           else
             echo "No Docker Compose found, using Python virtual environment..."
+            
+            # Ensure Python 3 is installed
+            if ! command -v python3 &> /dev/null; then
+              echo "ERROR: Python 3 is not installed!"
+              echo "Install with: sudo apt update && sudo apt install python3 python3-pip python3-venv"
+              exit 1
+            fi
             
             # Create virtual environment if it doesn't exist
             if [ ! -d "venv" ]; then
