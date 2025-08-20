@@ -4,33 +4,6 @@ from decimal import Decimal
 from pydantic import BaseModel, Field
 
 
-# Donor Schemas
-class DonorBase(BaseModel):
-    legal_name: str
-    address: Optional[str] = None
-
-
-class DonorCreate(DonorBase):
-    member_id: Optional[int] = None
-    rrn_encrypted: Optional[str] = None
-
-
-class DonorUpdate(BaseModel):
-    legal_name: Optional[str] = None
-    address: Optional[str] = None
-    rrn_encrypted: Optional[str] = None
-
-
-class Donor(DonorBase):
-    id: int
-    member_id: Optional[int] = None
-    created_at: datetime
-    updated_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
-
-
 # Offering Schemas
 class OfferingBase(BaseModel):
     offered_on: date
@@ -40,7 +13,7 @@ class OfferingBase(BaseModel):
 
 
 class OfferingCreate(OfferingBase):
-    donor_id: int
+    member_id: int
     church_id: int
 
 
@@ -53,7 +26,7 @@ class OfferingUpdate(BaseModel):
 
 class Offering(OfferingBase):
     id: int
-    donor_id: int
+    member_id: int
     church_id: int
     input_user_id: int
     created_at: datetime
@@ -71,7 +44,7 @@ class ReceiptBase(BaseModel):
 
 class ReceiptCreate(ReceiptBase):
     church_id: int
-    donor_id: int
+    member_id: int
 
 
 class ReceiptUpdate(BaseModel):
@@ -81,7 +54,7 @@ class ReceiptUpdate(BaseModel):
 class Receipt(ReceiptBase):
     id: int
     church_id: int
-    donor_id: int
+    member_id: int
     issued_by: int
     issued_at: datetime
     canceled_at: Optional[datetime] = None
@@ -176,9 +149,9 @@ class OfferingSummary(BaseModel):
     period_end: date
 
 
-class DonorSummary(BaseModel):
-    donor_id: int
-    donor_name: str
+class MemberOfferingSummary(BaseModel):
+    member_id: int
+    member_name: str
     total_amount: Decimal
     offering_count: int
     fund_types: List[str]

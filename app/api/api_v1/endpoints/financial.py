@@ -8,74 +8,9 @@ from sqlalchemy import and_, func, extract
 
 from app import models, schemas
 from app.api import deps
+from app.core.security import get_current_active_user
 
 router = APIRouter()
-
-
-# Donor endpoints
-@router.get("/donors", response_model=List[schemas.financial.Donor])
-def get_donors(
-    db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(deps.get_current_active_user),
-    skip: int = 0,
-    limit: int = 100
-):
-    """Get all donors for the current user's church"""
-    donors = db.query(models.Donor).join(
-        models.Member, models.Donor.member_id == models.Member.id
-    ).filter(
-        models.Member.church_id == current_user.church_id
-    ).offset(skip).limit(limit).all()
-    return donors
-
-
-@router.post("/donors", response_model=schemas.financial.Donor)
-def create_donor(
-    *,
-    db: Session = Depends(deps.get_db),
-    donor_in: schemas.financial.DonorCreate,
-    current_user: models.User = Depends(deps.get_current_active_user)
-):
-    """Create a new donor"""
-    # Verify member belongs to user's church if member_id is provided
-    if donor_in.member_id:
-        member = db.query(models.Member).filter(
-            models.Member.id == donor_in.member_id,
-            models.Member.church_id == current_user.church_id
-        ).first()
-        if not member:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Member not found"
-            )
-    
-    donor = models.Donor(**donor_in.dict())
-    db.add(donor)
-    db.commit()
-    db.refresh(donor)
-    return donor
-
-
-@router.get("/donors/{donor_id}", response_model=schemas.financial.Donor)
-def get_donor(
-    donor_id: int,
-    db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(deps.get_current_active_user)
-):
-    """Get a specific donor"""
-    donor = db.query(models.Donor).join(
-        models.Member, models.Donor.member_id == models.Member.id
-    ).filter(
-        models.Donor.id == donor_id,
-        models.Member.church_id == current_user.church_id
-    ).first()
-    
-    if not donor:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Donor not found"
-        )
-    return donor
 
 
 # Offering endpoints
@@ -83,7 +18,7 @@ def get_donor(
 def get_offerings(
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_active_user),
-    donor_id: Optional[int] = Query(None),
+    member_id: Optional[int] = Query(None),
     fund_type: Optional[str] = Query(None),
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
@@ -95,8 +30,8 @@ def get_offerings(
         models.Offering.church_id == current_user.church_id
     )
     
-    if donor_id:
-        query = query.filter(models.Offering.donor_id == donor_id)
+    if member_id:
+        query = query.filter(models.Offering.member_id == member_id)
     if fund_type:
         query = query.filter(models.Offering.fund_type == fund_type)
     if start_date:
@@ -116,18 +51,16 @@ def create_offering(
     current_user: models.User = Depends(deps.get_current_active_user)
 ):
     """Create a new offering record"""
-    # Verify donor exists and belongs to user's church
-    donor = db.query(models.Donor).join(
-        models.Member, models.Donor.member_id == models.Member.id
-    ).filter(
-        models.Donor.id == offering_in.donor_id,
+    # Verify member exists and belongs to user's church
+    member = db.query(models.Member).filter(
+        models.Member.id == offering_in.member_id,
         models.Member.church_id == current_user.church_id
     ).first()
     
-    if not donor:
+    if not member:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Donor not found"
+            detail="Member not found"
         )
     
     offering_data = offering_in.dict()
@@ -193,7 +126,7 @@ def get_receipts(
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_active_user),
     tax_year: Optional[int] = Query(None),
-    donor_id: Optional[int] = Query(None),
+    member_id: Optional[int] = Query(None),
     skip: int = 0,
     limit: int = 100
 ):
@@ -204,8 +137,8 @@ def get_receipts(
     
     if tax_year:
         query = query.filter(models.Receipt.tax_year == tax_year)
-    if donor_id:
-        query = query.filter(models.Receipt.donor_id == donor_id)
+    if member_id:
+        query = query.filter(models.Receipt.member_id == member_id)
     
     receipts = query.order_by(models.Receipt.issued_at.desc()).offset(skip).limit(limit).all()
     return receipts
@@ -219,18 +152,16 @@ def create_receipt(
     current_user: models.User = Depends(deps.get_current_active_user)
 ):
     """Create a new receipt"""
-    # Verify donor exists and belongs to user's church
-    donor = db.query(models.Donor).join(
-        models.Member, models.Donor.member_id == models.Member.id
-    ).filter(
-        models.Donor.id == receipt_in.donor_id,
+    # Verify member exists and belongs to user's church
+    member = db.query(models.Member).filter(
+        models.Member.id == receipt_in.member_id,
         models.Member.church_id == current_user.church_id
     ).first()
     
-    if not donor:
+    if not member:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Donor not found"
+            detail="Member not found"
         )
     
     receipt_data = receipt_in.dict()
@@ -309,39 +240,37 @@ def get_offerings_summary(
         ]
 
 
-@router.get("/statistics/donor-summary", response_model=List[schemas.financial.DonorSummary])
-def get_donor_summary(
+@router.get("/statistics/member-summary", response_model=List[schemas.financial.MemberOfferingSummary])
+def get_member_summary(
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_active_user),
     start_date: date = Query(...),
     end_date: date = Query(...),
     limit: int = Query(50, le=100)
 ):
-    """Get top donors summary"""
+    """Get top members offering summary"""
     results = db.query(
-        models.Donor.id,
-        models.Donor.legal_name,
+        models.Member.id,
+        models.Member.name,
         func.sum(models.Offering.amount).label('total_amount'),
         func.count(models.Offering.id).label('offering_count'),
         func.array_agg(models.Offering.fund_type.distinct()).label('fund_types')
     ).join(
-        models.Offering, models.Donor.id == models.Offering.donor_id
-    ).join(
-        models.Member, models.Donor.member_id == models.Member.id
+        models.Offering, models.Member.id == models.Offering.member_id
     ).filter(
         models.Member.church_id == current_user.church_id,
         models.Offering.offered_on >= start_date,
         models.Offering.offered_on <= end_date
     ).group_by(
-        models.Donor.id, models.Donor.legal_name
+        models.Member.id, models.Member.name
     ).order_by(
         func.sum(models.Offering.amount).desc()
     ).limit(limit).all()
     
     return [
-        schemas.financial.DonorSummary(
-            donor_id=result.id,
-            donor_name=result.legal_name,
+        schemas.financial.MemberOfferingSummary(
+            member_id=result.id,
+            member_name=result.name,
             total_amount=result.total_amount,
             offering_count=result.offering_count,
             fund_types=result.fund_types or []

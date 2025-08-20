@@ -30,7 +30,7 @@ from .member_enhanced import (
     MemberChurchSchool, Sacrament, Marriage, Transfer, EducationNote
 )
 from .financial import (
-    Donor, Offering, Receipt, ReceiptItem, ReceiptSnapshot,
+    Offering, Receipt, ReceiptItem, ReceiptSnapshot,
     FundType, FinancialReport
 )
 from .visit import (

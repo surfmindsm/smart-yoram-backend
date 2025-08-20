@@ -14,26 +14,11 @@ from sqlalchemy.sql import func
 from app.db.base_class import Base
 
 
-class Donor(Base):
-    __tablename__ = "donors"
-
-    id = Column(Integer, primary_key=True, index=True)
-    member_id = Column(Integer, ForeignKey("members.id"), nullable=True)  # 교인과 연결
-    legal_name = Column(String, nullable=False)  # 성명
-    rrn_encrypted = Column(String)  # 주민등록번호 (암호화)
-    address = Column(String)
-    
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-
-    member = relationship("Member", backref="donor_profile")
-
-
 class Offering(Base):
     __tablename__ = "offerings"
 
     id = Column(Integer, primary_key=True, index=True)
-    donor_id = Column(Integer, ForeignKey("donors.id"), nullable=False)
+    member_id = Column(Integer, ForeignKey("members.id"), nullable=False)  # 교인 직접 참조
     church_id = Column(Integer, ForeignKey("churches.id"), nullable=False)
     offered_on = Column(Date, nullable=False)  # 헌금일자
     fund_type = Column(String, nullable=False)  # 헌금유형 (십일조, 감사, 건축 등)
@@ -44,7 +29,7 @@ class Offering(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    donor = relationship("Donor", backref="offerings")
+    member = relationship("Member", backref="offerings")
     church = relationship("Church", backref="offerings")
     input_user = relationship("User", backref="input_offerings")
 
@@ -54,7 +39,7 @@ class Receipt(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     church_id = Column(Integer, ForeignKey("churches.id"), nullable=False)
-    donor_id = Column(Integer, ForeignKey("donors.id"), nullable=False)
+    member_id = Column(Integer, ForeignKey("members.id"), nullable=False)  # 교인 직접 참조
     tax_year = Column(Integer, nullable=False)  # 귀속연도
     issue_no = Column(String, nullable=False)  # 일련번호 (교회별 연도 단위 고유번호)
     issued_by = Column(Integer, ForeignKey("users.id"), nullable=False)  # 발급자
@@ -65,7 +50,7 @@ class Receipt(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     church = relationship("Church", backref="receipts")
-    donor = relationship("Donor", backref="receipts")
+    member = relationship("Member", backref="receipts")
     issuer = relationship("User", backref="issued_receipts")
 
 
@@ -91,9 +76,9 @@ class ReceiptSnapshot(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     receipt_id = Column(Integer, ForeignKey("receipts.id"), nullable=False)
-    donor_name = Column(String, nullable=False)  # 발급 시점의 기부자 성명
-    donor_rrn_masked = Column(String)  # 주민등록번호(마스킹 처리)
-    donor_address = Column(String)  # 주소 문자열
+    member_name = Column(String, nullable=False)  # 발급 시점의 교인 성명
+    member_rrn_masked = Column(String)  # 주민등록번호(마스킹 처리)
+    member_address = Column(String)  # 주소 문자열
     church_name = Column(String, nullable=False)  # 교회명
     church_business_no = Column(String)  # 교회 사업자번호
     total_amount = Column(DECIMAL(15, 2), nullable=False)  # 총액
