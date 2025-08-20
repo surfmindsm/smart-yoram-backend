@@ -127,6 +127,13 @@ jobs:
           if [ -f .env ]; then
             chmod 600 .env
             echo "✅ .env file found and permissions set"
+            
+            # Fix BACKEND_CORS_ORIGINS format if needed
+            # Replace smart quotes with regular quotes
+            sed -i "s/[""]/\"/g" .env
+            sed -i "s/['']/'/g" .env
+            
+            echo "✅ Fixed quote formatting in .env file"
           else
             echo "WARNING: .env file not found!"
             echo "Please set ENV_FILE_BASE64 in GitHub Environment Variables"

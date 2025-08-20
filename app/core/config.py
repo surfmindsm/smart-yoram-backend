@@ -28,12 +28,18 @@ class Settings(BaseSettings):
             # Handle empty string
             if not v or v.strip() == "":
                 return []
+            
+            # Fix smart quotes to regular quotes
+            v = v.replace('"', '"').replace('"', '"').replace("'", "'").replace("'", "'")
+            
             # Handle JSON array format
             if v.startswith("["):
                 # Try to parse as JSON
                 try:
                     return json.loads(v)
-                except json.JSONDecodeError:
+                except json.JSONDecodeError as e:
+                    print(f"Warning: Failed to parse BACKEND_CORS_ORIGINS as JSON: {e}")
+                    print(f"Value: {v[:100]}...")
                     # If JSON parsing fails, try to clean and split
                     v = v.strip("[]")
                     return [
