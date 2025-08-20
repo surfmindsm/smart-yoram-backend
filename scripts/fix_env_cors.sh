@@ -20,9 +20,24 @@ fi
 cp .env .env.backup
 echo -e "${YELLOW}Backup created: .env.backup${NC}"
 
-# Fix smart quotes to regular quotes
-sed -i "s/[""]/\"/g" .env
-sed -i "s/['']/'/g" .env
+# Fix smart quotes to regular quotes using Python
+python3 -c "
+with open('.env', 'r') as f:
+    content = f.read()
+# Replace smart quotes with regular quotes
+content = content.replace('"', '\"').replace('"', '\"')
+content = content.replace(''', \"'\").replace(''', \"'\")
+with open('.env', 'w') as f:
+    f.write(content)
+print('Fixed quote formatting')
+" || echo "Could not fix quotes with Python, trying sed..."
+
+# Fallback to sed with hex codes if Python fails
+# Smart quotes have specific Unicode values
+sed -i 's/\xe2\x80\x9c/"/g' .env 2>/dev/null || true  # Left double smart quote
+sed -i 's/\xe2\x80\x9d/"/g' .env 2>/dev/null || true  # Right double smart quote
+sed -i "s/\xe2\x80\x98/'/g" .env 2>/dev/null || true  # Left single smart quote
+sed -i "s/\xe2\x80\x99/'/g" .env 2>/dev/null || true  # Right single smart quote
 
 # Alternative fix: Convert BACKEND_CORS_ORIGINS to simple comma-separated format
 # Uncomment the following line if JSON array format continues to cause issues:

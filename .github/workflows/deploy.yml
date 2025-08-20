@@ -129,9 +129,17 @@ jobs:
             echo "✅ .env file found and permissions set"
             
             # Fix BACKEND_CORS_ORIGINS format if needed
-            # Replace smart quotes with regular quotes
-            sed -i "s/[""]/\"/g" .env
-            sed -i "s/['']/'/g" .env
+            # Replace smart quotes with regular quotes using Python
+            python3 -c "
+import sys
+with open('.env', 'r') as f:
+    content = f.read()
+content = content.replace('"', '\"').replace('"', '\"')
+content = content.replace(''', \"'\").replace(''', \"'\")
+with open('.env', 'w') as f:
+    f.write(content)
+print('Fixed quote formatting in .env file')
+" || echo "Could not fix quotes with Python"
             
             echo "✅ Fixed quote formatting in .env file"
           else
