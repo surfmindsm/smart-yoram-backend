@@ -228,7 +228,7 @@ jobs:
                 
                 echo "=== Testing local health check ==="
                 curl -v http://localhost:8000/health || echo "Local health check failed"
-              EOF
+EOF
               
               rm -f private_key_health.pem
               exit 1
