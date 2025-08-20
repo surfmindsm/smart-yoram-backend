@@ -97,50 +97,130 @@ jobs:
         
         # Deploy script on EC2
         ssh -i private_key.pem -o StrictHostKeyChecking=no ${{ env.EC2_USER }}@${{ env.EC2_HOST }} << 'EOF'
+          set -e  # Exit on error
+          
+          echo "Starting deployment..."
           cd /home/ubuntu/smart-yoram-backend
           
-          # Activate virtual environment or create if doesn't exist
-          if [ ! -d "venv" ]; then
-            python3 -m venv venv
+          # Check if .env file exists
+          if [ ! -f ".env" ]; then
+            echo "ERROR: .env file not found. Please create it with required environment variables."
+            echo "Copy .env.example to .env and update with your values."
+            exit 1
           fi
-          source venv/bin/activate
           
-          # Install/update dependencies
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          
-          # Run database migrations
-          alembic upgrade head
-          
-          # Restart the application using Docker Compose
+          # Check if using Docker
           if [ -f "docker-compose.yml" ]; then
-            docker-compose down
+            echo "Docker Compose found, using Docker deployment..."
+            
+            # Stop existing containers
+            docker-compose down || true
+            
+            # Build and start containers
             docker-compose up -d --build
+            
+            # Wait for container to be healthy
+            echo "Waiting for container to start..."
+            sleep 10
+            
+            # Check if container is running
+            docker ps | grep smart-yoram-backend
+            
           else
-            # If not using Docker, restart with systemd or supervisor
-            # sudo systemctl restart smart-yoram-backend
-            # Or restart with supervisorctl
-            # supervisorctl restart smart-yoram-backend
-            echo "Please configure service restart method"
+            echo "No Docker Compose found, using Python virtual environment..."
+            
+            # Create virtual environment if it doesn't exist
+            if [ ! -d "venv" ]; then
+              python3 -m venv venv
+            fi
+            
+            # Activate virtual environment
+            source venv/bin/activate
+            
+            # Install/update dependencies
+            pip install --upgrade pip
+            pip install -r requirements.txt
+            
+            # Run database migrations
+            echo "Running database migrations..."
+            alembic upgrade head || echo "WARNING: Migration failed, continuing..."
+            
+            # Kill existing process if running
+            pkill -f "uvicorn app.main:app" || true
+            
+            # Start the application in background
+            echo "Starting application..."
+            nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > app.log 2>&1 &
+            
+            # Wait for app to start
+            sleep 5
+            
+            # Check if process is running
+            ps aux | grep "uvicorn app.main:app" | grep -v grep
           fi
           
-          echo "Deployment completed successfully!"
+          # Test local health check
+          echo "Testing local health check..."
+          curl -f http://localhost:8000/health || echo "WARNING: Local health check failed"
+          
+          echo "Deployment completed!"
         EOF
         
         # Clean up
         rm -f private_key.pem
     
     - name: Health Check
+      env:
+        PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
       run: |
         echo "Waiting for application to start..."
-        sleep 30
         
-        # Check if the application is running
-        response=$(curl -s -o /dev/null -w "%{http_code}" http://${{ env.EC2_HOST }}:8000/health || echo "000")
+        # Setup SSH key for debugging
+        echo "$PRIVATE_KEY" > private_key_health.pem
+        chmod 600 private_key_health.pem
         
-        if [ "$response" == "200" ]; then
-          echo "✅ Application is running successfully!"
-        else
-          echo "❌ Health check failed with status code: $response"
-          exit 1
-        fi
+        # Try health check multiple times
+        max_attempts=6
+        attempt=1
+        
+        while [ $attempt -le $max_attempts ]; do
+          echo "Health check attempt $attempt/$max_attempts..."
+          
+          response=$(curl -s -o /dev/null -w "%{http_code}" http://${{ env.EC2_HOST }}:8000/health 2>/dev/null || echo "000")
+          
+          if [ "$response" == "200" ]; then
+            echo "✅ Application is running successfully!"
+            rm -f private_key_health.pem
+            exit 0
+          else
+            echo "Attempt $attempt failed with status code: $response"
+            
+            if [ $attempt -eq $max_attempts ]; then
+              echo "❌ Health check failed after $max_attempts attempts"
+              
+              # SSH and check logs for debugging
+              echo "Fetching application logs for debugging..."
+              ssh -i private_key_health.pem -o StrictHostKeyChecking=no ${{ env.EC2_USER }}@${{ env.EC2_HOST }} << 'EOF' || true
+                echo "=== Checking application status ==="
+                ps aux | grep uvicorn | grep -v grep || echo "No uvicorn process found"
+                
+                echo "=== Last 20 lines of app.log (if exists) ==="
+                [ -f /home/ubuntu/smart-yoram-backend/app.log ] && tail -20 /home/ubuntu/smart-yoram-backend/app.log || echo "No app.log found"
+                
+                echo "=== Docker status (if using Docker) ==="
+                docker ps -a | grep smart-yoram || echo "No Docker container found"
+                
+                echo "=== Testing local health check ==="
+                curl -v http://localhost:8000/health || echo "Local health check failed"
+              EOF
+              
+              rm -f private_key_health.pem
+              exit 1
+            fi
+            
+            sleep 10
+            ((attempt++))
+          fi
+        done
+        
+        rm -f private_key_health.pem
