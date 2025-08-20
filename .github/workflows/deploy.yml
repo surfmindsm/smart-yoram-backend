@@ -129,17 +129,26 @@ jobs:
             echo "✅ .env file found and permissions set"
             
             # Fix BACKEND_CORS_ORIGINS format if needed
-            # Replace smart quotes with regular quotes using Python
-            python3 -c "
+            # Create Python script to fix quotes
+            cat > fix_quotes.py << 'FIXQUOTES'
+#!/usr/bin/env python3
 import sys
-with open('.env', 'r') as f:
-    content = f.read()
-content = content.replace('"', '\"').replace('"', '\"')
-content = content.replace(''', \"'\").replace(''', \"'\")
-with open('.env', 'w') as f:
-    f.write(content)
-print('Fixed quote formatting in .env file')
-" || echo "Could not fix quotes with Python"
+try:
+    with open('.env', 'r') as f:
+        content = f.read()
+    # Replace smart quotes with regular quotes
+    content = content.replace('"', '"').replace('"', '"')
+    content = content.replace(''', "'").replace(''', "'")
+    with open('.env', 'w') as f:
+        f.write(content)
+    print('Fixed quote formatting in .env file')
+except Exception as e:
+    print(f'Error fixing quotes: {e}')
+    sys.exit(1)
+FIXQUOTES
+            
+            python3 fix_quotes.py || echo "Could not fix quotes with Python"
+            rm -f fix_quotes.py
             
             echo "✅ Fixed quote formatting in .env file"
           else
