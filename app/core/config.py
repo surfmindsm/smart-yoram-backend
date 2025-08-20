@@ -28,10 +28,15 @@ class Settings(BaseSettings):
             # Handle empty string
             if not v or v.strip() == "":
                 return []
-            
+
             # Fix smart quotes to regular quotes
-            v = v.replace('"', '"').replace('"', '"').replace("'", "'").replace("'", "'")
-            
+            v = (
+                v.replace('"', '"')
+                .replace('"', '"')
+                .replace("'", "'")
+                .replace("'", "'")
+            )
+
             # Handle JSON array format
             if v.startswith("["):
                 # Try to parse as JSON
