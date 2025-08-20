@@ -25,16 +25,21 @@ class Settings(BaseSettings):
     @classmethod
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
         if isinstance(v, str):
+            # Handle empty string
+            if not v or v.strip() == "":
+                return []
+            # Handle JSON array format
             if v.startswith("["):
                 # Try to parse as JSON
                 try:
                     return json.loads(v)
                 except json.JSONDecodeError:
-                    # If JSON parsing fails, split by comma
-                    return [i.strip() for i in v.split(",")]
+                    # If JSON parsing fails, try to clean and split
+                    v = v.strip("[]")
+                    return [i.strip().strip('"').strip("'") for i in v.split(",") if i.strip()]
             else:
                 # Split by comma
-                return [i.strip() for i in v.split(",")]
+                return [i.strip() for i in v.split(",") if i.strip()]
         elif isinstance(v, list):
             return v
         return []
