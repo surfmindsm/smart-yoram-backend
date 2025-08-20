@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
 
     DATABASE_URL: str
-    
+
     # Supabase settings
     SUPABASE_URL: str
     SUPABASE_ANON_KEY: str
@@ -41,10 +41,10 @@ class Settings(BaseSettings):
 
     FIRST_SUPERUSER: str = "admin@smartyoram.com"
     FIRST_SUPERUSER_PASSWORD: str = "changeme"
-    
+
     # Redis Configuration
     REDIS_URL: str = "redis://localhost:6379/0"
-    
+
     # Firebase Configuration
     FIREBASE_CREDENTIALS_PATH: str = "firebase-credentials.json"
 

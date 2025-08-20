@@ -22,12 +22,12 @@ def generate_member_qr_code(member) -> Optional[str]:
             "phone": member.phone,
             "church_id": member.church_id,
             "position": member.position,
-            "created_at": datetime.utcnow().isoformat()
+            "created_at": datetime.utcnow().isoformat(),
         }
-        
+
         # Convert to JSON string
         qr_content = json.dumps(qr_data, ensure_ascii=False)
-        
+
         # Create QR code
         qr = qrcode.QRCode(
             version=1,
@@ -37,17 +37,17 @@ def generate_member_qr_code(member) -> Optional[str]:
         )
         qr.add_data(qr_content)
         qr.make(fit=True)
-        
+
         # Create image
         img = qr.make_image(fill_color="black", back_color="white")
-        
+
         # Convert to base64
         buffer = io.BytesIO()
         img.save(buffer, format="PNG")
         img_str = base64.b64encode(buffer.getvalue()).decode()
-        
+
         return f"data:image/png;base64,{img_str}"
-        
+
     except Exception as e:
         print(f"Error generating QR code: {e}")
         return None

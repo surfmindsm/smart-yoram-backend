@@ -9,7 +9,7 @@ try:
         "smart_yoram",
         broker=settings.REDIS_URL,
         backend=settings.REDIS_URL,
-        include=["app.tasks.notifications"]
+        include=["app.tasks.notifications"],
     )
 
     # Configure Celery
@@ -29,7 +29,7 @@ try:
 
     # Beat schedule for periodic tasks
     from celery.schedules import crontab
-    
+
     celery_app.conf.beat_schedule = {
         # Send worship reminders every Sunday at 8 AM
         "worship-reminder-sunday": {
@@ -56,23 +56,25 @@ try:
 except Exception as e:
     logger.error(f"Failed to initialize Celery: {e}")
     logger.warning("Background tasks will be disabled")
-    
+
     # Create a dummy Celery app that does nothing
     class DummyCelery:
         def task(self, *args, **kwargs):
             def decorator(func):
                 return func
+
             return decorator
-        
+
         def delay(self, *args, **kwargs):
             pass
-            
+
         def apply_async(self, *args, **kwargs):
             pass
-        
-        conf = type('conf', (), {
-            'beat_schedule': {},
-            'update': lambda self, *args, **kwargs: None
-        })()
-    
+
+        conf = type(
+            "conf",
+            (),
+            {"beat_schedule": {}, "update": lambda self, *args, **kwargs: None},
+        )()
+
     celery_app = DummyCelery()

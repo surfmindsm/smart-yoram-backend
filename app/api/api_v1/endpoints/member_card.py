@@ -23,42 +23,53 @@ def get_member_card_data(
     """
     Get member card data for mobile display.
     """
-    member = db.query(models.Member).filter(
-        models.Member.id == member_id,
-        models.Member.church_id == current_user.church_id
-    ).first()
-    
+    member = (
+        db.query(models.Member)
+        .filter(
+            models.Member.id == member_id,
+            models.Member.church_id == current_user.church_id,
+        )
+        .first()
+    )
+
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")
-    
+
     # Get church info
-    church = db.query(models.Church).filter(
-        models.Church.id == current_user.church_id
-    ).first()
-    
+    church = (
+        db.query(models.Church)
+        .filter(models.Church.id == current_user.church_id)
+        .first()
+    )
+
     # Get or create QR code
-    qr_code = db.query(models.QRCode).filter(
-        models.QRCode.member_id == member_id,
-        models.QRCode.is_active == True,
-        models.QRCode.qr_type == "member_card"
-    ).first()
-    
+    qr_code = (
+        db.query(models.QRCode)
+        .filter(
+            models.QRCode.member_id == member_id,
+            models.QRCode.is_active == True,
+            models.QRCode.qr_type == "member_card",
+        )
+        .first()
+    )
+
     if not qr_code:
         # Create new QR code for member card
         import uuid
+
         unique_code = f"card:{member.church_id}:{member_id}:{uuid.uuid4().hex[:8]}"
-        
+
         qr_code = models.QRCode(
             church_id=member.church_id,
             member_id=member_id,
             code=unique_code,
             qr_type="member_card",
-            is_active=True
+            is_active=True,
         )
         db.add(qr_code)
         db.commit()
         db.refresh(qr_code)
-    
+
     # Generate QR code image
     qr = qrcode.QRCode(
         version=1,
@@ -68,14 +79,14 @@ def get_member_card_data(
     )
     qr.add_data(qr_code.code)
     qr.make(fit=True)
-    
+
     img = qr.make_image(fill_color="black", back_color="white")
     img_byte_arr = io.BytesIO()
-    img.save(img_byte_arr, format='PNG')
+    img.save(img_byte_arr, format="PNG")
     img_byte_arr.seek(0)
-    
+
     qr_code_base64 = base64.b64encode(img_byte_arr.getvalue()).decode()
-    
+
     # Calculate age if birth date exists
     age = None
     if member.birthdate:
@@ -83,17 +94,22 @@ def get_member_card_data(
         age = today.year - member.birthdate.year
         if today < member.birthdate.replace(year=today.year):
             age -= 1
-    
+
     # Get recent attendance count (last 30 days)
     from datetime import timedelta
+
     thirty_days_ago = datetime.now().date() - timedelta(days=30)
-    
-    recent_attendance_count = db.query(models.Attendance).filter(
-        models.Attendance.member_id == member_id,
-        models.Attendance.service_date >= thirty_days_ago,
-        models.Attendance.present == True
-    ).count()
-    
+
+    recent_attendance_count = (
+        db.query(models.Attendance)
+        .filter(
+            models.Attendance.member_id == member_id,
+            models.Attendance.service_date >= thirty_days_ago,
+            models.Attendance.present == True,
+        )
+        .count()
+    )
+
     return {
         "member": {
             "id": member.id,
@@ -104,21 +120,20 @@ def get_member_card_data(
             "district": member.district,
             "registration_date": member.registration_date,
             "age": age,
-            "member_status": member.member_status
+            "member_status": member.member_status,
         },
         "church": {
             "name": church.name if church else "교회",
             "address": church.address if church else "",
-            "phone": church.phone if church else ""
+            "phone": church.phone if church else "",
         },
-        "qr_code": {
-            "code": qr_code.code,
-            "image_base64": qr_code_base64
-        },
+        "qr_code": {"code": qr_code.code, "image_base64": qr_code_base64},
         "statistics": {
             "recent_attendance_count": recent_attendance_count,
-            "member_since": member.registration_date.strftime("%Y년 %m월") if member.registration_date else ""
-        }
+            "member_since": member.registration_date.strftime("%Y년 %m월")
+            if member.registration_date
+            else "",
+        },
     }
 
 
@@ -133,16 +148,14 @@ def get_member_card_html(
     Get member card as HTML for mobile display.
     """
     card_data = get_member_card_data(
-        db=db, 
-        member_id=member_id, 
-        current_user=current_user
+        db=db, member_id=member_id, current_user=current_user
     )
-    
+
     member = card_data["member"]
     church = card_data["church"]
     qr_code = card_data["qr_code"]
     stats = card_data["statistics"]
-    
+
     html_content = f"""
     <!DOCTYPE html>
     <html lang="ko">
@@ -362,7 +375,7 @@ def get_member_card_html(
     </body>
     </html>
     """
-    
+
     return HTMLResponse(content=html_content)
 
 
@@ -376,43 +389,49 @@ def regenerate_member_card_qr(
     """
     Regenerate QR code for member card.
     """
-    member = db.query(models.Member).filter(
-        models.Member.id == member_id,
-        models.Member.church_id == current_user.church_id
-    ).first()
-    
+    member = (
+        db.query(models.Member)
+        .filter(
+            models.Member.id == member_id,
+            models.Member.church_id == current_user.church_id,
+        )
+        .first()
+    )
+
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")
-    
+
     # Deactivate existing QR codes
-    existing_codes = db.query(models.QRCode).filter(
-        models.QRCode.member_id == member_id,
-        models.QRCode.qr_type == "member_card",
-        models.QRCode.is_active == True
-    ).all()
-    
+    existing_codes = (
+        db.query(models.QRCode)
+        .filter(
+            models.QRCode.member_id == member_id,
+            models.QRCode.qr_type == "member_card",
+            models.QRCode.is_active == True,
+        )
+        .all()
+    )
+
     for code in existing_codes:
         code.is_active = False
-    
+
     # Create new QR code
     import uuid
+
     unique_code = f"card:{member.church_id}:{member_id}:{uuid.uuid4().hex[:8]}"
-    
+
     new_qr_code = models.QRCode(
         church_id=member.church_id,
         member_id=member_id,
         code=unique_code,
         qr_type="member_card",
-        is_active=True
+        is_active=True,
     )
     db.add(new_qr_code)
     db.commit()
     db.refresh(new_qr_code)
-    
+
     return {
         "message": "QR code regenerated successfully",
-        "qr_code": {
-            "id": new_qr_code.id,
-            "code": new_qr_code.code
-        }
+        "qr_code": {"id": new_qr_code.id, "code": new_qr_code.code},
     }

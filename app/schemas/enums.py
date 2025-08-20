@@ -4,7 +4,7 @@ from enum import Enum
 class Gender(str, Enum):
     MALE = "M"
     FEMALE = "F"
-    
+
     @classmethod
     def from_korean(cls, value: str) -> "Gender":
         """Convert Korean gender label to enum value"""
@@ -17,7 +17,7 @@ class Gender(str, Enum):
             "여성": cls.FEMALE,
         }
         return mapping.get(value, None)
-    
+
     def to_korean(self) -> str:
         """Convert enum value to Korean gender label"""
         mapping = {

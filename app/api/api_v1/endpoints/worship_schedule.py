@@ -11,7 +11,7 @@ from app.schemas.worship_schedule import (
     WorshipServiceCategory as WorshipServiceCategorySchema,
     WorshipServiceCategoryCreate,
     WorshipServiceCategoryUpdate,
-    WorshipScheduleResponse
+    WorshipScheduleResponse,
 )
 from app.crud.base import CRUDBase
 
@@ -22,35 +22,36 @@ router = APIRouter()
 def get_worship_schedule(
     church_id: Optional[int] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """교회의 전체 예배 스케줄 조회"""
     # If church_id is not provided, use the current user's church_id
     if church_id is None:
         church_id = current_user.church_id
-    
+
     # Check if user has church_id
     if church_id is None:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="사용자에게 교회가 할당되지 않았습니다"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="사용자에게 교회가 할당되지 않았습니다"
         )
-    
+
     if current_user.church_id != church_id and not current_user.is_superuser:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="접근 권한이 없습니다"
-        )
-    
-    categories = db.query(WorshipServiceCategory).filter(
-        WorshipServiceCategory.church_id == church_id
-    ).order_by(WorshipServiceCategory.order_index).all()
-    
-    services = db.query(WorshipService).filter(
-        WorshipService.church_id == church_id,
-        WorshipService.is_active == True
-    ).order_by(WorshipService.order_index).all()
-    
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="접근 권한이 없습니다")
+
+    categories = (
+        db.query(WorshipServiceCategory)
+        .filter(WorshipServiceCategory.church_id == church_id)
+        .order_by(WorshipServiceCategory.order_index)
+        .all()
+    )
+
+    services = (
+        db.query(WorshipService)
+        .filter(WorshipService.church_id == church_id, WorshipService.is_active == True)
+        .order_by(WorshipService.order_index)
+        .all()
+    )
+
     return WorshipScheduleResponse(categories=categories, services=services)
 
 
@@ -62,31 +63,26 @@ def get_worship_services(
     day_of_week: Optional[int] = None,
     is_online: Optional[bool] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """예배 서비스 목록 조회"""
     # If church_id is not provided, use the current user's church_id
     if church_id is None:
         church_id = current_user.church_id
-    
+
     # Check if user has church_id
     if church_id is None:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="사용자에게 교회가 할당되지 않았습니다"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="사용자에게 교회가 할당되지 않았습니다"
         )
-        
+
     if current_user.church_id != church_id and not current_user.is_superuser:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="접근 권한이 없습니다"
-        )
-    
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="접근 권한이 없습니다")
+
     query = db.query(WorshipService).filter(
-        WorshipService.church_id == church_id,
-        WorshipService.is_active == True
+        WorshipService.church_id == church_id, WorshipService.is_active == True
     )
-    
+
     if service_type:
         query = query.filter(WorshipService.service_type == service_type)
     if target_group:
@@ -95,7 +91,7 @@ def get_worship_services(
         query = query.filter(WorshipService.day_of_week == day_of_week)
     if is_online is not None:
         query = query.filter(WorshipService.is_online == is_online)
-    
+
     services = query.order_by(WorshipService.order_index).all()
     return services
 
@@ -105,30 +101,28 @@ def create_worship_service(
     service: WorshipServiceCreate,
     church_id: Optional[int] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """예배 서비스 생성"""
     # If church_id is not provided, use the current user's church_id
     if church_id is None:
         church_id = current_user.church_id
-    
+
     # Check if user has church_id
     if church_id is None:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="사용자에게 교회가 할당되지 않았습니다"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="사용자에게 교회가 할당되지 않았습니다"
         )
-        
-    if current_user.church_id != church_id or current_user.role not in ["admin", "pastor"]:
+
+    if current_user.church_id != church_id or current_user.role not in [
+        "admin",
+        "pastor",
+    ]:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="예배 일정 생성 권한이 없습니다"
+            status_code=status.HTTP_403_FORBIDDEN, detail="예배 일정 생성 권한이 없습니다"
         )
-    
-    db_service = WorshipService(
-        church_id=church_id,
-        **service.dict()
-    )
+
+    db_service = WorshipService(church_id=church_id, **service.dict())
     db.add(db_service)
     db.commit()
     db.refresh(db_service)
@@ -139,22 +133,18 @@ def create_worship_service(
 def get_worship_service(
     service_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """특정 예배 서비스 조회"""
     service = db.query(WorshipService).filter(WorshipService.id == service_id).first()
     if not service:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="예배 서비스를 찾을 수 없습니다"
+            status_code=status.HTTP_404_NOT_FOUND, detail="예배 서비스를 찾을 수 없습니다"
         )
-    
+
     if current_user.church_id != service.church_id and not current_user.is_superuser:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="접근 권한이 없습니다"
-        )
-    
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="접근 권한이 없습니다")
+
     return service
 
 
@@ -163,25 +153,26 @@ def update_worship_service(
     service_id: int,
     service_update: WorshipServiceUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """예배 서비스 수정"""
     service = db.query(WorshipService).filter(WorshipService.id == service_id).first()
     if not service:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="예배 서비스를 찾을 수 없습니다"
+            status_code=status.HTTP_404_NOT_FOUND, detail="예배 서비스를 찾을 수 없습니다"
         )
-    
-    if current_user.church_id != service.church_id or current_user.role not in ["admin", "pastor"]:
+
+    if current_user.church_id != service.church_id or current_user.role not in [
+        "admin",
+        "pastor",
+    ]:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="예배 일정 수정 권한이 없습니다"
+            status_code=status.HTTP_403_FORBIDDEN, detail="예배 일정 수정 권한이 없습니다"
         )
-    
+
     for field, value in service_update.dict(exclude_unset=True).items():
         setattr(service, field, value)
-    
+
     db.commit()
     db.refresh(service)
     return service
@@ -191,22 +182,23 @@ def update_worship_service(
 def delete_worship_service(
     service_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """예배 서비스 삭제"""
     service = db.query(WorshipService).filter(WorshipService.id == service_id).first()
     if not service:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="예배 서비스를 찾을 수 없습니다"
+            status_code=status.HTTP_404_NOT_FOUND, detail="예배 서비스를 찾을 수 없습니다"
         )
-    
-    if current_user.church_id != service.church_id or current_user.role not in ["admin", "pastor"]:
+
+    if current_user.church_id != service.church_id or current_user.role not in [
+        "admin",
+        "pastor",
+    ]:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="예배 일정 삭제 권한이 없습니다"
+            status_code=status.HTTP_403_FORBIDDEN, detail="예배 일정 삭제 권한이 없습니다"
         )
-    
+
     db.delete(service)
     db.commit()
     return {"message": "예배 서비스가 삭제되었습니다"}
@@ -216,30 +208,29 @@ def delete_worship_service(
 def get_worship_categories(
     church_id: Optional[int] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """예배 카테고리 목록 조회"""
     # If church_id is not provided, use the current user's church_id
     if church_id is None:
         church_id = current_user.church_id
-    
+
     # Check if user has church_id
     if church_id is None:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="사용자에게 교회가 할당되지 않았습니다"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="사용자에게 교회가 할당되지 않았습니다"
         )
-        
+
     if current_user.church_id != church_id and not current_user.is_superuser:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="접근 권한이 없습니다"
-        )
-    
-    categories = db.query(WorshipServiceCategory).filter(
-        WorshipServiceCategory.church_id == church_id
-    ).order_by(WorshipServiceCategory.order_index).all()
-    
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="접근 권한이 없습니다")
+
+    categories = (
+        db.query(WorshipServiceCategory)
+        .filter(WorshipServiceCategory.church_id == church_id)
+        .order_by(WorshipServiceCategory.order_index)
+        .all()
+    )
+
     return categories
 
 
@@ -248,30 +239,28 @@ def create_worship_category(
     category: WorshipServiceCategoryCreate,
     church_id: Optional[int] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """예배 카테고리 생성"""
     # If church_id is not provided, use the current user's church_id
     if church_id is None:
         church_id = current_user.church_id
-    
+
     # Check if user has church_id
     if church_id is None:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="사용자에게 교회가 할당되지 않았습니다"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="사용자에게 교회가 할당되지 않았습니다"
         )
-        
-    if current_user.church_id != church_id or current_user.role not in ["admin", "pastor"]:
+
+    if current_user.church_id != church_id or current_user.role not in [
+        "admin",
+        "pastor",
+    ]:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="카테고리 생성 권한이 없습니다"
+            status_code=status.HTTP_403_FORBIDDEN, detail="카테고리 생성 권한이 없습니다"
         )
-    
-    db_category = WorshipServiceCategory(
-        church_id=church_id,
-        **category.dict()
-    )
+
+    db_category = WorshipServiceCategory(church_id=church_id, **category.dict())
     db.add(db_category)
     db.commit()
     db.refresh(db_category)
@@ -283,28 +272,31 @@ def update_worship_category(
     category_id: int,
     category_update: WorshipServiceCategoryUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """예배 카테고리 수정"""
-    category = db.query(WorshipServiceCategory).filter(
-        WorshipServiceCategory.id == category_id
-    ).first()
-    
+    category = (
+        db.query(WorshipServiceCategory)
+        .filter(WorshipServiceCategory.id == category_id)
+        .first()
+    )
+
     if not category:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="카테고리를 찾을 수 없습니다"
+            status_code=status.HTTP_404_NOT_FOUND, detail="카테고리를 찾을 수 없습니다"
         )
-    
-    if current_user.church_id != category.church_id or current_user.role not in ["admin", "pastor"]:
+
+    if current_user.church_id != category.church_id or current_user.role not in [
+        "admin",
+        "pastor",
+    ]:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="카테고리 수정 권한이 없습니다"
+            status_code=status.HTTP_403_FORBIDDEN, detail="카테고리 수정 권한이 없습니다"
         )
-    
+
     for field, value in category_update.dict(exclude_unset=True).items():
         setattr(category, field, value)
-    
+
     db.commit()
     db.refresh(category)
     return category
@@ -314,25 +306,28 @@ def update_worship_category(
 def delete_worship_category(
     category_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """예배 카테고리 삭제"""
-    category = db.query(WorshipServiceCategory).filter(
-        WorshipServiceCategory.id == category_id
-    ).first()
-    
+    category = (
+        db.query(WorshipServiceCategory)
+        .filter(WorshipServiceCategory.id == category_id)
+        .first()
+    )
+
     if not category:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="카테고리를 찾을 수 없습니다"
+            status_code=status.HTTP_404_NOT_FOUND, detail="카테고리를 찾을 수 없습니다"
         )
-    
-    if current_user.church_id != category.church_id or current_user.role not in ["admin", "pastor"]:
+
+    if current_user.church_id != category.church_id or current_user.role not in [
+        "admin",
+        "pastor",
+    ]:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="카테고리 삭제 권한이 없습니다"
+            status_code=status.HTTP_403_FORBIDDEN, detail="카테고리 삭제 권한이 없습니다"
         )
-    
+
     db.delete(category)
     db.commit()
     return {"message": "카테고리가 삭제되었습니다"}

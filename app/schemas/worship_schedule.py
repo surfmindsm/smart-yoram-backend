@@ -71,6 +71,7 @@ class WorshipServiceCategory(WorshipServiceCategoryBase):
 
 class WorshipScheduleResponse(BaseModel):
     """교회 전체 예배 스케줄 응답"""
+
     categories: List[WorshipServiceCategory]
     services: List[WorshipService]
 

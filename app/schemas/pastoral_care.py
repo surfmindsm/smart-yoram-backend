@@ -7,12 +7,12 @@ from pydantic import BaseModel
 class PastoralCareRequestBase(BaseModel):
     requester_name: str
     requester_phone: str
-    request_type: Optional[str] = 'general'
+    request_type: Optional[str] = "general"
     request_content: str
     preferred_date: Optional[date] = None
     preferred_time_start: Optional[time] = None
     preferred_time_end: Optional[time] = None
-    priority: Optional[str] = 'normal'
+    priority: Optional[str] = "normal"
 
 
 class PastoralCareRequestCreate(PastoralCareRequestBase):
@@ -62,7 +62,7 @@ class PastoralCareRequest(PastoralCareRequestBase):
 class PrayerRequestBase(BaseModel):
     requester_name: str
     requester_phone: Optional[str] = None
-    prayer_type: Optional[str] = 'general'
+    prayer_type: Optional[str] = "general"
     prayer_content: str
     is_anonymous: Optional[bool] = False
     is_urgent: Optional[bool] = False

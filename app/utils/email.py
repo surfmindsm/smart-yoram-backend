@@ -6,10 +6,7 @@ import os
 
 
 def send_email(
-    to_email: str,
-    subject: str,
-    body: str,
-    html_body: Optional[str] = None
+    to_email: str, subject: str, body: str, html_body: Optional[str] = None
 ) -> bool:
     """
     Send an email using SMTP.
@@ -21,33 +18,33 @@ def send_email(
     smtp_user = os.getenv("SMTP_USER", "")
     smtp_password = os.getenv("SMTP_PASSWORD", "")
     from_email = os.getenv("FROM_EMAIL", smtp_user)
-    
+
     if not smtp_user or not smtp_password:
         print("SMTP credentials not configured. Skipping email send.")
         return False
-    
+
     try:
         # Create message
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = subject
-        msg['From'] = from_email
-        msg['To'] = to_email
-        
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = from_email
+        msg["To"] = to_email
+
         # Add text part
-        text_part = MIMEText(body, 'plain', 'utf-8')
+        text_part = MIMEText(body, "plain", "utf-8")
         msg.attach(text_part)
-        
+
         # Add HTML part if provided
         if html_body:
-            html_part = MIMEText(html_body, 'html', 'utf-8')
+            html_part = MIMEText(html_body, "html", "utf-8")
             msg.attach(html_part)
-        
+
         # Send email
         with smtplib.SMTP(smtp_host, smtp_port) as server:
             server.starttls()
             server.login(smtp_user, smtp_password)
             server.send_message(msg)
-        
+
         return True
     except Exception as e:
         print(f"Failed to send email: {e}")
@@ -55,16 +52,13 @@ def send_email(
 
 
 def send_temporary_password_email(
-    to_email: str,
-    member_name: str,
-    church_name: str,
-    temp_password: str
+    to_email: str, member_name: str, church_name: str, temp_password: str
 ) -> bool:
     """
     Send temporary password email to new member.
     """
     subject = f"[{church_name}] 스마트요람 임시 비밀번호 안내"
-    
+
     body = f"""
 안녕하세요 {member_name}님,
 
@@ -79,7 +73,7 @@ def send_temporary_password_email(
 감사합니다.
 {church_name} 드림
 """
-    
+
     html_body = f"""
 <!DOCTYPE html>
 <html>
@@ -118,5 +112,5 @@ def send_temporary_password_email(
 </body>
 </html>
 """
-    
+
     return send_email(to_email, subject, body, html_body)

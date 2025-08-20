@@ -25,7 +25,7 @@ class Offering(Base):
     amount = Column(DECIMAL(15, 2), nullable=False)  # 금액
     note = Column(Text)  # 적요 (비고)
     input_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # 입력자
-    
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -45,7 +45,7 @@ class Receipt(Base):
     issued_by = Column(Integer, ForeignKey("users.id"), nullable=False)  # 발급자
     issued_at = Column(DateTime(timezone=True), nullable=False)  # 발급일
     canceled_at = Column(DateTime(timezone=True))  # 취소일 (있으면 무효 처리)
-    
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -63,7 +63,7 @@ class ReceiptItem(Base):
     fund_code = Column(String, default="41")  # 코드 (41: 종교단체기부금 등)
     description = Column(String)  # 적요 (십일조, 감사헌금 등)
     amount = Column(DECIMAL(15, 2), nullable=False)  # 금액
-    
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -82,7 +82,7 @@ class ReceiptSnapshot(Base):
     church_name = Column(String, nullable=False)  # 교회명
     church_business_no = Column(String)  # 교회 사업자번호
     total_amount = Column(DECIMAL(15, 2), nullable=False)  # 총액
-    
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     receipt = relationship("Receipt", backref="snapshot")
@@ -98,7 +98,7 @@ class FundType(Base):
     description = Column(Text)  # 상세 설명
     is_active = Column(Boolean, default=True)  # 활성 상태
     sort_order = Column(Integer, default=0)  # 정렬 순서
-    
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -115,7 +115,7 @@ class FinancialReport(Base):
     period_end = Column(Date, nullable=False)
     generated_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     summary_data = Column(Text)  # JSON 형태의 집계 데이터
-    
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     church = relationship("Church", backref="financial_reports")

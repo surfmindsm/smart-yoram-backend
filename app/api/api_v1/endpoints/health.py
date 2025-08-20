@@ -20,7 +20,7 @@ async def health_check():
     return {
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
-        "service": "smart-yoram-backend"
+        "service": "smart-yoram-backend",
     }
 
 
@@ -34,14 +34,14 @@ async def database_health(db: Session = Depends(get_db)):
             "status": "healthy",
             "timestamp": datetime.utcnow().isoformat(),
             "database": "connected",
-            "result": result
+            "result": result,
         }
     except Exception as e:
         return {
             "status": "unhealthy",
             "timestamp": datetime.utcnow().isoformat(),
             "database": "disconnected",
-            "error": str(e)
+            "error": str(e),
         }
 
 
@@ -49,9 +49,8 @@ async def database_health(db: Session = Depends(get_db)):
 async def redis_health():
     """Check Redis connectivity and health"""
     try:
-        
         # Check if Redis is actually connected (not a dummy client)
-        if hasattr(redis_client, 'ping'):
+        if hasattr(redis_client, "ping"):
             redis_client.ping()
             info = redis_client.info()
             return {
@@ -60,21 +59,21 @@ async def redis_health():
                 "redis": "connected",
                 "version": info.get("redis_version", "unknown"),
                 "used_memory": info.get("used_memory_human", "unknown"),
-                "connected_clients": info.get("connected_clients", 0)
+                "connected_clients": info.get("connected_clients", 0),
             }
         else:
             return {
                 "status": "warning",
                 "timestamp": datetime.utcnow().isoformat(),
                 "redis": "dummy_client",
-                "message": "Redis not configured, using dummy client"
+                "message": "Redis not configured, using dummy client",
             }
     except Exception as e:
         return {
             "status": "unhealthy",
             "timestamp": datetime.utcnow().isoformat(),
             "redis": "disconnected",
-            "error": str(e)
+            "error": str(e),
         }
 
 
@@ -88,41 +87,35 @@ async def celery_health():
                 "status": "warning",
                 "timestamp": datetime.utcnow().isoformat(),
                 "celery": "not_configured",
-                "message": "Celery not configured"
+                "message": "Celery not configured",
             }
-        
+
         # Get active workers
         inspect = celery_app.control.inspect()
         stats = inspect.stats()
         active_workers = list(stats.keys()) if stats else []
-        
+
         # Get scheduled tasks
         scheduled = inspect.scheduled()
         scheduled_count = sum(len(tasks) for tasks in (scheduled or {}).values())
-        
+
         # Get active tasks
         active = inspect.active()
         active_count = sum(len(tasks) for tasks in (active or {}).values())
-        
+
         return {
             "status": "healthy" if active_workers else "warning",
             "timestamp": datetime.utcnow().isoformat(),
             "celery": "connected",
-            "workers": {
-                "count": len(active_workers),
-                "names": active_workers
-            },
-            "tasks": {
-                "active": active_count,
-                "scheduled": scheduled_count
-            }
+            "workers": {"count": len(active_workers), "names": active_workers},
+            "tasks": {"active": active_count, "scheduled": scheduled_count},
         }
     except Exception as e:
         return {
             "status": "unhealthy",
             "timestamp": datetime.utcnow().isoformat(),
             "celery": "error",
-            "error": str(e)
+            "error": str(e),
         }
 
 
@@ -132,46 +125,43 @@ async def system_health():
     try:
         # CPU usage
         cpu_percent = psutil.cpu_percent(interval=1)
-        
+
         # Memory usage
         memory = psutil.virtual_memory()
-        
+
         # Disk usage
-        disk = psutil.disk_usage('/')
-        
+        disk = psutil.disk_usage("/")
+
         # Process info
         process = psutil.Process()
-        
+
         return {
             "status": "healthy",
             "timestamp": datetime.utcnow().isoformat(),
             "system": {
-                "cpu": {
-                    "percent": cpu_percent,
-                    "count": psutil.cpu_count()
-                },
+                "cpu": {"percent": cpu_percent, "count": psutil.cpu_count()},
                 "memory": {
                     "percent": memory.percent,
                     "total": f"{memory.total / (1024**3):.2f} GB",
-                    "available": f"{memory.available / (1024**3):.2f} GB"
+                    "available": f"{memory.available / (1024**3):.2f} GB",
                 },
                 "disk": {
                     "percent": disk.percent,
                     "total": f"{disk.total / (1024**3):.2f} GB",
-                    "free": f"{disk.free / (1024**3):.2f} GB"
+                    "free": f"{disk.free / (1024**3):.2f} GB",
                 },
                 "process": {
                     "pid": process.pid,
                     "memory_mb": f"{process.memory_info().rss / (1024**2):.2f}",
-                    "threads": process.num_threads()
-                }
-            }
+                    "threads": process.num_threads(),
+                },
+            },
         }
     except Exception as e:
         return {
             "status": "error",
             "timestamp": datetime.utcnow().isoformat(),
-            "error": str(e)
+            "error": str(e),
         }
 
 
@@ -179,24 +169,24 @@ async def system_health():
 async def all_health_checks(db: Session = Depends(get_db)):
     """Comprehensive health check of all services"""
     results = {}
-    
+
     # Database check
     try:
         db.execute("SELECT 1").scalar()
         results["database"] = {"status": "healthy"}
     except Exception as e:
         results["database"] = {"status": "unhealthy", "error": str(e)}
-    
+
     # Redis check
     try:
-        if hasattr(redis_client, 'ping'):
+        if hasattr(redis_client, "ping"):
             redis_client.ping()
             results["redis"] = {"status": "healthy"}
         else:
             results["redis"] = {"status": "warning", "message": "Using dummy client"}
     except Exception as e:
         results["redis"] = {"status": "unhealthy", "error": str(e)}
-    
+
     # Celery check
     try:
         if celery_app:
@@ -205,12 +195,15 @@ async def all_health_checks(db: Session = Depends(get_db)):
             if stats:
                 results["celery"] = {"status": "healthy", "workers": len(stats)}
             else:
-                results["celery"] = {"status": "warning", "message": "No active workers"}
+                results["celery"] = {
+                    "status": "warning",
+                    "message": "No active workers",
+                }
         else:
             results["celery"] = {"status": "warning", "message": "Not configured"}
     except Exception as e:
         results["celery"] = {"status": "unhealthy", "error": str(e)}
-    
+
     # System check
     try:
         cpu = psutil.cpu_percent(interval=0.1)
@@ -218,11 +211,11 @@ async def all_health_checks(db: Session = Depends(get_db)):
         results["system"] = {
             "status": "healthy" if cpu < 90 and memory < 90 else "warning",
             "cpu": cpu,
-            "memory": memory
+            "memory": memory,
         }
     except Exception as e:
         results["system"] = {"status": "error", "error": str(e)}
-    
+
     # Overall status
     statuses = [v.get("status", "unknown") for v in results.values()]
     if all(s == "healthy" for s in statuses):
@@ -233,9 +226,9 @@ async def all_health_checks(db: Session = Depends(get_db)):
         overall_status = "degraded"
     else:
         overall_status = "unknown"
-    
+
     return {
         "status": overall_status,
         "timestamp": datetime.utcnow().isoformat(),
-        "services": results
+        "services": results,
     }

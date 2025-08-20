@@ -42,7 +42,7 @@ class FamilyTreeMember(BaseModel):
     relationship_type: Optional[str] = None
     date_of_birth: Optional[str] = None
     phone_number: Optional[str] = None
-    
+
     class Config:
         from_attributes = True
 

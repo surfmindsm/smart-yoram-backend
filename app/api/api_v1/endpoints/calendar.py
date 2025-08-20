@@ -25,16 +25,16 @@ def get_calendar_events(
     query = db.query(models.CalendarEvent).filter(
         models.CalendarEvent.church_id == current_user.church_id
     )
-    
+
     if start_date:
         query = query.filter(models.CalendarEvent.event_date >= start_date)
-    
+
     if end_date:
         query = query.filter(models.CalendarEvent.event_date <= end_date)
-    
+
     if event_type:
         query = query.filter(models.CalendarEvent.event_type == event_type)
-    
+
     events = query.offset(skip).limit(limit).all()
     return events
 
@@ -50,9 +50,7 @@ def create_calendar_event(
     Create new calendar event.
     """
     event = models.CalendarEvent(
-        **event_in.dict(),
-        church_id=current_user.church_id,
-        created_by=current_user.id
+        **event_in.dict(), church_id=current_user.church_id, created_by=current_user.id
     )
     db.add(event)
     db.commit()
@@ -71,18 +69,22 @@ def update_calendar_event(
     """
     Update calendar event.
     """
-    event = db.query(models.CalendarEvent).filter(
-        models.CalendarEvent.id == event_id,
-        models.CalendarEvent.church_id == current_user.church_id
-    ).first()
-    
+    event = (
+        db.query(models.CalendarEvent)
+        .filter(
+            models.CalendarEvent.id == event_id,
+            models.CalendarEvent.church_id == current_user.church_id,
+        )
+        .first()
+    )
+
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
-    
+
     update_data = event_in.dict(exclude_unset=True)
     for field, value in update_data.items():
         setattr(event, field, value)
-    
+
     db.commit()
     db.refresh(event)
     return event
@@ -98,17 +100,21 @@ def delete_calendar_event(
     """
     Delete calendar event.
     """
-    event = db.query(models.CalendarEvent).filter(
-        models.CalendarEvent.id == event_id,
-        models.CalendarEvent.church_id == current_user.church_id
-    ).first()
-    
+    event = (
+        db.query(models.CalendarEvent)
+        .filter(
+            models.CalendarEvent.id == event_id,
+            models.CalendarEvent.church_id == current_user.church_id,
+        )
+        .first()
+    )
+
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
-    
+
     db.delete(event)
     db.commit()
-    
+
     return {"message": "Event deleted successfully"}
 
 
@@ -123,44 +129,52 @@ def get_upcoming_birthdays(
     """
     today = datetime.utcnow().date()
     end_date = today + timedelta(days=days_ahead)
-    
-    members = db.query(models.Member).filter(
-        models.Member.church_id == current_user.church_id,
-        models.Member.birthdate.isnot(None)
-    ).all()
-    
+
+    members = (
+        db.query(models.Member)
+        .filter(
+            models.Member.church_id == current_user.church_id,
+            models.Member.birthdate.isnot(None),
+        )
+        .all()
+    )
+
     upcoming_birthdays = []
-    
+
     for member in members:
         if not member.birthdate:
             continue
-        
+
         # Calculate this year's birthday
         this_year_birthday = member.birthdate.replace(year=today.year)
-        
+
         # If birthday already passed this year, check next year
         if this_year_birthday < today:
             next_year_birthday = member.birthdate.replace(year=today.year + 1)
             if next_year_birthday <= end_date:
-                upcoming_birthdays.append({
+                upcoming_birthdays.append(
+                    {
+                        "member_id": member.id,
+                        "member_name": member.name,
+                        "birthday": next_year_birthday,
+                        "age": today.year + 1 - member.birthdate.year,
+                        "days_until": (next_year_birthday - today).days,
+                    }
+                )
+        elif this_year_birthday <= end_date:
+            upcoming_birthdays.append(
+                {
                     "member_id": member.id,
                     "member_name": member.name,
-                    "birthday": next_year_birthday,
-                    "age": today.year + 1 - member.birthdate.year,
-                    "days_until": (next_year_birthday - today).days
-                })
-        elif this_year_birthday <= end_date:
-            upcoming_birthdays.append({
-                "member_id": member.id,
-                "member_name": member.name,
-                "birthday": this_year_birthday,
-                "age": today.year - member.birthdate.year,
-                "days_until": (this_year_birthday - today).days
-            })
-    
+                    "birthday": this_year_birthday,
+                    "age": today.year - member.birthdate.year,
+                    "days_until": (this_year_birthday - today).days,
+                }
+            )
+
     # Sort by days until birthday
     upcoming_birthdays.sort(key=lambda x: x["days_until"])
-    
+
     return upcoming_birthdays
 
 
@@ -173,24 +187,32 @@ def create_birthday_events(
     """
     Create calendar events for all member birthdays.
     """
-    members = db.query(models.Member).filter(
-        models.Member.church_id == current_user.church_id,
-        models.Member.birthdate.isnot(None)
-    ).all()
-    
+    members = (
+        db.query(models.Member)
+        .filter(
+            models.Member.church_id == current_user.church_id,
+            models.Member.birthdate.isnot(None),
+        )
+        .all()
+    )
+
     created_count = 0
-    
+
     for member in members:
         if not member.birthdate:
             continue
-        
+
         # Check if birthday event already exists
-        existing_event = db.query(models.CalendarEvent).filter(
-            models.CalendarEvent.church_id == current_user.church_id,
-            models.CalendarEvent.event_type == "birthday",
-            models.CalendarEvent.related_member_id == member.id
-        ).first()
-        
+        existing_event = (
+            db.query(models.CalendarEvent)
+            .filter(
+                models.CalendarEvent.church_id == current_user.church_id,
+                models.CalendarEvent.event_type == "birthday",
+                models.CalendarEvent.related_member_id == member.id,
+            )
+            .first()
+        )
+
         if not existing_event:
             # Create recurring birthday event
             event = models.CalendarEvent(
@@ -202,15 +224,15 @@ def create_birthday_events(
                 is_recurring=True,
                 recurrence_pattern="yearly",
                 related_member_id=member.id,
-                created_by=current_user.id
+                created_by=current_user.id,
             )
             db.add(event)
             created_count += 1
-    
+
     db.commit()
-    
+
     return {
         "message": f"Created {created_count} birthday events",
         "total_members_with_birthdays": len(members),
-        "created_count": created_count
+        "created_count": created_count,
     }

@@ -22,58 +22,62 @@ class OpenAIService:
                 self.client = OpenAI(api_key=env_key, organization=env_org)
             else:
                 self.client = None
-    
+
     async def generate_response(
         self,
         messages: List[Dict[str, str]],
         model: str = "gpt-4o-mini",
         max_tokens: int = 4000,
         temperature: float = 0.7,
-        system_prompt: str = None
+        system_prompt: str = None,
     ) -> Dict:
         """
         Generate AI response using OpenAI API
-        
+
         Args:
             messages: List of message dictionaries with 'role' and 'content'
             model: OpenAI model to use
             max_tokens: Maximum tokens in response
             temperature: Response randomness (0-1)
             system_prompt: System prompt to prepend
-            
+
         Returns:
             Dictionary with response content and metadata
         """
         if not self.client:
             raise Exception("OpenAI client not initialized. Please provide an API key.")
-            
+
         try:
             # Prepare messages
             if system_prompt:
                 messages = [{"role": "system", "content": system_prompt}] + messages
-            
+
             # Call OpenAI API using the new client
             response = self.client.chat.completions.create(
                 model=model,
                 messages=messages,
                 max_tokens=max_tokens,
-                temperature=temperature
+                temperature=temperature,
             )
-            
+
             # Extract response
             content = response.choices[0].message.content
             tokens_used = response.usage.total_tokens
-            
+
             return {
                 "content": content,
                 "tokens_used": tokens_used,
                 "model": model,
-                "finish_reason": response.choices[0].finish_reason
+                "finish_reason": response.choices[0].finish_reason,
             }
-            
+
         except Exception as e:
             error_str = str(e).lower()
-            if "authentication" in error_str or "api key" in error_str or "unauthorized" in error_str:
+            if (
+                "authentication" in error_str
+                or "api key" in error_str
+                or "unauthorized" in error_str
+            ):
                 logger.error(f"OpenAI authentication error: {e}")
                 raise Exception("GPT API 키가 유효하지 않습니다.")
             elif "rate limit" in error_str:
@@ -85,51 +89,51 @@ class OpenAIService:
             else:
                 logger.error(f"OpenAI API error: {e}")
                 raise Exception(f"AI 응답 생성 중 오류가 발생했습니다: {str(e)}")
-    
+
     def generate_response_sync(
         self,
         messages: List[Dict[str, str]],
         model: str = "gpt-4o-mini",
         max_tokens: int = 4000,
         temperature: float = 0.7,
-        system_prompt: str = None
+        system_prompt: str = None,
     ) -> Dict:
         """Synchronous version of generate_response"""
         if not self.client:
             raise Exception("OpenAI client not initialized. Please provide an API key.")
-            
+
         try:
             # Prepare messages
             if system_prompt:
                 messages = [{"role": "system", "content": system_prompt}] + messages
-            
+
             # Call OpenAI API
             response = self.client.chat.completions.create(
                 model=model,
                 messages=messages,
                 max_tokens=max_tokens,
-                temperature=temperature
+                temperature=temperature,
             )
-            
+
             # Extract response
             content = response.choices[0].message.content
             tokens_used = response.usage.total_tokens
-            
+
             return {
                 "content": content,
                 "tokens_used": tokens_used,
                 "model": model,
-                "finish_reason": response.choices[0].finish_reason
+                "finish_reason": response.choices[0].finish_reason,
             }
-            
+
         except Exception as e:
             logger.error(f"OpenAI API error: {e}")
             raise
-    
+
     def calculate_cost(self, tokens: int, model: str = "gpt-4o-mini") -> float:
         """
         Calculate cost based on token usage
-        
+
         Pricing (as of 2024):
         - GPT-4o-mini: $0.00015 per 1K input tokens, $0.0006 per 1K output tokens
         - GPT-4o: $0.005 per 1K input tokens, $0.015 per 1K output tokens
@@ -149,58 +153,58 @@ class OpenAIService:
             cost_per_1k = 0.001  # ($0.0005 + $0.0015) / 2
         else:
             cost_per_1k = 0.02  # Default fallback
-        
+
         return (tokens / 1000) * cost_per_1k
-    
+
     async def test_connection(self, api_key: str = None) -> bool:
         """Test if the API key is valid"""
         try:
             test_client = OpenAI(api_key=api_key) if api_key else self.client
-            
+
             if not test_client:
                 return False
-            
+
             # Simple test request
             response = test_client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[{"role": "user", "content": "test"}],
-                max_tokens=5
+                max_tokens=5,
             )
             return True
-            
+
         except Exception as e:
             logger.error(f"API key test failed: {e}")
             return False
-    
+
     def analyze_message_intent(self, message: str) -> List[str]:
         """
         Analyze user message to determine what church data might be needed
-        
+
         Returns:
             List of data types needed (e.g., ['attendance', 'members'])
         """
         required_data = []
-        
+
         # Keywords for different data types
         attendance_keywords = ["출석", "결석", "참석", "예배참여", "출석률"]
         member_keywords = ["성도", "교인", "회원", "연락처", "전화번호", "주소"]
         donation_keywords = ["헌금", "십일조", "감사헌금", "건축헌금", "재정"]
         event_keywords = ["행사", "예배", "모임", "일정", "스케줄"]
-        
+
         message_lower = message.lower()
-        
+
         if any(keyword in message for keyword in attendance_keywords):
             required_data.append("attendance")
-        
+
         if any(keyword in message for keyword in member_keywords):
             required_data.append("members")
-        
+
         if any(keyword in message for keyword in donation_keywords):
             required_data.append("donations")
-        
+
         if any(keyword in message for keyword in event_keywords):
             required_data.append("events")
-        
+
         return required_data
 
 

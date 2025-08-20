@@ -26,17 +26,25 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     church = relationship("Church", backref="users")
-    
+
     # Push notification relationships
     devices = relationship("UserDevice", back_populates="user")
     sent_notifications = relationship("PushNotification", back_populates="sender")
-    received_notifications = relationship("NotificationRecipient", back_populates="user")
-    notification_preference = relationship("NotificationPreference", back_populates="user", uselist=False)
-    
+    received_notifications = relationship(
+        "NotificationRecipient", back_populates="user"
+    )
+    notification_preference = relationship(
+        "NotificationPreference", back_populates="user", uselist=False
+    )
+
     # Chat relationships
     chat_histories = relationship("ChatHistory", back_populates="user")
-    
+
     # Pastoral care and prayer relationships
-    pastoral_care_requests = relationship("PastoralCareRequest", foreign_keys="PastoralCareRequest.member_id", back_populates="member")
+    pastoral_care_requests = relationship(
+        "PastoralCareRequest",
+        foreign_keys="PastoralCareRequest.member_id",
+        back_populates="member",
+    )
     prayer_requests = relationship("PrayerRequest", back_populates="member")
     prayer_participations = relationship("PrayerParticipation", back_populates="member")

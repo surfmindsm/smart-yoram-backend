@@ -51,7 +51,7 @@ def encrypt_data(data: str) -> str:
     """Encrypt sensitive data"""
     if not data:
         return ""
-    
+
     key = get_encryption_key()
     fernet = Fernet(key)
     encrypted_data = fernet.encrypt(data.encode())
@@ -62,7 +62,7 @@ def decrypt_data(encrypted_data: str) -> str:
     """Decrypt sensitive data"""
     if not encrypted_data:
         return ""
-    
+
     try:
         key = get_encryption_key()
         fernet = Fernet(key)

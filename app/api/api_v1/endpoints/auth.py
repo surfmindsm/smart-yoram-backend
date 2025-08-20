@@ -49,8 +49,8 @@ def login_access_token(
             "role": user.role,
             "is_active": user.is_active,
             "is_superuser": user.is_superuser,
-            "is_first": user.is_first
-        }
+            "is_first": user.is_first,
+        },
     }
 
 
@@ -72,11 +72,11 @@ def change_password(
     """
     if not verify_password(current_password, current_user.hashed_password):
         raise HTTPException(status_code=400, detail="Incorrect password")
-    
+
     current_user.hashed_password = get_password_hash(new_password)
     db.add(current_user)
     db.commit()
-    
+
     return {"msg": "Password updated successfully"}
 
 
@@ -84,7 +84,9 @@ def change_password(
 def complete_first_time_setup(
     *,
     db: Session = Depends(deps.get_db),
-    new_password: str = Body(..., description="New password to replace temporary password"),
+    new_password: str = Body(
+        ..., description="New password to replace temporary password"
+    ),
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
@@ -96,19 +98,18 @@ def complete_first_time_setup(
     """
     if not current_user.is_first:
         raise HTTPException(
-            status_code=400, 
-            detail="First-time setup already completed"
+            status_code=400, detail="First-time setup already completed"
         )
-    
+
     # 1. Update password
     current_user.hashed_password = get_password_hash(new_password)
     current_user.encrypted_password = None  # Clear encrypted password
-    
+
     # 2. Generate QR code if member exists
-    member = db.query(models.Member).filter(
-        models.Member.user_id == current_user.id
-    ).first()
-    
+    member = (
+        db.query(models.Member).filter(models.Member.user_id == current_user.id).first()
+    )
+
     if member and not member.qr_code:
         try:
             qr_code_data = generate_member_qr_code(member)
@@ -117,15 +118,15 @@ def complete_first_time_setup(
         except Exception as e:
             # Log error but don't fail the whole process
             print(f"Error generating QR code: {e}")
-    
+
     # 3. Mark first-time setup as complete
     current_user.is_first = False
-    
+
     # Save changes
     db.add(current_user)
     db.commit()
     db.refresh(current_user)
-    
+
     return current_user
 
 
@@ -139,5 +140,5 @@ def check_first_time_status(
     return {
         "is_first": current_user.is_first,
         "user_id": current_user.id,
-        "email": current_user.email
+        "email": current_user.email,
     }

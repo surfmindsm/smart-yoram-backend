@@ -7,12 +7,12 @@ from app.models.ai_agent import OfficialAgentTemplate
 
 def create_official_templates(db: Session) -> None:
     """Create official agent templates if they don't exist"""
-    
+
     # Check if templates already exist
     existing = db.query(OfficialAgentTemplate).first()
     if existing:
         return
-    
+
     templates = [
         {
             "name": "설교 준비 도우미",
@@ -49,10 +49,10 @@ def create_official_templates(db: Session) -> None:
                 "announcements": True,
                 "attendances": False,
                 "members": False,
-                "worship_services": True
+                "worship_services": True,
             },
             "version": "2.1.0",
-            "created_by": "Smart Yoram Team"
+            "created_by": "Smart Yoram Team",
         },
         {
             "name": "목양 및 심방 도우미",
@@ -89,10 +89,10 @@ def create_official_templates(db: Session) -> None:
                 "announcements": False,
                 "attendances": True,
                 "members": True,
-                "worship_services": False
+                "worship_services": False,
             },
             "version": "1.8.0",
-            "created_by": "Smart Yoram Team"
+            "created_by": "Smart Yoram Team",
         },
         {
             "name": "예배 기획 도우미",
@@ -126,7 +126,7 @@ def create_official_templates(db: Session) -> None:
 
 예배를 통해 하나님과의 만남이 일어나고, 성도들이 새로워지는 시간이 될 수 있도록 최선을 다해 도와드립니다.""",
             "version": "1.5.0",
-            "created_by": "Smart Yoram Team"
+            "created_by": "Smart Yoram Team",
         },
         {
             "name": "교육 프로그램 도우미",
@@ -163,24 +163,24 @@ def create_official_templates(db: Session) -> None:
                 "announcements": False,
                 "attendances": True,
                 "members": True,
-                "worship_services": False
+                "worship_services": False,
             },
             "version": "1.3.0",
-            "created_by": "Smart Yoram Team"
-        }
+            "created_by": "Smart Yoram Team",
+        },
     ]
-    
+
     for template_data in templates:
         template = OfficialAgentTemplate(**template_data)
         db.add(template)
-    
+
     db.commit()
     print(f"Created {len(templates)} official agent templates")
 
 
 if __name__ == "__main__":
     from app.db.session import SessionLocal
-    
+
     db = SessionLocal()
     try:
         create_official_templates(db)

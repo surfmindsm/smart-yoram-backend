@@ -52,17 +52,23 @@ class Member(Base):
     is_new_family_head = Column(Boolean, default=False)  # 신앙세대주 여부
 
     # Inviter Information
-    inviter1_member_id = Column(Integer, ForeignKey("members.id"), nullable=True)  # 인도자1
-    inviter2_member_id = Column(Integer, ForeignKey("members.id"), nullable=True)  # 인도자2
+    inviter1_member_id = Column(
+        Integer, ForeignKey("members.id"), nullable=True
+    )  # 인도자1
+    inviter2_member_id = Column(
+        Integer, ForeignKey("members.id"), nullable=True
+    )  # 인도자2
 
     # Status and Notes
     status = Column(String, default="active")  # active, inactive, transferred
     notes = Column(Text)
     memo = Column(Text)  # 메모(개인 특별 사항)
-    
+
     # Enhanced fields for app features
     profile_photo_url = Column(String)
-    member_status = Column(String, default="active")  # active, inactive, transferred, absent, visiting
+    member_status = Column(
+        String, default="active"
+    )  # active, inactive, transferred, absent, visiting
     transfer_church = Column(String)
     transfer_date = Column(Date)
     invitation_sent = Column(Boolean, default=False)
@@ -74,10 +80,14 @@ class Member(Base):
     church = relationship("Church", backref="members")
     user = relationship("User", backref="member_profile")
     family = relationship("Family", foreign_keys=[family_id], backref="members")
-    
+
     # Self-referential relationships for inviters
-    inviter1 = relationship("Member", foreign_keys=[inviter1_member_id], remote_side=[id])
-    inviter2 = relationship("Member", foreign_keys=[inviter2_member_id], remote_side=[id])
+    inviter1 = relationship(
+        "Member", foreign_keys=[inviter1_member_id], remote_side=[id]
+    )
+    inviter2 = relationship(
+        "Member", foreign_keys=[inviter2_member_id], remote_side=[id]
+    )
 
 
 class Family(Base):

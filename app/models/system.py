@@ -24,7 +24,7 @@ class Service(Base):
     end_time = Column(DateTime(timezone=True))  # 종료 시간
     place = Column(String)  # 장소
     group_scope = Column(String)  # 대상 범위 (전체/구역/가족 정렬 기준 등)
-    
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -38,7 +38,7 @@ class SearchPreset(Base):
     church_id = Column(Integer, ForeignKey("churches.id"), nullable=False)
     name = Column(String, nullable=False)  # 프리셋 명
     query_json = Column(Text)  # 조건 JSON (교구/구역/정렬/사진포함 등)
-    
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -55,7 +55,7 @@ class PrintJob(Base):
     scope = Column(String)  # 대상 범위 (현재교인/검색된교인/선택교인/구역그룹 등)
     options_json = Column(Text)  # 옵션 JSON (최근심방 출력건수, 가족비고 자동늘리기, 사진포함 등)
     status = Column(String, default="pending")  # 상태 (대기/완료/실패)
-    
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -70,7 +70,7 @@ class StatsSnapshot(Base):
     church_id = Column(Integer, ForeignKey("churches.id"), nullable=False)
     date = Column(Date, nullable=False)  # 기준일
     payload_json = Column(Text)  # 출결/심방/등록 등 집계 결과 JSON
-    
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     church = relationship("Church", backref="stats_snapshots")

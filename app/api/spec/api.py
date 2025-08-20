@@ -360,7 +360,9 @@ def create_chat_history(payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
     history = {
         "id": history_id,
         "title": title,
-        "agentName": _AGENTS.get(agent_id, {}).get("name", "설교 도우미") if agent_id else "설교 도우미",
+        "agentName": _AGENTS.get(agent_id, {}).get("name", "설교 도우미")
+        if agent_id
+        else "설교 도우미",
         "isBookmarked": False,
         "messageCount": 0,
         "timestamp": datetime.utcnow().isoformat() + "Z",
@@ -379,7 +381,9 @@ def get_chat_history_messages(history_id: str) -> Dict[str, Any]:
 
 
 @spec_router.put("/chat/histories/{history_id}")
-def update_chat_history(history_id: str, payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+def update_chat_history(
+    history_id: str, payload: Dict[str, Any] = Body(...)
+) -> Dict[str, Any]:
     for h in _CHAT_HISTORIES:
         if h["id"] == history_id:
             if "title" in payload and payload["title"] is not None:
@@ -426,7 +430,12 @@ def church_database_query(payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]
     # Return a deterministic mock result matching the spec structure
     if payload.get("query_type") == "members_absent":
         result = [
-            {"member_id": "12345", "name": "김철수", "weeks_absent": 3, "last_attendance": "2025-07-20"}
+            {
+                "member_id": "12345",
+                "name": "김철수",
+                "weeks_absent": 3,
+                "last_attendance": "2025-07-20",
+            }
         ]
     else:
         result = []

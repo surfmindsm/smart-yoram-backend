@@ -28,11 +28,11 @@ def send_sms(
         recipient_member_id=sms_in.recipient_member_id,
         message=sms_in.message,
         sms_type=sms_in.sms_type,
-        status="pending"
+        status="pending",
     )
     db.add(sms_history)
     db.commit()
-    
+
     # Send SMS (placeholder - implement actual SMS service)
     try:
         # result = sms_utils.send_sms(sms_in.recipient_phone, sms_in.message)
@@ -42,10 +42,10 @@ def send_sms(
     except Exception as e:
         sms_history.status = "failed"
         sms_history.error_message = str(e)
-    
+
     db.commit()
     db.refresh(sms_history)
-    
+
     return sms_history
 
 
@@ -60,15 +60,15 @@ def send_bulk_sms(
     Send SMS to multiple recipients.
     """
     sms_results = []
-    
+
     for member_id in sms_in.recipient_member_ids:
         member = db.query(models.Member).filter(models.Member.id == member_id).first()
         if not member or not member.phone:
             continue
-        
+
         if member.church_id != current_user.church_id:
             continue
-        
+
         # Create SMS history record
         sms_history = models.SMSHistory(
             church_id=current_user.church_id,
@@ -77,11 +77,11 @@ def send_bulk_sms(
             recipient_member_id=member_id,
             message=sms_in.message,
             sms_type=sms_in.sms_type,
-            status="pending"
+            status="pending",
         )
         db.add(sms_history)
         db.commit()
-        
+
         # Send SMS (placeholder)
         try:
             # result = sms_utils.send_sms(member.phone, sms_in.message)
@@ -90,11 +90,11 @@ def send_bulk_sms(
         except Exception as e:
             sms_history.status = "failed"
             sms_history.error_message = str(e)
-        
+
         db.commit()
         db.refresh(sms_history)
         sms_results.append(sms_history)
-    
+
     return sms_results
 
 
@@ -108,10 +108,14 @@ def get_sms_history(
     """
     Retrieve SMS history.
     """
-    sms_history = db.query(models.SMSHistory).filter(
-        models.SMSHistory.church_id == current_user.church_id
-    ).offset(skip).limit(limit).all()
-    
+    sms_history = (
+        db.query(models.SMSHistory)
+        .filter(models.SMSHistory.church_id == current_user.church_id)
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
     return sms_history
 
 
@@ -126,22 +130,22 @@ def get_sms_templates(
         {
             "id": 1,
             "name": "주일예배 안내",
-            "message": "[{church_name}] 안녕하세요 {name}님! 이번 주일예배에 참석하여 은혜받는 시간 되시길 바랍니다."
+            "message": "[{church_name}] 안녕하세요 {name}님! 이번 주일예배에 참석하여 은혜받는 시간 되시길 바랍니다.",
         },
         {
             "id": 2,
             "name": "생일 축하",
-            "message": "[{church_name}] {name}님의 생일을 축하합니다! 하나님의 은혜가 늘 함께하시길 기도합니다."
+            "message": "[{church_name}] {name}님의 생일을 축하합니다! 하나님의 은혜가 늘 함께하시길 기도합니다.",
         },
         {
             "id": 3,
             "name": "심방 안내",
-            "message": "[{church_name}] {name}님 댁에 {date} {time}에 심방 예정입니다. 준비 부탁드립니다."
+            "message": "[{church_name}] {name}님 댁에 {date} {time}에 심방 예정입니다. 준비 부탁드립니다.",
         },
         {
             "id": 4,
             "name": "교회 행사 안내",
-            "message": "[{church_name}] {event_name} 행사가 {date}에 있습니다. 많은 참석 부탁드립니다."
-        }
+            "message": "[{church_name}] {event_name} 행사가 {date}에 있습니다. 많은 참석 부탁드립니다.",
+        },
     ]
     return templates

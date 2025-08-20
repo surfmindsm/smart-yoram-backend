@@ -15,17 +15,14 @@ def get_random_daily_verse(
 ) -> Any:
     """
     오늘의 말씀을 랜덤으로 조회합니다.
-    
+
     - **인증 불필요**: 누구나 접근 가능
     - **용도**: 모바일 앱이나 웹사이트 메인 화면에 표시
     - **응답**: 활성화된 말씀 중 랜덤하게 하나 반환
     """
     verse = crud_daily_verse.get_random_verse(db)
     if not verse:
-        raise HTTPException(
-            status_code=404,
-            detail="활성화된 말씀이 없습니다."
-        )
+        raise HTTPException(status_code=404, detail="활성화된 말씀이 없습니다.")
     return verse
 
 
@@ -38,14 +35,14 @@ def read_daily_verses(
 ) -> Any:
     """
     등록된 모든 말씀 목록을 조회합니다.
-    
+
     - **권한**: 관리자만 접근 가능
     - **페이지네이션**: skip과 limit 매개변수 지원
     - **정렬**: 최신 등록순
     """
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="권한이 없습니다.")
-    
+
     verses = crud_daily_verse.get_all_verses(db, skip=skip, limit=limit)
     return verses
 
@@ -59,7 +56,7 @@ def create_daily_verse(
 ) -> Any:
     """
     새로운 성경 말씀을 추가합니다.
-    
+
     - **권한**: 관리자만 접근 가능
     - **verse**: 성경 구절 내용
     - **reference**: 출처 (예: 시편 23:1)
@@ -67,7 +64,7 @@ def create_daily_verse(
     """
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="권한이 없습니다.")
-    
+
     verse = crud_daily_verse.create(db=db, obj_in=verse_in)
     return verse
 
@@ -85,11 +82,11 @@ def update_daily_verse(
     """
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="권한이 없습니다.")
-    
+
     verse = crud_daily_verse.get(db=db, id=verse_id)
     if not verse:
         raise HTTPException(status_code=404, detail="말씀을 찾을 수 없습니다.")
-    
+
     verse = crud_daily_verse.update(db=db, db_obj=verse, obj_in=verse_in)
     return verse
 
@@ -106,11 +103,11 @@ def delete_daily_verse(
     """
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="권한이 없습니다.")
-    
+
     verse = crud_daily_verse.get(db=db, id=verse_id)
     if not verse:
         raise HTTPException(status_code=404, detail="말씀을 찾을 수 없습니다.")
-    
+
     verse = crud_daily_verse.remove(db=db, id=verse_id)
     return verse
 
@@ -122,7 +119,7 @@ def get_daily_verse_stats(
 ) -> Any:
     """
     오늘의 말씀 통계를 조회합니다.
-    
+
     - **권한**: 관리자만 접근 가능
     - **total_verses**: 전체 말씀 개수
     - **active_verses**: 활성화된 말씀 개수
@@ -130,12 +127,12 @@ def get_daily_verse_stats(
     """
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="권한이 없습니다.")
-    
+
     total_count = crud_daily_verse.count_verses(db)
     active_count = crud_daily_verse.count_active_verses(db)
-    
+
     return {
         "total_verses": total_count,
         "active_verses": active_count,
-        "inactive_verses": total_count - active_count
+        "inactive_verses": total_count - active_count,
     }

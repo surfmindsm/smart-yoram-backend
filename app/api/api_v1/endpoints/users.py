@@ -85,13 +85,13 @@ def update_user_me(
         # Clear first login flag when password is changed
         if current_user.is_first:
             current_user.is_first = False
-    
+
     # Update other fields
-    update_data = user_in.dict(exclude_unset=True, exclude={'password'})
+    update_data = user_in.dict(exclude_unset=True, exclude={"password"})
     for field, value in update_data.items():
         if hasattr(current_user, field):
             setattr(current_user, field, value)
-    
+
     db.add(current_user)
     db.commit()
     db.refresh(current_user)
@@ -112,15 +112,15 @@ def update_first_login_status(
     db.add(current_user)
     db.commit()
     db.refresh(current_user)
-    
+
     return {
         "success": True,
         "message": f"is_first updated to {is_first}",
         "data": {
             "id": current_user.id,
             "email": current_user.email,
-            "is_first": current_user.is_first
-        }
+            "is_first": current_user.is_first,
+        },
     }
 
 

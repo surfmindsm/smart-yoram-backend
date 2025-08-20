@@ -12,30 +12,52 @@ from .announcement import Announcement
 from .daily_verse import DailyVerse
 from .worship_schedule import WorshipService, WorshipServiceCategory
 from .push_notification import (
-    UserDevice, NotificationTemplate, PushNotification,
-    NotificationRecipient, NotificationPreference
+    UserDevice,
+    NotificationTemplate,
+    PushNotification,
+    NotificationRecipient,
+    NotificationPreference,
 )
 from .ai_agent import (
-    OfficialAgentTemplate, AIAgent, ChatHistory, 
-    ChatMessage, ChurchDatabaseConfig
+    OfficialAgentTemplate,
+    AIAgent,
+    ChatHistory,
+    ChatMessage,
+    ChurchDatabaseConfig,
 )
-from .pastoral_care import (
-    PastoralCareRequest, PrayerRequest, PrayerParticipation
-)
+from .pastoral_care import PastoralCareRequest, PrayerRequest, PrayerParticipation
 
 # Enhanced models
 from .member_enhanced import (
-    Code, Address, File, AuditLog, MemberContact, MemberAddress,
-    MemberVehicle, MemberFamily, MemberStatusHistory, MemberMinistry,
-    MemberChurchSchool, Sacrament, Marriage, Transfer, EducationNote
+    Code,
+    Address,
+    File,
+    AuditLog,
+    MemberContact,
+    MemberAddress,
+    MemberVehicle,
+    MemberFamily,
+    MemberStatusHistory,
+    MemberMinistry,
+    MemberChurchSchool,
+    Sacrament,
+    Marriage,
+    Transfer,
+    EducationNote,
 )
 from .financial import (
-    Offering, Receipt, ReceiptItem, ReceiptSnapshot,
-    FundType, FinancialReport
+    Offering,
+    Receipt,
+    ReceiptItem,
+    ReceiptSnapshot,
+    FundType,
+    FinancialReport,
 )
 from .visit import (
-    Visit, VisitPeople, VisitIndex, DailyMinistryReport, DailyMinistryLink
+    Visit,
+    VisitPeople,
+    VisitIndex,
+    DailyMinistryReport,
+    DailyMinistryLink,
 )
-from .system import (
-    Service, SearchPreset, PrintJob, StatsSnapshot
-)
+from .system import Service, SearchPreset, PrintJob, StatsSnapshot

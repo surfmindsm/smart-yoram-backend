@@ -84,7 +84,7 @@ class NotificationHistoryResponse(BaseModel):
 
     class Config:
         from_attributes = True
-        
+
     @property
     def calculated_status(self) -> str:
         """Calculate status based on counts"""
@@ -98,7 +98,7 @@ class NotificationHistoryResponse(BaseModel):
             return "failed"
         else:
             return "partial"
-    
+
     def model_post_init(self, __context):
         """Set status after initialization"""
         self.status = self.calculated_status
@@ -112,8 +112,12 @@ class NotificationPreferenceUpdate(BaseModel):
     prayer_request: Optional[bool] = None
     system: Optional[bool] = None
     do_not_disturb: Optional[bool] = None
-    dnd_start_time: Optional[str] = Field(None, pattern="^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$")
-    dnd_end_time: Optional[str] = Field(None, pattern="^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$")
+    dnd_start_time: Optional[str] = Field(
+        None, pattern="^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$"
+    )
+    dnd_end_time: Optional[str] = Field(
+        None, pattern="^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$"
+    )
     push_enabled: Optional[bool] = None
     email_enabled: Optional[bool] = None
     sms_enabled: Optional[bool] = None

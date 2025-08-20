@@ -14,7 +14,7 @@ from app.schemas.pastoral_care import (
     PastoralCareRequestComplete,
     PastoralCareRequest as PastoralCareRequestSchema,
     PastoralCareRequestList,
-    PastoralCareStats
+    PastoralCareStats,
 )
 
 router = APIRouter()
@@ -32,9 +32,7 @@ def create_pastoral_care_request(
     Create new pastoral care request.
     """
     request = PastoralCareRequest(
-        **request_in.dict(),
-        church_id=current_user.church_id,
-        member_id=current_user.id
+        **request_in.dict(), church_id=current_user.church_id, member_id=current_user.id
     )
     db.add(request)
     db.commit()
@@ -56,15 +54,19 @@ def read_my_pastoral_care_requests(
     """
     query = db.query(PastoralCareRequest).filter(
         PastoralCareRequest.member_id == current_user.id,
-        PastoralCareRequest.church_id == current_user.church_id
+        PastoralCareRequest.church_id == current_user.church_id,
     )
-    
+
     if status:
         query = query.filter(PastoralCareRequest.status == status)
-    
-    requests = query.order_by(desc(PastoralCareRequest.created_at))\
-                   .offset(skip).limit(limit).all()
-    
+
+    requests = (
+        query.order_by(desc(PastoralCareRequest.created_at))
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
     return requests
 
 
@@ -79,27 +81,25 @@ def update_pastoral_care_request(
     """
     Update pastoral care request (only when status is pending).
     """
-    request = db.query(PastoralCareRequest).filter(
-        PastoralCareRequest.id == request_id,
-        PastoralCareRequest.member_id == current_user.id
-    ).first()
-    
+    request = (
+        db.query(PastoralCareRequest)
+        .filter(
+            PastoralCareRequest.id == request_id,
+            PastoralCareRequest.member_id == current_user.id,
+        )
+        .first()
+    )
+
     if not request:
-        raise HTTPException(
-            status_code=404,
-            detail="Pastoral care request not found"
-        )
-    
+        raise HTTPException(status_code=404, detail="Pastoral care request not found")
+
     if request.status != "pending":
-        raise HTTPException(
-            status_code=400,
-            detail="Can only update pending requests"
-        )
-    
+        raise HTTPException(status_code=400, detail="Can only update pending requests")
+
     update_data = request_in.dict(exclude_unset=True)
     for field, value in update_data.items():
         setattr(request, field, value)
-    
+
     db.commit()
     db.refresh(request)
     return request
@@ -115,26 +115,24 @@ def delete_pastoral_care_request(
     """
     Cancel pastoral care request (only when status is pending).
     """
-    request = db.query(PastoralCareRequest).filter(
-        PastoralCareRequest.id == request_id,
-        PastoralCareRequest.member_id == current_user.id
-    ).first()
-    
+    request = (
+        db.query(PastoralCareRequest)
+        .filter(
+            PastoralCareRequest.id == request_id,
+            PastoralCareRequest.member_id == current_user.id,
+        )
+        .first()
+    )
+
     if not request:
-        raise HTTPException(
-            status_code=404,
-            detail="Pastoral care request not found"
-        )
-    
+        raise HTTPException(status_code=404, detail="Pastoral care request not found")
+
     if request.status != "pending":
-        raise HTTPException(
-            status_code=400,
-            detail="Can only cancel pending requests"
-        )
-    
+        raise HTTPException(status_code=400, detail="Can only cancel pending requests")
+
     request.status = "cancelled"
     db.commit()
-    
+
     return {"success": True, "message": "Request cancelled successfully"}
 
 
@@ -154,34 +152,30 @@ def read_all_pastoral_care_requests(
     """
     # Check admin permission
     if current_user.role not in ["admin", "minister"]:
-        raise HTTPException(
-            status_code=403,
-            detail="Not enough permissions"
-        )
-    
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
     query = db.query(PastoralCareRequest).filter(
         PastoralCareRequest.church_id == current_user.church_id
     )
-    
+
     if status:
         query = query.filter(PastoralCareRequest.status == status)
     if priority:
         query = query.filter(PastoralCareRequest.priority == priority)
-    
+
     total = query.count()
     skip = (page - 1) * per_page
-    
-    requests = query.order_by(
-        PastoralCareRequest.priority.desc(),
-        desc(PastoralCareRequest.created_at)
-    ).offset(skip).limit(per_page).all()
-    
-    return {
-        "items": requests,
-        "total": total,
-        "page": page,
-        "per_page": per_page
-    }
+
+    requests = (
+        query.order_by(
+            PastoralCareRequest.priority.desc(), desc(PastoralCareRequest.created_at)
+        )
+        .offset(skip)
+        .limit(per_page)
+        .all()
+    )
+
+    return {"items": requests, "total": total, "page": page, "per_page": per_page}
 
 
 @router.get("/admin/requests/{request_id}", response_model=PastoralCareRequestSchema)
@@ -196,22 +190,20 @@ def read_pastoral_care_request_detail(
     """
     # Check admin permission
     if current_user.role not in ["admin", "minister"]:
-        raise HTTPException(
-            status_code=403,
-            detail="Not enough permissions"
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    request = (
+        db.query(PastoralCareRequest)
+        .filter(
+            PastoralCareRequest.id == request_id,
+            PastoralCareRequest.church_id == current_user.church_id,
         )
-    
-    request = db.query(PastoralCareRequest).filter(
-        PastoralCareRequest.id == request_id,
-        PastoralCareRequest.church_id == current_user.church_id
-    ).first()
-    
+        .first()
+    )
+
     if not request:
-        raise HTTPException(
-            status_code=404,
-            detail="Pastoral care request not found"
-        )
-    
+        raise HTTPException(status_code=404, detail="Pastoral care request not found")
+
     return request
 
 
@@ -228,32 +220,32 @@ def admin_update_pastoral_care_request(
     """
     # Check admin permission
     if current_user.role not in ["admin", "minister"]:
-        raise HTTPException(
-            status_code=403,
-            detail="Not enough permissions"
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    request = (
+        db.query(PastoralCareRequest)
+        .filter(
+            PastoralCareRequest.id == request_id,
+            PastoralCareRequest.church_id == current_user.church_id,
         )
-    
-    request = db.query(PastoralCareRequest).filter(
-        PastoralCareRequest.id == request_id,
-        PastoralCareRequest.church_id == current_user.church_id
-    ).first()
-    
+        .first()
+    )
+
     if not request:
-        raise HTTPException(
-            status_code=404,
-            detail="Pastoral care request not found"
-        )
-    
+        raise HTTPException(status_code=404, detail="Pastoral care request not found")
+
     update_data = request_in.dict(exclude_unset=True)
     for field, value in update_data.items():
         setattr(request, field, value)
-    
+
     db.commit()
     db.refresh(request)
     return request
 
 
-@router.put("/admin/requests/{request_id}/assign", response_model=PastoralCareRequestSchema)
+@router.put(
+    "/admin/requests/{request_id}/assign", response_model=PastoralCareRequestSchema
+)
 def assign_pastor_to_request(
     *,
     db: Session = Depends(deps.get_db),
@@ -266,44 +258,47 @@ def assign_pastor_to_request(
     """
     # Check admin permission
     if current_user.role not in ["admin", "minister"]:
-        raise HTTPException(
-            status_code=403,
-            detail="Not enough permissions"
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    request = (
+        db.query(PastoralCareRequest)
+        .filter(
+            PastoralCareRequest.id == request_id,
+            PastoralCareRequest.church_id == current_user.church_id,
         )
-    
-    request = db.query(PastoralCareRequest).filter(
-        PastoralCareRequest.id == request_id,
-        PastoralCareRequest.church_id == current_user.church_id
-    ).first()
-    
+        .first()
+    )
+
     if not request:
-        raise HTTPException(
-            status_code=404,
-            detail="Pastoral care request not found"
-        )
-    
+        raise HTTPException(status_code=404, detail="Pastoral care request not found")
+
     # Verify pastor exists and is a minister
-    pastor = db.query(models.User).filter(
-        models.User.id == pastor_id,
-        models.User.church_id == current_user.church_id,
-        models.User.role.in_(["admin", "minister"])
-    ).first()
-    
+    pastor = (
+        db.query(models.User)
+        .filter(
+            models.User.id == pastor_id,
+            models.User.church_id == current_user.church_id,
+            models.User.role.in_(["admin", "minister"]),
+        )
+        .first()
+    )
+
     if not pastor:
         raise HTTPException(
-            status_code=404,
-            detail="Pastor not found or not authorized"
+            status_code=404, detail="Pastor not found or not authorized"
         )
-    
+
     request.assigned_pastor_id = pastor_id
     request.status = "approved"
-    
+
     db.commit()
     db.refresh(request)
     return request
 
 
-@router.post("/admin/requests/{request_id}/complete", response_model=PastoralCareRequestSchema)
+@router.post(
+    "/admin/requests/{request_id}/complete", response_model=PastoralCareRequestSchema
+)
 def complete_pastoral_care_request(
     *,
     db: Session = Depends(deps.get_db),
@@ -316,26 +311,24 @@ def complete_pastoral_care_request(
     """
     # Check admin permission
     if current_user.role not in ["admin", "minister"]:
-        raise HTTPException(
-            status_code=403,
-            detail="Not enough permissions"
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    request = (
+        db.query(PastoralCareRequest)
+        .filter(
+            PastoralCareRequest.id == request_id,
+            PastoralCareRequest.church_id == current_user.church_id,
         )
-    
-    request = db.query(PastoralCareRequest).filter(
-        PastoralCareRequest.id == request_id,
-        PastoralCareRequest.church_id == current_user.church_id
-    ).first()
-    
+        .first()
+    )
+
     if not request:
-        raise HTTPException(
-            status_code=404,
-            detail="Pastoral care request not found"
-        )
-    
+        raise HTTPException(status_code=404, detail="Pastoral care request not found")
+
     request.status = "completed"
     request.completion_notes = completion.completion_notes
     request.completed_at = datetime.now()
-    
+
     db.commit()
     db.refresh(request)
     return request
@@ -352,56 +345,82 @@ def get_pastoral_care_statistics(
     """
     # Check admin permission
     if current_user.role not in ["admin", "minister"]:
-        raise HTTPException(
-            status_code=403,
-            detail="Not enough permissions"
-        )
-    
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
     # Total requests
-    total_requests = db.query(PastoralCareRequest).filter(
-        PastoralCareRequest.church_id == current_user.church_id
-    ).count()
-    
+    total_requests = (
+        db.query(PastoralCareRequest)
+        .filter(PastoralCareRequest.church_id == current_user.church_id)
+        .count()
+    )
+
     # Count by status
-    pending_count = db.query(PastoralCareRequest).filter(
-        PastoralCareRequest.church_id == current_user.church_id,
-        PastoralCareRequest.status == "pending"
-    ).count()
-    
-    scheduled_count = db.query(PastoralCareRequest).filter(
-        PastoralCareRequest.church_id == current_user.church_id,
-        PastoralCareRequest.status == "scheduled"
-    ).count()
-    
-    completed_count = db.query(PastoralCareRequest).filter(
-        PastoralCareRequest.church_id == current_user.church_id,
-        PastoralCareRequest.status == "completed"
-    ).count()
-    
+    pending_count = (
+        db.query(PastoralCareRequest)
+        .filter(
+            PastoralCareRequest.church_id == current_user.church_id,
+            PastoralCareRequest.status == "pending",
+        )
+        .count()
+    )
+
+    scheduled_count = (
+        db.query(PastoralCareRequest)
+        .filter(
+            PastoralCareRequest.church_id == current_user.church_id,
+            PastoralCareRequest.status == "scheduled",
+        )
+        .count()
+    )
+
+    completed_count = (
+        db.query(PastoralCareRequest)
+        .filter(
+            PastoralCareRequest.church_id == current_user.church_id,
+            PastoralCareRequest.status == "completed",
+        )
+        .count()
+    )
+
     # Completed this month
     from datetime import datetime, timedelta
-    start_of_month = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    
-    completed_this_month = db.query(PastoralCareRequest).filter(
-        PastoralCareRequest.church_id == current_user.church_id,
-        PastoralCareRequest.status == "completed",
-        PastoralCareRequest.completed_at >= start_of_month
-    ).count()
-    
+
+    start_of_month = datetime.now().replace(
+        day=1, hour=0, minute=0, second=0, microsecond=0
+    )
+
+    completed_this_month = (
+        db.query(PastoralCareRequest)
+        .filter(
+            PastoralCareRequest.church_id == current_user.church_id,
+            PastoralCareRequest.status == "completed",
+            PastoralCareRequest.completed_at >= start_of_month,
+        )
+        .count()
+    )
+
     # Urgent count
-    urgent_count = db.query(PastoralCareRequest).filter(
-        PastoralCareRequest.church_id == current_user.church_id,
-        PastoralCareRequest.priority == "urgent",
-        PastoralCareRequest.status.in_(["pending", "approved", "scheduled"])
-    ).count()
-    
+    urgent_count = (
+        db.query(PastoralCareRequest)
+        .filter(
+            PastoralCareRequest.church_id == current_user.church_id,
+            PastoralCareRequest.priority == "urgent",
+            PastoralCareRequest.status.in_(["pending", "approved", "scheduled"]),
+        )
+        .count()
+    )
+
     # Calculate average completion days
-    completed_requests = db.query(PastoralCareRequest).filter(
-        PastoralCareRequest.church_id == current_user.church_id,
-        PastoralCareRequest.status == "completed",
-        PastoralCareRequest.completed_at.isnot(None)
-    ).all()
-    
+    completed_requests = (
+        db.query(PastoralCareRequest)
+        .filter(
+            PastoralCareRequest.church_id == current_user.church_id,
+            PastoralCareRequest.status == "completed",
+            PastoralCareRequest.completed_at.isnot(None),
+        )
+        .all()
+    )
+
     total_days = 0
     count = 0
     for req in completed_requests:
@@ -409,9 +428,9 @@ def get_pastoral_care_statistics(
             days = (req.completed_at - req.created_at).days
             total_days += days
             count += 1
-    
+
     average_completion_days = total_days / count if count > 0 else 0
-    
+
     return {
         "total_requests": total_requests,
         "pending_count": pending_count,
@@ -419,5 +438,5 @@ def get_pastoral_care_statistics(
         "completed_count": completed_count,
         "completed_this_month": completed_this_month,
         "urgent_count": urgent_count,
-        "average_completion_days": average_completion_days
+        "average_completion_days": average_completion_days,
     }

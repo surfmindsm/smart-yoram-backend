@@ -8,7 +8,7 @@ from app.api import deps
 from app.core.announcement_categories import (
     get_categories,
     validate_category,
-    ANNOUNCEMENT_CATEGORIES
+    ANNOUNCEMENT_CATEGORIES,
 )
 
 router = APIRouter()
@@ -42,25 +42,29 @@ def read_announcements(
     query = db.query(models.Announcement).filter(
         models.Announcement.church_id == current_user.church_id
     )
-    
+
     if is_active is not None:
         query = query.filter(models.Announcement.is_active == is_active)
-    
+
     if is_pinned is not None:
         query = query.filter(models.Announcement.is_pinned == is_pinned)
-    
+
     if category is not None:
         query = query.filter(models.Announcement.category == category)
-    
+
     if subcategory is not None:
         query = query.filter(models.Announcement.subcategory == subcategory)
-    
+
     # Order by pinned first, then by created date
-    announcements = query.order_by(
-        desc(models.Announcement.is_pinned),
-        desc(models.Announcement.created_at)
-    ).offset(skip).limit(limit).all()
-    
+    announcements = (
+        query.order_by(
+            desc(models.Announcement.is_pinned), desc(models.Announcement.created_at)
+        )
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
     return announcements
 
 
@@ -78,23 +82,22 @@ def create_announcement(
     if current_user.role not in ["admin", "minister"]:
         raise HTTPException(
             status_code=403,
-            detail="Only church admins and ministers can create announcements"
+            detail="Only church admins and ministers can create announcements",
         )
-    
+
     # Validate category and subcategory
     if not validate_category(announcement_in.category, announcement_in.subcategory):
         raise HTTPException(
-            status_code=400,
-            detail="Invalid category or subcategory combination"
+            status_code=400, detail="Invalid category or subcategory combination"
         )
-    
+
     announcement = models.Announcement(
         **announcement_in.dict(),
         church_id=current_user.church_id,
         author_id=current_user.id,
-        author_name=current_user.full_name or current_user.username
+        author_name=current_user.full_name or current_user.username,
     )
-    
+
     db.add(announcement)
     db.commit()
     db.refresh(announcement)
@@ -111,16 +114,18 @@ def read_announcement(
     """
     Get announcement by ID.
     """
-    announcement = db.query(models.Announcement).filter(
-        models.Announcement.id == announcement_id
-    ).first()
-    
+    announcement = (
+        db.query(models.Announcement)
+        .filter(models.Announcement.id == announcement_id)
+        .first()
+    )
+
     if not announcement:
         raise HTTPException(status_code=404, detail="Announcement not found")
-    
+
     if announcement.church_id != current_user.church_id:
         raise HTTPException(status_code=403, detail="Not enough permissions")
-    
+
     return announcement
 
 
@@ -135,27 +140,29 @@ def update_announcement(
     """
     Update an announcement.
     """
-    announcement = db.query(models.Announcement).filter(
-        models.Announcement.id == announcement_id
-    ).first()
-    
+    announcement = (
+        db.query(models.Announcement)
+        .filter(models.Announcement.id == announcement_id)
+        .first()
+    )
+
     if not announcement:
         raise HTTPException(status_code=404, detail="Announcement not found")
-    
+
     if announcement.church_id != current_user.church_id:
         raise HTTPException(status_code=403, detail="Not enough permissions")
-    
+
     # Only author or admin can update
     if announcement.author_id != current_user.id and current_user.role != "admin":
         raise HTTPException(
             status_code=403,
-            detail="Only the author or admin can update this announcement"
+            detail="Only the author or admin can update this announcement",
         )
-    
+
     update_data = announcement_in.dict(exclude_unset=True)
     for field, value in update_data.items():
         setattr(announcement, field, value)
-    
+
     db.add(announcement)
     db.commit()
     db.refresh(announcement)
@@ -172,23 +179,25 @@ def delete_announcement(
     """
     Delete an announcement.
     """
-    announcement = db.query(models.Announcement).filter(
-        models.Announcement.id == announcement_id
-    ).first()
-    
+    announcement = (
+        db.query(models.Announcement)
+        .filter(models.Announcement.id == announcement_id)
+        .first()
+    )
+
     if not announcement:
         raise HTTPException(status_code=404, detail="Announcement not found")
-    
+
     if announcement.church_id != current_user.church_id:
         raise HTTPException(status_code=403, detail="Not enough permissions")
-    
+
     # Only author or admin can delete
     if announcement.author_id != current_user.id and current_user.role != "admin":
         raise HTTPException(
             status_code=403,
-            detail="Only the author or admin can delete this announcement"
+            detail="Only the author or admin can delete this announcement",
         )
-    
+
     db.delete(announcement)
     db.commit()
     return {"message": "Announcement deleted successfully"}
@@ -207,20 +216,21 @@ def toggle_pin_announcement(
     """
     if current_user.role != "admin":
         raise HTTPException(
-            status_code=403,
-            detail="Only admins can pin/unpin announcements"
+            status_code=403, detail="Only admins can pin/unpin announcements"
         )
-    
-    announcement = db.query(models.Announcement).filter(
-        models.Announcement.id == announcement_id
-    ).first()
-    
+
+    announcement = (
+        db.query(models.Announcement)
+        .filter(models.Announcement.id == announcement_id)
+        .first()
+    )
+
     if not announcement:
         raise HTTPException(status_code=404, detail="Announcement not found")
-    
+
     if announcement.church_id != current_user.church_id:
         raise HTTPException(status_code=403, detail="Not enough permissions")
-    
+
     announcement.is_pinned = not announcement.is_pinned
     db.add(announcement)
     db.commit()

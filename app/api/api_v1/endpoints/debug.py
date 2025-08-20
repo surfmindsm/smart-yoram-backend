@@ -19,11 +19,13 @@ def test_authentication(
     Test authentication - returns current user info if authenticated.
     """
     logger.info(f"Test auth endpoint called by user {current_user.id}")
-    
+
     # Log headers for debugging
     auth_header = request.headers.get("Authorization")
-    logger.debug(f"Authorization header: {auth_header[:50] if auth_header else 'None'}...")
-    
+    logger.debug(
+        f"Authorization header: {auth_header[:50] if auth_header else 'None'}..."
+    )
+
     return {
         "success": True,
         "message": "Authentication successful",
@@ -33,8 +35,8 @@ def test_authentication(
             "username": current_user.username,
             "church_id": current_user.church_id,
             "role": current_user.role,
-            "is_active": current_user.is_active
-        }
+            "is_active": current_user.is_active,
+        },
     }
 
 
@@ -48,12 +50,12 @@ def test_request_body(
     """
     logger.info(f"Test request body endpoint called by user {current_user.id}")
     logger.debug(f"Received data: {data}")
-    
+
     return {
         "success": True,
         "message": "Request body received",
         "received_data": data,
-        "data_type": {key: type(value).__name__ for key, value in data.items()}
+        "data_type": {key: type(value).__name__ for key, value in data.items()},
     }
 
 
@@ -63,9 +65,9 @@ def test_no_auth() -> Any:
     Test endpoint without authentication - should always work.
     """
     logger.info("Test no-auth endpoint called")
-    
+
     return {
         "success": True,
         "message": "This endpoint works without authentication",
-        "info": "If you can see this but not authenticated endpoints, the issue is with JWT"
+        "info": "If you can see this but not authenticated endpoints, the issue is with JWT",
     }

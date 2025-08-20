@@ -20,10 +20,12 @@ class Code(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     church_id = Column(Integer, ForeignKey("churches.id"), nullable=False)
-    type = Column(String, nullable=False)  # position, department, district, visit_type, marital_status
+    type = Column(
+        String, nullable=False
+    )  # position, department, district, visit_type, marital_status
     code = Column(String, nullable=False)
     label = Column(String, nullable=False)
-    
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -40,7 +42,7 @@ class Address(Base):
     sido = Column(String)  # 시/도
     sigungu = Column(String)  # 시/군/구
     eupmyeondong = Column(String)  # 읍/면/동
-    
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -56,7 +58,7 @@ class File(Base):
     mime_type = Column(String)
     bytes = Column(BigInteger)
     taken_at = Column(DateTime(timezone=True))
-    
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -73,7 +75,7 @@ class AuditLog(Base):
     entity_id = Column(Integer, nullable=False)
     action = Column(String, nullable=False)  # create, update, delete, view, print
     diff = Column(Text)  # JSON format
-    
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     church = relationship("Church", backref="audit_logs")
@@ -87,7 +89,7 @@ class MemberContact(Base):
     member_id = Column(Integer, ForeignKey("members.id"), nullable=False)
     type = Column(String, nullable=False)  # phone, mobile, email
     value = Column(String, nullable=False)
-    
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -101,7 +103,7 @@ class MemberAddress(Base):
     member_id = Column(Integer, ForeignKey("members.id"), nullable=False)
     address_id = Column(Integer, ForeignKey("addresses.id"), nullable=False)
     is_primary = Column(Boolean, default=False)
-    
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -116,7 +118,7 @@ class MemberVehicle(Base):
     member_id = Column(Integer, ForeignKey("members.id"), nullable=False)
     car_type = Column(String)
     plate_no = Column(String)
-    
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -131,7 +133,7 @@ class MemberFamily(Base):
     family_id = Column(Integer, ForeignKey("families.id"), nullable=False)
     member_id = Column(Integer, ForeignKey("members.id"), nullable=False)
     role = Column(String)  # 세대주, 배우자, 자녀
-    
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -148,7 +150,7 @@ class MemberStatusHistory(Base):
     status = Column(String, nullable=False)
     started_at = Column(Date, nullable=False)
     ended_at = Column(Date)
-    
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -168,7 +170,7 @@ class MemberMinistry(Base):
     workplace = Column(String)
     workplace_phone = Column(String)
     resign_on = Column(Date)
-    
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -183,7 +185,7 @@ class MemberChurchSchool(Base):
     year = Column(Integer)
     grade = Column(String)
     ministry_code = Column(String)
-    
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -198,7 +200,7 @@ class Sacrament(Base):
     type = Column(String, nullable=False)  # 세례, 입교, 유아세례, 성찬
     date = Column(Date)
     church_name = Column(String)
-    
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -213,11 +215,13 @@ class Marriage(Base):
     status = Column(String)  # 미혼, 기혼, 사별, 이혼
     spouse_member_id = Column(Integer, ForeignKey("members.id"), nullable=True)
     married_on = Column(Date)
-    
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    member = relationship("Member", foreign_keys=[member_id], backref="marriage_records")
+    member = relationship(
+        "Member", foreign_keys=[member_id], backref="marriage_records"
+    )
     spouse = relationship("Member", foreign_keys=[spouse_member_id])
 
 
@@ -229,7 +233,7 @@ class Transfer(Base):
     type = Column(String, nullable=False)  # in, out
     church_name = Column(String)
     date = Column(Date)
-    
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -243,7 +247,7 @@ class EducationNote(Base):
     member_id = Column(Integer, ForeignKey("members.id"), nullable=False)
     level_code = Column(String)
     memo = Column(Text)
-    
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

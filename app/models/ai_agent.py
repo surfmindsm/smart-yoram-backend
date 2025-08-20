@@ -1,4 +1,14 @@
-from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey, Float, JSON
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Text,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Float,
+    JSON,
+)
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base_class import Base
@@ -20,7 +30,7 @@ class OfficialAgentTemplate(Base):
     created_by = Column(String(255), default="Smart Yoram Team")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    
+
     # Relationships
     agents = relationship("AIAgent", back_populates="template")
 
@@ -30,7 +40,9 @@ class AIAgent(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     church_id = Column(Integer, ForeignKey("churches.id"), nullable=False)
-    template_id = Column(Integer, ForeignKey("official_agent_templates.id"), nullable=True)
+    template_id = Column(
+        Integer, ForeignKey("official_agent_templates.id"), nullable=True
+    )
     name = Column(String(255), nullable=False)
     category = Column(String(100), nullable=False)
     description = Column(Text)
@@ -44,7 +56,7 @@ class AIAgent(Base):
     total_cost = Column(Float, default=0.0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    
+
     # Relationships
     church = relationship("Church", back_populates="ai_agents")
     template = relationship("OfficialAgentTemplate", back_populates="agents")
@@ -63,12 +75,14 @@ class ChatHistory(Base):
     message_count = Column(Integer, default=0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    
+
     # Relationships
     church = relationship("Church", back_populates="chat_histories")
     user = relationship("User", back_populates="chat_histories")
     agent = relationship("AIAgent", back_populates="chat_histories")
-    messages = relationship("ChatMessage", back_populates="chat_history", cascade="all, delete-orphan")
+    messages = relationship(
+        "ChatMessage", back_populates="chat_history", cascade="all, delete-orphan"
+    )
 
 
 class ChatMessage(Base):
@@ -80,7 +94,7 @@ class ChatMessage(Base):
     role = Column(String(20), nullable=False)  # 'user' or 'assistant'
     tokens_used = Column(Integer, default=0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    
+
     # Relationships
     chat_history = relationship("ChatHistory", back_populates="messages")
 
@@ -102,6 +116,6 @@ class ChurchDatabaseConfig(Base):
     tables_count = Column(Integer, default=0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    
+
     # Relationships
     church = relationship("Church", back_populates="database_config")

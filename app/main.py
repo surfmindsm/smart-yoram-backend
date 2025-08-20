@@ -1,4 +1,5 @@
 import warnings
+
 warnings.filterwarnings("ignore", message=".*error reading bcrypt version.*")
 
 from fastapi import FastAPI
@@ -26,11 +27,11 @@ app = FastAPI(
 # Set up CORS
 cors_origins = [
     "http://localhost:3000",
-    "http://localhost:3001", 
+    "http://localhost:3001",
     "http://localhost:8080",
     "https://smart-yoram-admin.vercel.app",
     "https://smart-yoram.vercel.app",
-    "*"  # Allow all origins for development
+    "*",  # Allow all origins for development
 ]
 
 app.add_middleware(
@@ -47,14 +48,16 @@ app.include_router(spec_router, prefix="/api")
 app.include_router(admin_router)
 app.include_router(web_router)
 
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint for deployment monitoring"""
     return {
         "status": "healthy",
         "service": "smart-yoram-backend",
-        "version": settings.VERSION
+        "version": settings.VERSION,
     }
+
 
 @app.get("/")
 async def root():
@@ -62,8 +65,9 @@ async def root():
     return {
         "message": "Smart Yoram Backend API",
         "version": settings.VERSION,
-        "docs": f"{settings.API_V1_STR}/docs"
+        "docs": f"{settings.API_V1_STR}/docs",
     }
+
 
 # Mount static files only if directory exists
 static_dir = "static"

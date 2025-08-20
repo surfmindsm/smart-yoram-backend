@@ -10,11 +10,11 @@ def send_sms(phone_number: str, message: str) -> bool:
     # SMS service configuration from environment variables
     sms_api_key = os.getenv("SMS_API_KEY", "")
     sms_api_url = os.getenv("SMS_API_URL", "")
-    
+
     if not sms_api_key or not sms_api_url:
         print("SMS service not configured. Skipping SMS send.")
         return False
-    
+
     try:
         # TODO: Implement actual SMS sending logic
         # Example providers: Twilio, AWS SNS, Korean SMS services, etc.
@@ -26,15 +26,12 @@ def send_sms(phone_number: str, message: str) -> bool:
 
 
 def send_temporary_password_sms(
-    phone_number: str,
-    member_name: str,
-    church_name: str,
-    temp_password: str
+    phone_number: str, member_name: str, church_name: str, temp_password: str
 ) -> bool:
     """
     Send temporary password via SMS to new member.
     """
     message = f"""[{church_name}] {member_name}님 스마트요람 임시 비밀번호: {temp_password}
 로그인 후 변경해주세요."""
-    
+
     return send_sms(phone_number, message)

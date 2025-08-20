@@ -20,7 +20,9 @@ if not ENCRYPTION_KEY:
             f.write(ENCRYPTION_KEY)
         print(f"Generated new encryption key and saved to {ENCRYPTION_KEY_FILE}")
 
-fernet = Fernet(ENCRYPTION_KEY.encode() if isinstance(ENCRYPTION_KEY, str) else ENCRYPTION_KEY)
+fernet = Fernet(
+    ENCRYPTION_KEY.encode() if isinstance(ENCRYPTION_KEY, str) else ENCRYPTION_KEY
+)
 
 
 def encrypt_password(plain_password: str) -> str:

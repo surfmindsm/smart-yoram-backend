@@ -6,6 +6,7 @@ from app.db.base_class import Base
 
 class WorshipService(Base):
     """예배 서비스 정보"""
+
     __tablename__ = "worship_services"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -20,26 +21,27 @@ class WorshipService(Base):
     is_online = Column(Boolean, default=False)  # 온라인 여부
     is_active = Column(Boolean, default=True)  # 활성화 여부
     order_index = Column(Integer, default=0)  # 표시 순서
-    
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    
+
     # Relationships
     church = relationship("Church", back_populates="worship_services")
 
 
 class WorshipServiceCategory(Base):
     """예배 카테고리 (주일예배, 수요예배, 새벽기도회 등)"""
+
     __tablename__ = "worship_service_categories"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     church_id = Column(Integer, ForeignKey("churches.id"), nullable=False)
     name = Column(String(50), nullable=False)
     description = Column(String(200))
     order_index = Column(Integer, default=0)
-    
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    
+
     # Relationships
     church = relationship("Church", back_populates="worship_categories")

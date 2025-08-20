@@ -11,4 +11,6 @@ class DailyVerse(Base):
     reference = Column(String(100), nullable=False, comment="성경 구절 출처 (예: 시편 23:1)")
     is_active = Column(Boolean, default=True, comment="활성 상태")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )

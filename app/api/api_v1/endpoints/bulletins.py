@@ -95,15 +95,15 @@ def update_bulletin(
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
     update_data = bulletin_in.model_dump(exclude_unset=True)
-    
+
     # Validate that date is not set to None if it's provided
     # The database requires date to be non-null
     if "date" in update_data and update_data["date"] is None:
         raise HTTPException(
-            status_code=422, 
-            detail="Date field cannot be set to null. Date is required for bulletins."
+            status_code=422,
+            detail="Date field cannot be set to null. Date is required for bulletins.",
         )
-    
+
     for field, value in update_data.items():
         setattr(bulletin, field, value)
 
@@ -140,7 +140,7 @@ async def upload_bulletin_file(
     db: Session = Depends(deps.get_db),
     bulletin_id: int,
     current_user: models.User = Depends(deps.get_current_active_user),
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
 ) -> Any:
     """
     Upload bulletin file to Supabase Storage.
@@ -150,34 +150,34 @@ async def upload_bulletin_file(
     )
     if not bulletin:
         raise HTTPException(status_code=404, detail="Bulletin not found")
-    
+
     if bulletin.church_id != current_user.church_id and not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not enough permissions")
-    
+
     # Validate that bulletin has a date (required for file storage path)
     if bulletin.date is None:
         raise HTTPException(
-            status_code=422, 
-            detail="Cannot upload file to bulletin without a date. Please update the bulletin with a valid date first."
+            status_code=422,
+            detail="Cannot upload file to bulletin without a date. Please update the bulletin with a valid date first.",
         )
-    
+
     # Read file content
     file_content = await file.read()
-    
+
     # Upload to Supabase Storage
     success, file_url, error_msg = upload_bulletin(
         file_content=file_content,
         filename=file.filename,
         church_id=bulletin.church_id,
-        bulletin_date=str(bulletin.date)
+        bulletin_date=str(bulletin.date),
     )
-    
+
     if not success:
         raise HTTPException(status_code=400, detail=error_msg)
-    
+
     # Update bulletin with file URL
     bulletin.file_url = file_url
     db.commit()
     db.refresh(bulletin)
-    
+
     return bulletin

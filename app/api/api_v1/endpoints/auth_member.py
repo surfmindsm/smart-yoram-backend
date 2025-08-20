@@ -14,8 +14,7 @@ router = APIRouter()
 
 @router.post("/login", response_model=schemas.Token)
 def login_member(
-    db: Session = Depends(deps.get_db),
-    form_data: OAuth2PasswordRequestForm = Depends()
+    db: Session = Depends(deps.get_db), form_data: OAuth2PasswordRequestForm = Depends()
 ) -> Any:
     """
     OAuth2 compatible token login for members.
@@ -23,25 +22,29 @@ def login_member(
     """
     # Try to find user by email first
     user = db.query(models.User).filter(models.User.email == form_data.username).first()
-    
+
     # If not found by email, try phone number
     if not user:
-        user = db.query(models.User).filter(models.User.phone == form_data.username).first()
-    
+        user = (
+            db.query(models.User)
+            .filter(models.User.phone == form_data.username)
+            .first()
+        )
+
     if not user:
         raise HTTPException(status_code=400, detail="Incorrect username or password")
-    
+
     if not security.verify_password(form_data.password, user.hashed_password):
         raise HTTPException(status_code=400, detail="Incorrect username or password")
-    
+
     if not user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
-    
+
     # Check if user has member profile
     member = db.query(models.Member).filter(models.Member.user_id == user.id).first()
     if not member:
         raise HTTPException(status_code=403, detail="User is not a member")
-    
+
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     return {
         "access_token": security.create_access_token(
@@ -63,25 +66,25 @@ def login_member_access_token(
     """
     # Try to find user by email first
     user = db.query(models.User).filter(models.User.email == username).first()
-    
+
     # If not found by email, try phone number
     if not user:
         user = db.query(models.User).filter(models.User.phone == username).first()
-    
+
     if not user:
         raise HTTPException(status_code=400, detail="Incorrect username or password")
-    
+
     if not security.verify_password(password, user.hashed_password):
         raise HTTPException(status_code=400, detail="Incorrect username or password")
-    
+
     if not user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
-    
+
     # Check if user has member profile
     member = db.query(models.Member).filter(models.Member.user_id == user.id).first()
     if not member:
         raise HTTPException(status_code=403, detail="User is not a member")
-    
+
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     return {
         "access_token": security.create_access_token(
@@ -89,7 +92,7 @@ def login_member_access_token(
         ),
         "token_type": "bearer",
         "user": user,
-        "member": member
+        "member": member,
     }
 
 
@@ -107,36 +110,38 @@ def request_password_reset(
     if not user:
         # Don't reveal if user exists
         return {"message": "If the email exists, a password reset link has been sent"}
-    
+
     # Check if user has member profile
     member = db.query(models.Member).filter(models.Member.user_id == user.id).first()
     if not member:
         return {"message": "If the email exists, a password reset link has been sent"}
-    
+
     # Generate new temporary password
     from app.utils.password import generate_temporary_password
     from app.utils.encryption import encrypt_password
     from app.utils.email import send_temporary_password_email
-    
+
     temp_password = generate_temporary_password()
-    
+
     # Update user password
     user.hashed_password = security.get_password_hash(temp_password)
     user.encrypted_password = encrypt_password(temp_password)
-    
+
     # Get church name
-    church = db.query(models.Church).filter(models.Church.id == member.church_id).first()
-    
+    church = (
+        db.query(models.Church).filter(models.Church.id == member.church_id).first()
+    )
+
     # Send email
     send_temporary_password_email(
         to_email=user.email,
         member_name=member.name,
         church_name=church.name if church else "교회",
-        temp_password=temp_password
+        temp_password=temp_password,
     )
-    
+
     db.commit()
-    
+
     return {"message": "If the email exists, a password reset link has been sent"}
 
 
@@ -153,30 +158,30 @@ def change_password(
     """
     if not security.verify_password(current_password, current_user.hashed_password):
         raise HTTPException(status_code=400, detail="Incorrect password")
-    
+
     # Check if user has member profile
-    member = db.query(models.Member).filter(models.Member.user_id == current_user.id).first()
+    member = (
+        db.query(models.Member).filter(models.Member.user_id == current_user.id).first()
+    )
     if not member:
         raise HTTPException(status_code=403, detail="User is not a member")
-    
+
     from app.utils.encryption import encrypt_password
-    
+
     # Update password
     current_user.hashed_password = security.get_password_hash(new_password)
     current_user.encrypted_password = encrypt_password(new_password)
-    
+
     # If this is the first time password change, set is_first to False
     if current_user.is_first:
         current_user.is_first = False
-    
+
     db.add(current_user)
     db.commit()
     db.refresh(current_user)
-    
+
     return {
         "success": True,
         "message": "Password changed successfully",
-        "data": {
-            "is_first": current_user.is_first
-        }
+        "data": {"is_first": current_user.is_first},
     }

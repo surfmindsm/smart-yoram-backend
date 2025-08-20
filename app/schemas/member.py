@@ -32,8 +32,8 @@ class MemberBase(BaseModel):
     memo: Optional[str] = None
     invitation_sent: Optional[bool] = False
     invitation_sent_at: Optional[datetime] = None
-    
-    @field_validator('gender', mode='before')
+
+    @field_validator("gender", mode="before")
     def validate_gender(cls, v):
         if v is None:
             return None
@@ -41,13 +41,13 @@ class MemberBase(BaseModel):
             return v.value
         if isinstance(v, str):
             v = v.upper().strip()
-            if v in ['M', 'F']:
+            if v in ["M", "F"]:
                 return v
             # Try to convert Korean labels
             gender_enum = Gender.from_korean(v)
             if gender_enum:
                 return gender_enum.value
-        raise ValueError('Gender must be M or F (or 남/여 in Korean)')
+        raise ValueError("Gender must be M or F (or 남/여 in Korean)")
 
 
 class MemberCreate(MemberBase):
