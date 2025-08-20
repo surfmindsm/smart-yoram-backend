@@ -8,7 +8,6 @@ from sqlalchemy import and_, func, extract
 
 from app import models, schemas
 from app.api import deps
-from app.core.security import get_current_active_user
 
 router = APIRouter()
 
