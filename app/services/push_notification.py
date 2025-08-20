@@ -360,9 +360,9 @@ class PushNotificationService:
         result["failed_count"] = failed_count + len(users_without_devices)
 
         if users_without_devices:
-            result[
-                "message"
-            ] = f"성공: {success_count}명, 실패: {failed_count}명, 기기 없음: {len(users_without_devices)}명"
+            result["message"] = (
+                f"성공: {success_count}명, 실패: {failed_count}명, 기기 없음: {len(users_without_devices)}명"
+            )
         else:
             result["message"] = f"성공: {success_count}명, 실패: {failed_count}명"
 

@@ -188,9 +188,9 @@ def get_family_tree(
                     name=member.name,
                     profile_photo_url=member.profile_photo_url,
                     relationship_type=relationship_map.get(member.id),
-                    date_of_birth=member.birthdate.isoformat()
-                    if member.birthdate
-                    else None,
+                    date_of_birth=(
+                        member.birthdate.isoformat() if member.birthdate else None
+                    ),
                     phone_number=member.phone,
                 )
             )
@@ -201,9 +201,9 @@ def get_family_tree(
         name=root_member.name,
         profile_photo_url=root_member.profile_photo_url,
         relationship_type="본인",
-        date_of_birth=root_member.birthdate.isoformat()
-        if root_member.birthdate
-        else None,
+        date_of_birth=(
+            root_member.birthdate.isoformat() if root_member.birthdate else None
+        ),
         phone_number=root_member.phone,
     )
 

@@ -1,4 +1,5 @@
 """Supabase Storage utilities for file management."""
+
 import os
 import uuid
 from typing import Optional, Tuple

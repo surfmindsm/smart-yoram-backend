@@ -72,7 +72,9 @@ async def upload_members_excel(
                 # Optional fields
                 if pd.notna(row.get("생년월일")):
                     try:
-                        member_data["birthdate"] = pd.to_datetime(row["생년월일"]).date()
+                        member_data["birthdate"] = pd.to_datetime(
+                            row["생년월일"]
+                        ).date()
                     except:
                         pass
 
@@ -200,7 +202,15 @@ def download_member_template(
         # Add instructions sheet
         instructions = pd.DataFrame(
             {
-                "필드명": ["이름", "성별", "생년월일", "전화번호", "주소", "직분", "구역"],
+                "필드명": [
+                    "이름",
+                    "성별",
+                    "생년월일",
+                    "전화번호",
+                    "주소",
+                    "직분",
+                    "구역",
+                ],
                 "필수여부": ["필수", "필수", "선택", "필수", "선택", "선택", "선택"],
                 "설명": [
                     "교인 이름",

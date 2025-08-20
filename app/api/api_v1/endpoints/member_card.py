@@ -130,9 +130,11 @@ def get_member_card_data(
         "qr_code": {"code": qr_code.code, "image_base64": qr_code_base64},
         "statistics": {
             "recent_attendance_count": recent_attendance_count,
-            "member_since": member.registration_date.strftime("%Y년 %m월")
-            if member.registration_date
-            else "",
+            "member_since": (
+                member.registration_date.strftime("%Y년 %m월")
+                if member.registration_date
+                else ""
+            ),
         },
     }
 

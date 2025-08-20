@@ -1,6 +1,7 @@
 """
 Test OpenAI service that returns mock responses
 """
+
 import random
 from typing import List, Dict
 

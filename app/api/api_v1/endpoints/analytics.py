@@ -283,16 +283,16 @@ def read_usage_trends(
             "summary": {
                 "total_days": len(trend_data),
                 "weekly_growth_rate": round(weekly_growth, 2),
-                "avg_daily_tokens": round(
-                    sum(t["tokens"] for t in trend_data) / len(trend_data), 0
-                )
-                if trend_data
-                else 0,
-                "avg_daily_cost": round(
-                    sum(t["cost"] for t in trend_data) / len(trend_data), 2
-                )
-                if trend_data
-                else 0,
+                "avg_daily_tokens": (
+                    round(sum(t["tokens"] for t in trend_data) / len(trend_data), 0)
+                    if trend_data
+                    else 0
+                ),
+                "avg_daily_cost": (
+                    round(sum(t["cost"] for t in trend_data) / len(trend_data), 2)
+                    if trend_data
+                    else 0
+                ),
             },
         },
     }

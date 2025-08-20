@@ -28,7 +28,9 @@ class Member(Base):
     email = Column(String)
     address = Column(String)
     photo_url = Column(String)
-    photo_file_id = Column(Integer, ForeignKey("files.id"), nullable=True)  # 프로필 사진
+    photo_file_id = Column(
+        Integer, ForeignKey("files.id"), nullable=True
+    )  # 프로필 사진
 
     # Personal Details
     birthdate = Column(Date)

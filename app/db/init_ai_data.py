@@ -1,6 +1,7 @@
 """
 Seed data for AI agent templates
 """
+
 from sqlalchemy.orm import Session
 from app.models.ai_agent import OfficialAgentTemplate
 

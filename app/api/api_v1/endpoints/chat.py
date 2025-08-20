@@ -389,9 +389,9 @@ async def send_message(
                     "content": ai_message.content,
                     "role": ai_message.role,
                     "tokens_used": ai_message.tokens_used,
-                    "data_sources": list(church_context.keys())
-                    if church_context
-                    else [],
+                    "data_sources": (
+                        list(church_context.keys()) if church_context else []
+                    ),
                     "church_data_context": church_context if church_context else None,
                     "timestamp": ai_message.created_at,
                 },

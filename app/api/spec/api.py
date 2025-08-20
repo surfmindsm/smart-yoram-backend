@@ -360,9 +360,11 @@ def create_chat_history(payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
     history = {
         "id": history_id,
         "title": title,
-        "agentName": _AGENTS.get(agent_id, {}).get("name", "설교 도우미")
-        if agent_id
-        else "설교 도우미",
+        "agentName": (
+            _AGENTS.get(agent_id, {}).get("name", "설교 도우미")
+            if agent_id
+            else "설교 도우미"
+        ),
         "isBookmarked": False,
         "messageCount": 0,
         "timestamp": datetime.utcnow().isoformat() + "Z",

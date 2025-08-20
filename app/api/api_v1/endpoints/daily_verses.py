@@ -9,7 +9,9 @@ from app.crud.crud_daily_verse import daily_verse as crud_daily_verse
 router = APIRouter()
 
 
-@router.get("/random", response_model=schemas.DailyVerse, summary="오늘의 말씀 랜덤 조회")
+@router.get(
+    "/random", response_model=schemas.DailyVerse, summary="오늘의 말씀 랜덤 조회"
+)
 def get_random_daily_verse(
     db: Session = Depends(deps.get_db),
 ) -> Any:

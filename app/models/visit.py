@@ -61,7 +61,9 @@ class VisitIndex(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     visit_id = Column(Integer, ForeignKey("visits.id"), nullable=False)
-    member_id = Column(Integer, ForeignKey("members.id"), nullable=False)  # 주요 대상 교인
+    member_id = Column(
+        Integer, ForeignKey("members.id"), nullable=False
+    )  # 주요 대상 교인
     term_start = Column(Date)  # 회계/회기 시작일
     term_end = Column(Date)  # 회계/회기 종료일
     has_family = Column(Boolean, default=False)  # 가족포함 여부

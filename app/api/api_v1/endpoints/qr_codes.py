@@ -264,12 +264,14 @@ def get_qr_code_info(
             "code": qr_code.code,
             "qr_type": qr_code.qr_type,
             "is_active": qr_code.is_active,
-            "expires_at": qr_code.expires_at.isoformat()
-            if qr_code.expires_at
-            else None,
-            "created_at": qr_code.created_at.isoformat()
-            if hasattr(qr_code, "created_at") and qr_code.created_at
-            else None,
+            "expires_at": (
+                qr_code.expires_at.isoformat() if qr_code.expires_at else None
+            ),
+            "created_at": (
+                qr_code.created_at.isoformat()
+                if hasattr(qr_code, "created_at") and qr_code.created_at
+                else None
+            ),
         },
         "member": {
             "id": member.id,

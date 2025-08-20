@@ -1,6 +1,7 @@
 """
 QR Code generation utilities for members
 """
+
 import qrcode
 import io
 import base64

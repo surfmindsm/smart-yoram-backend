@@ -82,7 +82,9 @@ class OpenAIService:
                 raise Exception("GPT API 키가 유효하지 않습니다.")
             elif "rate limit" in error_str:
                 logger.error(f"OpenAI rate limit error: {e}")
-                raise Exception("API 요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요.")
+                raise Exception(
+                    "API 요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요."
+                )
             elif "invalid request" in error_str:
                 logger.error(f"OpenAI invalid request: {e}")
                 raise Exception(f"잘못된 요청입니다: {str(e)}")

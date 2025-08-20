@@ -66,9 +66,9 @@ def get_recent_announcements(
             {
                 "id": ann.id,
                 "title": ann.title,
-                "content": ann.content[:200] + "..."
-                if len(ann.content) > 200
-                else ann.content,
+                "content": (
+                    ann.content[:200] + "..." if len(ann.content) > 200 else ann.content
+                ),
                 "category": ann.category,
                 "created_at": ann.created_at.isoformat() if ann.created_at else None,
                 "importance": ann.importance,
@@ -187,12 +187,12 @@ def get_worship_schedule(db: Session, church_id: int) -> List[Dict]:
             {
                 "id": service.id,
                 "worship_type": service.worship_type,
-                "worship_date": service.worship_date.isoformat()
-                if service.worship_date
-                else None,
-                "start_time": service.start_time.isoformat()
-                if service.start_time
-                else None,
+                "worship_date": (
+                    service.worship_date.isoformat() if service.worship_date else None
+                ),
+                "start_time": (
+                    service.start_time.isoformat() if service.start_time else None
+                ),
                 "end_time": service.end_time.isoformat() if service.end_time else None,
                 "location": service.location,
                 "preacher": service.preacher,
@@ -222,7 +222,9 @@ def format_context_for_prompt(context_data: Dict) -> str:
     if context_data.get("attendances"):
         stats = context_data["attendances"]
         context_parts.append("\n[출석 현황]")
-        context_parts.append(f"- 평균 주간 출석: {stats['average_weekly_attendance']}명")
+        context_parts.append(
+            f"- 평균 주간 출석: {stats['average_weekly_attendance']}명"
+        )
         context_parts.append(f"- 지난주 출석: {stats['last_week_attendance']}명")
 
     if context_data.get("members"):

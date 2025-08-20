@@ -14,11 +14,15 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
 
     # Supabase Database URL
-    DATABASE_URL: str = "postgresql://postgres.adzhdsajdamrflvybhxq:YOUR_DB_PASSWORD@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres"
+    DATABASE_URL: str = (
+        "postgresql://postgres.adzhdsajdamrflvybhxq:YOUR_DB_PASSWORD@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres"
+    )
 
     # Supabase Settings
     SUPABASE_URL: str = "https://adzhdsajdamrflvybhxq.supabase.co"
-    SUPABASE_ANON_KEY: str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFkemhkc2FqZGFtcmZsdnliaHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4NDg5ODEsImV4cCI6MjA2OTQyNDk4MX0.pgn6M5_ihDFt3ojQmCoc3Qf8pc7LzRvQEIDT7g1nW3c"
+    SUPABASE_ANON_KEY: str = (
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFkemhkc2FqZGFtcmZsdnliaHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4NDg5ODEsImV4cCI6MjA2OTQyNDk4MX0.pgn6M5_ihDFt3ojQmCoc3Qf8pc7LzRvQEIDT7g1nW3c"
+    )
     SUPABASE_SERVICE_KEY: str  # Add service role key for admin operations
 
     BACKEND_CORS_ORIGINS: List[str] = []

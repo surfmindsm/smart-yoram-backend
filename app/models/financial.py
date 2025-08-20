@@ -18,7 +18,9 @@ class Offering(Base):
     __tablename__ = "offerings"
 
     id = Column(Integer, primary_key=True, index=True)
-    member_id = Column(Integer, ForeignKey("members.id"), nullable=False)  # 교인 직접 참조
+    member_id = Column(
+        Integer, ForeignKey("members.id"), nullable=False
+    )  # 교인 직접 참조
     church_id = Column(Integer, ForeignKey("churches.id"), nullable=False)
     offered_on = Column(Date, nullable=False)  # 헌금일자
     fund_type = Column(String, nullable=False)  # 헌금유형 (십일조, 감사, 건축 등)
@@ -39,7 +41,9 @@ class Receipt(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     church_id = Column(Integer, ForeignKey("churches.id"), nullable=False)
-    member_id = Column(Integer, ForeignKey("members.id"), nullable=False)  # 교인 직접 참조
+    member_id = Column(
+        Integer, ForeignKey("members.id"), nullable=False
+    )  # 교인 직접 참조
     tax_year = Column(Integer, nullable=False)  # 귀속연도
     issue_no = Column(String, nullable=False)  # 일련번호 (교회별 연도 단위 고유번호)
     issued_by = Column(Integer, ForeignKey("users.id"), nullable=False)  # 발급자

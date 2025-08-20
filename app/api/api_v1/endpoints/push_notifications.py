@@ -83,7 +83,9 @@ async def send_notification(
 ):
     """개별 사용자에게 푸시 알림 발송 (관리자/목사만 가능)"""
     if current_user.role not in ["admin", "pastor"]:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="권한이 없습니다")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="권한이 없습니다"
+        )
 
     # Check if target user exists and belongs to same church
     target_user = (
@@ -120,7 +122,9 @@ async def send_batch_notification(
 ):
     """여러 사용자에게 푸시 알림 발송 (관리자/목사만 가능)"""
     if current_user.role not in ["admin", "pastor"]:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="권한이 없습니다")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="권한이 없습니다"
+        )
 
     # Verify all users belong to same church
     users_count = (
@@ -133,7 +137,8 @@ async def send_batch_notification(
 
     if users_count != len(notification.user_ids):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="일부 사용자가 교회에 속하지 않습니다"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="일부 사용자가 교회에 속하지 않습니다",
         )
 
     result = await PushNotificationService.send_to_multiple_users(
@@ -158,7 +163,9 @@ async def send_church_notification(
 ):
     """교회 전체에 푸시 알림 발송 (관리자/목사만 가능)"""
     if current_user.role not in ["admin", "pastor"]:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="권한이 없습니다")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="권한이 없습니다"
+        )
 
     result = await PushNotificationService.send_to_church(
         db=db,
@@ -183,7 +190,9 @@ def get_notification_history(
 ):
     """발송한 알림 이력 조회 (관리자/목사만 가능)"""
     if current_user.role not in ["admin", "pastor"]:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="권한이 없습니다")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="권한이 없습니다"
+        )
 
     query = db.query(PushNotification).filter(
         PushNotification.church_id == current_user.church_id

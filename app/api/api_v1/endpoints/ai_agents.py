@@ -115,9 +115,9 @@ def read_agents(
             "total_cost": agent.total_cost,
             "system_prompt": agent.system_prompt,
             "template_id": agent.template_id,
-            "church_data_sources": agent.church_data_sources
-            if agent.church_data_sources
-            else {},
+            "church_data_sources": (
+                agent.church_data_sources if agent.church_data_sources else {}
+            ),
         }
         agents_data.append(agent_dict)
 
@@ -234,9 +234,9 @@ def read_official_templates(
             "detailed_description": template.detailed_description,
             "icon": template.icon,
             "system_prompt": template.system_prompt,
-            "church_data_sources": template.church_data_sources
-            if template.church_data_sources
-            else {},
+            "church_data_sources": (
+                template.church_data_sources if template.church_data_sources else {}
+            ),
             "is_official": True,
             "version": template.version,
             "created_by": template.created_by,

@@ -50,10 +50,16 @@ class PrintJob(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     church_id = Column(Integer, ForeignKey("churches.id"), nullable=False)
-    requester_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # 요청자
-    template_code = Column(String, nullable=False)  # 양식 코드 (개인교적부/사진리스트/구역사진리스트 등)
+    requester_user_id = Column(
+        Integer, ForeignKey("users.id"), nullable=False
+    )  # 요청자
+    template_code = Column(
+        String, nullable=False
+    )  # 양식 코드 (개인교적부/사진리스트/구역사진리스트 등)
     scope = Column(String)  # 대상 범위 (현재교인/검색된교인/선택교인/구역그룹 등)
-    options_json = Column(Text)  # 옵션 JSON (최근심방 출력건수, 가족비고 자동늘리기, 사진포함 등)
+    options_json = Column(
+        Text
+    )  # 옵션 JSON (최근심방 출력건수, 가족비고 자동늘리기, 사진포함 등)
     status = Column(String, default="pending")  # 상태 (대기/완료/실패)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
