@@ -1,7 +1,8 @@
-from typing import List, Union
+from typing import List, Union, Optional
 from pydantic_settings import BaseSettings
-from pydantic import field_validator
+from pydantic import field_validator, Field
 import json
+import os
 
 
 class Settings(BaseSettings):
@@ -19,58 +20,45 @@ class Settings(BaseSettings):
     SUPABASE_URL: str
     SUPABASE_ANON_KEY: str
 
-    BACKEND_CORS_ORIGINS: List[str] = []
+    # CORS settings - completely optional with safe defaults
+    BACKEND_CORS_ORIGINS: Optional[Union[List[str], str]] = Field(
+        default=["*"],  # Allow all origins by default
+        description="List of allowed CORS origins"
+    )
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
-    def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
-        try:
-            if isinstance(v, str):
-                # Handle empty string
-                if not v or v.strip() == "":
-                    return ["*"]  # Allow all origins as fallback
-
-                # Fix smart quotes to regular quotes
-                v = (
-                    v.replace('"', '"')
-                    .replace('"', '"')
-                    .replace("'", "'")
-                    .replace("'", "'")
-                    .replace("\\n", "")  # Remove newlines
-                    .replace("\\r", "")  # Remove carriage returns
-                    .strip()
-                )
-
-                # Handle JSON array format
-                if v.startswith("["):
-                    # Try to parse as JSON
-                    try:
-                        result = json.loads(v)
-                        if isinstance(result, list):
-                            return result
-                    except json.JSONDecodeError:
-                        # If JSON parsing fails, try to clean and split
-                        v = v.strip("[]")
-                        origins = []
-                        for item in v.split(","):
-                            cleaned = item.strip().strip('"').strip("'").strip()
-                            if cleaned:
-                                origins.append(cleaned)
-                        return origins if origins else ["*"]
-                else:
-                    # Split by comma
-                    origins = []
-                    for item in v.split(","):
-                        cleaned = item.strip()
-                        if cleaned:
-                            origins.append(cleaned)
-                    return origins if origins else ["*"]
-            elif isinstance(v, list):
-                return v
-            return ["*"]  # Allow all origins as fallback
-        except Exception as e:
-            print(f"Error parsing BACKEND_CORS_ORIGINS: {e}, using wildcard")
-            return ["*"]  # Allow all origins on error
+    def assemble_cors_origins(cls, v: Optional[Union[str, List[str]]]) -> List[str]:
+        # If nothing provided, use default
+        if v is None:
+            return ["*"]
+        
+        # If already a list, return it
+        if isinstance(v, list):
+            return v if v else ["*"]
+        
+        # If string, try simple comma-separated parsing
+        if isinstance(v, str):
+            # Handle empty or whitespace-only string
+            v = v.strip()
+            if not v:
+                return ["*"]
+            
+            # Simple comma-separated parsing (no JSON)
+            # This avoids all the JSON parsing issues
+            origins = []
+            for origin in v.split(","):
+                cleaned = origin.strip()
+                if cleaned:
+                    # Remove any quotes
+                    cleaned = cleaned.strip('"').strip("'")
+                    if cleaned:
+                        origins.append(cleaned)
+            
+            return origins if origins else ["*"]
+        
+        # Fallback to wildcard
+        return ["*"]
 
     FIRST_SUPERUSER: str = "admin@smartyoram.com"
     FIRST_SUPERUSER_PASSWORD: str = "changeme"

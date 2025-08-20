@@ -101,10 +101,22 @@ jobs:
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
           cd ~/smart-yoram-backend
-          # Create .env file from GitHub Secrets
-          echo "${{ secrets.ENV_FILE }}" > .env
-          chmod 600 .env
-          echo "✅ .env file created successfully"
+          
+          # Check if ENV_FILE secret exists
+          if [ ! -z "${{ secrets.ENV_FILE }}" ]; then
+            echo "Creating .env file from GitHub Secrets..."
+            # Create .env file using printf to preserve formatting
+            printf '%s\n' "${{ secrets.ENV_FILE }}" > .env
+            chmod 600 .env
+            echo "✅ .env file created from secrets"
+          elif [ -f .env.template ]; then
+            echo "⚠️ ENV_FILE secret not found, using template..."
+            cp .env.template .env
+            chmod 600 .env
+            echo "⚠️ Using template .env - please update values!"
+          else
+            echo "❌ No ENV_FILE secret and no template found"
+          fi
 
     - name: Deploy application
       uses: appleboy/ssh-action@v1.0.3
