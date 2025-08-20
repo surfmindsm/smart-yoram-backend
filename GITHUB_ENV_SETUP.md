@@ -16,11 +16,18 @@
 먼저 .env 파일을 base64로 인코딩:
 
 ```bash
-# 로컬에서 실행
+# 로컬에서 실행 (OS 자동 감지)
 ./scripts/encode_env_file.sh
-# 또는
-base64 -w 0 .env  # Linux/Mac
-base64 .env | tr -d '\n'  # Mac alternative
+
+# 또는 직접 실행
+# macOS:
+base64 -i .env | tr -d '\n'
+
+# Linux:
+base64 -w 0 .env
+
+# 일반적인 방법:
+base64 < .env | tr -d '\n'
 ```
 
 Environment 페이지에서 **Add variable** 버튼을 클릭하고:
