@@ -180,7 +180,7 @@ jobs:
           curl -f http://localhost:8000/health || echo "WARNING: Local health check failed"
           
           echo "Deployment completed!"
-ENDSSH
+        ENDSSH
         
         # Clean up
         rm -f private_key.pem
