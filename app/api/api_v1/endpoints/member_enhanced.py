@@ -91,7 +91,7 @@ def create_member_contact(
     *,
     db: Session = Depends(deps.get_db),
     contact_in: schemas.member_enhanced.MemberContactCreate,
-    current_user: models.User = Depends(deps.get_current_active_user)
+    current_user: models.User = Depends(deps.get_current_active_user),
 ):
     """Create a new contact for a member"""
     # Verify member belongs to user's church
@@ -162,7 +162,7 @@ def create_member_ministry(
     *,
     db: Session = Depends(deps.get_db),
     ministry_in: schemas.member_enhanced.MemberMinistryCreate,
-    current_user: models.User = Depends(deps.get_current_active_user)
+    current_user: models.User = Depends(deps.get_current_active_user),
 ):
     """Create a new ministry position for a member"""
     # Verify member belongs to user's church
@@ -232,7 +232,7 @@ def create_member_sacrament(
     *,
     db: Session = Depends(deps.get_db),
     sacrament_in: schemas.member_enhanced.SacramentCreate,
-    current_user: models.User = Depends(deps.get_current_active_user)
+    current_user: models.User = Depends(deps.get_current_active_user),
 ):
     """Record a new sacrament for a member"""
     # Verify member belongs to user's church
@@ -300,7 +300,7 @@ def create_member_transfer(
     *,
     db: Session = Depends(deps.get_db),
     transfer_in: schemas.member_enhanced.TransferCreate,
-    current_user: models.User = Depends(deps.get_current_active_user)
+    current_user: models.User = Depends(deps.get_current_active_user),
 ):
     """Record a new transfer for a member"""
     # Verify member belongs to user's church
@@ -351,7 +351,7 @@ def create_code(
     *,
     db: Session = Depends(deps.get_db),
     code_in: schemas.member_enhanced.CodeCreate,
-    current_user: models.User = Depends(deps.get_current_active_user)
+    current_user: models.User = Depends(deps.get_current_active_user),
 ):
     """Create a new code"""
     # Check if code already exists for this church and type
