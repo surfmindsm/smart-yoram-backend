@@ -36,7 +36,11 @@ class Settings(BaseSettings):
                 except json.JSONDecodeError:
                     # If JSON parsing fails, try to clean and split
                     v = v.strip("[]")
-                    return [i.strip().strip('"').strip("'") for i in v.split(",") if i.strip()]
+                    return [
+                        i.strip().strip('"').strip("'")
+                        for i in v.split(",")
+                        if i.strip()
+                    ]
             else:
                 # Split by comma
                 return [i.strip() for i in v.split(",") if i.strip()]
