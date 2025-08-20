@@ -216,7 +216,7 @@ jobs:
               
               # SSH and check logs for debugging
               echo "Fetching application logs for debugging..."
-              ssh -i private_key_health.pem -o StrictHostKeyChecking=no ${{ env.EC2_USER }}@${{ env.EC2_HOST }} bash << 'EOFLOG' || true
+              ssh -i private_key_health.pem -o StrictHostKeyChecking=no ${{ env.EC2_USER }}@${{ env.EC2_HOST }} 'bash -s' << 'SCRIPT_END' || true
                 echo "=== Checking application status ==="
                 ps aux | grep uvicorn | grep -v grep || echo "No uvicorn process found"
                 
@@ -228,7 +228,7 @@ jobs:
                 
                 echo "=== Testing local health check ==="
                 curl -v http://localhost:8000/health || echo "Local health check failed"
-EOFLOG
+              SCRIPT_END
               
               rm -f private_key_health.pem
               exit 1
