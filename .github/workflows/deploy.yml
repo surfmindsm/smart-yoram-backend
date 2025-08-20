@@ -74,8 +74,8 @@ jobs:
     - name: Deploy to EC2
       env:
         PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
-        # Pass entire .env file content as single variable
-        ENV_FILE: ${{ vars.ENV_FILE }}
+        # Pass entire .env file content as base64 encoded variable
+        ENV_FILE_BASE64: ${{ vars.ENV_FILE_BASE64 }}
       run: |
         # Setup SSH key
         echo "$PRIVATE_KEY" > private_key.pem
@@ -98,8 +98,8 @@ jobs:
           --exclude='private_key.pem' \
           ./ ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:${{ env.DEPLOY_PATH }}/
         
-        # Write ENV_FILE to a temporary file
-        echo "${{ vars.ENV_FILE }}" > env_temp.txt
+        # Decode base64 ENV_FILE and write to a temporary file
+        echo "${{ vars.ENV_FILE_BASE64 }}" | base64 -d > env_temp.txt
         
         # Copy the env file to EC2
         scp -i private_key.pem -o StrictHostKeyChecking=no env_temp.txt ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:/home/ubuntu/smart-yoram-backend/.env

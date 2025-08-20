@@ -11,12 +11,22 @@
 3. **New environment** 버튼 클릭하여 `production` 환경 생성 (또는 기존 환경 사용)
 4. 생성된 환경 클릭
 
-### 2. Environment Variables 추가
+### 2. Environment Variables 추가 (Base64 인코딩)
+
+먼저 .env 파일을 base64로 인코딩:
+
+```bash
+# 로컬에서 실행
+./scripts/encode_env_file.sh
+# 또는
+base64 -w 0 .env  # Linux/Mac
+base64 .env | tr -d '\n'  # Mac alternative
+```
 
 Environment 페이지에서 **Add variable** 버튼을 클릭하고:
 
-- **Name**: `ENV_FILE`
-- **Value**: 전체 .env 파일 내용을 복사하여 붙여넣기
+- **Name**: `ENV_FILE_BASE64`
+- **Value**: 위 명령으로 생성된 base64 문자열 전체를 복사하여 붙여넣기
 
 예시:
 ```
