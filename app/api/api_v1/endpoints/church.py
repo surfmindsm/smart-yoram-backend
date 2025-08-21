@@ -115,7 +115,7 @@ def read_gpt_config(
     return {
         "success": True,
         "data": {
-            "api_key": "sk-..." if church.gpt_api_key else None,
+            "api_key": church.gpt_api_key if church.gpt_api_key else None,
             "database_connected": bool(church.gpt_api_key),
             "last_sync": church.gpt_last_test,
             "model": church.gpt_model or "gpt-4o-mini",
