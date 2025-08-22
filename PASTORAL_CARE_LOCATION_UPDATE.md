@@ -351,13 +351,61 @@ interface PastoralCareRequestWithDistance extends PastoralCareRequest {
 
 ---
 
+## 💾 데이터베이스 마이그레이션 
+
+**⚠️ 중요**: API를 사용하기 전에 데이터베이스에 새 컬럼들을 추가해야 합니다.
+
+### 자동 마이그레이션 (권장)
+```bash
+# 백엔드 프로젝트 디렉토리에서
+alembic upgrade head
+```
+
+### 수동 마이그레이션 (필요시)
+프로젝트 루트의 `MANUAL_MIGRATION_PASTORAL_CARE.sql` 파일을 실행하세요:
+
+```sql
+-- 새 컬럼들 추가
+ALTER TABLE public.pastoral_care_requests 
+ADD COLUMN IF NOT EXISTS address VARCHAR(500),
+ADD COLUMN IF NOT EXISTS latitude NUMERIC(10,8),
+ADD COLUMN IF NOT EXISTS longitude NUMERIC(11,8),
+ADD COLUMN IF NOT EXISTS contact_info VARCHAR(500),
+ADD COLUMN IF NOT EXISTS is_urgent BOOLEAN DEFAULT FALSE;
+
+-- 인덱스 생성
+CREATE INDEX IF NOT EXISTS idx_pastoral_care_location 
+ON public.pastoral_care_requests (latitude, longitude);
+
+CREATE INDEX IF NOT EXISTS idx_pastoral_care_is_urgent 
+ON public.pastoral_care_requests (is_urgent);
+```
+
+### 마이그레이션 확인
+```sql
+-- 컬럼 확인
+SELECT column_name, data_type, is_nullable, column_default 
+FROM information_schema.columns 
+WHERE table_name = 'pastoral_care_requests' 
+AND table_schema = 'public'
+ORDER BY ordinal_position;
+
+-- 인덱스 확인  
+SELECT indexname, indexdef 
+FROM pg_indexes 
+WHERE tablename = 'pastoral_care_requests';
+```
+
+---
+
 ## 📞 문의 및 지원
 
 구현 중 문제가 발생하거나 추가 기능이 필요한 경우:
 
 1. **GitHub Issues**: 버그 리포트 및 기능 요청
 2. **API 문서**: `/api/v1/docs` (Swagger UI)
-3. **백엔드 팀 연락처**: [담당자 정보]
+3. **마이그레이션 문제**: `MANUAL_MIGRATION_PASTORAL_CARE.sql` 파일 참조
+4. **백엔드 팀 연락처**: [담당자 정보]
 
 ---
 
