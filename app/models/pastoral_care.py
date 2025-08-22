@@ -8,6 +8,7 @@ from sqlalchemy import (
     Date,
     Time,
     ForeignKey,
+    Numeric,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -42,6 +43,20 @@ class PastoralCareRequest(Base):
     scheduled_time = Column(Time, nullable=True)
     completion_notes = Column(Text, nullable=True)
     admin_notes = Column(Text, nullable=True)
+
+    # Location information
+    address = Column(
+        String(500), nullable=True
+    )  # Visit address (basic + detailed combined)
+    latitude = Column(Numeric(10, 8), nullable=True)  # Latitude (e.g., 37.5665000)
+    longitude = Column(Numeric(11, 8), nullable=True)  # Longitude (e.g., 126.9780000)
+
+    # Additional contact info
+    contact_info = Column(String(500), nullable=True)  # Additional contact information
+
+    # Urgency flag
+    is_urgent = Column(Boolean, default=False)  # Urgent status
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     completed_at = Column(DateTime(timezone=True), nullable=True)
