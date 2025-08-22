@@ -465,26 +465,26 @@ def search_requests_by_location(
 
     from decimal import Decimal
     import math
-    
+
     query = db.query(PastoralCareRequest).filter(
         PastoralCareRequest.church_id == current_user.church_id,
         PastoralCareRequest.latitude.isnot(None),
         PastoralCareRequest.longitude.isnot(None),
     )
-    
+
     requests = query.all()
     requests_with_distance = []
-    
+
     # Calculate distance for each request
     for request in requests:
         if request.latitude and request.longitude:
             # Haversine formula for distance calculation
             lat1, lon1 = float(location_query.latitude), float(location_query.longitude)
             lat2, lon2 = float(request.latitude), float(request.longitude)
-            
+
             # Convert to radians
             lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
-            
+
             # Haversine formula
             dlat = lat2 - lat1
             dlon = lon2 - lon1
@@ -494,7 +494,7 @@ def search_requests_by_location(
             )
             c = 2 * math.asin(math.sqrt(a))
             distance = 6371 * c  # Radius of Earth in km
-            
+
             # Only include requests within the specified radius
             if distance <= location_query.radius_km:
                 # Convert request to dict and add distance
@@ -506,10 +506,10 @@ def search_requests_by_location(
                     "distance_km": round(distance, 2),
                 }
                 requests_with_distance.append(request_dict)
-    
+
     # Sort by distance
     requests_with_distance.sort(key=lambda x: x["distance_km"])
-    
+
     return requests_with_distance
 
 
@@ -536,7 +536,7 @@ def get_urgent_requests(
         .order_by(desc(PastoralCareRequest.created_at))
         .all()
     )
-    
+
     return requests
 
 
@@ -565,5 +565,5 @@ def get_requests_with_location(
         .order_by(desc(PastoralCareRequest.created_at))
         .all()
     )
-    
+
     return requests
