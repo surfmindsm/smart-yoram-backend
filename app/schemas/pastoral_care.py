@@ -14,12 +14,15 @@ class PastoralCareRequestBase(BaseModel):
     preferred_time_start: Optional[time] = None
     preferred_time_end: Optional[time] = None
     priority: Optional[str] = "normal"
+    
     # Location information
     address: Optional[str] = None
     latitude: Optional[Decimal] = None
     longitude: Optional[Decimal] = None
+    
     # Additional contact info
     contact_info: Optional[str] = None
+    
     # Urgency flag
     is_urgent: Optional[bool] = False
 
@@ -35,12 +38,15 @@ class PastoralCareRequestUpdate(BaseModel):
     preferred_time_end: Optional[time] = None
     priority: Optional[str] = None
     status: Optional[str] = None
+    
     # Location information
     address: Optional[str] = None
     latitude: Optional[Decimal] = None
     longitude: Optional[Decimal] = None
+    
     # Additional contact info
     contact_info: Optional[str] = None
+    
     # Urgency flag
     is_urgent: Optional[bool] = None
 
