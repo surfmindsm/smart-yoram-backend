@@ -69,6 +69,10 @@ class Settings(BaseSettings):
     # Firebase Configuration
     FIREBASE_CREDENTIALS_PATH: str = "firebase-credentials.json"
 
+    # Naver Maps API Configuration
+    NAVER_MAPS_CLIENT_ID: Optional[str] = None
+    NAVER_MAPS_CLIENT_SECRET: Optional[str] = None
+
     class Config:
         env_file = ".env"
         case_sensitive = True

@@ -10,6 +10,8 @@ class MemberBase(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     address: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     photo_url: Optional[str] = None
     birthdate: Optional[date] = None
     gender: Optional[Union[Gender, str]] = None
