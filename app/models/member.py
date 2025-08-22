@@ -7,6 +7,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Text,
+    Float,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -27,6 +28,8 @@ class Member(Base):
     phone = Column(String)
     email = Column(String)
     address = Column(String)
+    latitude = Column(Float)  # 위도
+    longitude = Column(Float)  # 경도
     photo_url = Column(String)
     photo_file_id = Column(
         Integer, ForeignKey("files.id"), nullable=True
@@ -101,6 +104,8 @@ class Family(Base):
     head_member_id = Column(Integer, ForeignKey("members.id"), nullable=True)
 
     address = Column(String)
+    latitude = Column(Float)  # 위도
+    longitude = Column(Float)  # 경도
     notes = Column(Text)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())

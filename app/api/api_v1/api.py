@@ -30,6 +30,7 @@ from app.api.api_v1.endpoints import (
     prayer_requests,
     financial,
     member_enhanced,
+    geocoding,
 )
 
 
@@ -85,3 +86,4 @@ api_router.include_router(financial.router, prefix="/financial", tags=["financia
 api_router.include_router(
     member_enhanced.router, prefix="/members", tags=["member_enhanced"]
 )
+api_router.include_router(geocoding.router, prefix="/geocoding", tags=["geocoding"])
