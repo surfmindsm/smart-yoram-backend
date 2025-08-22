@@ -1,5 +1,6 @@
 from typing import Optional, List
 from datetime import datetime, date, time
+from decimal import Decimal
 from pydantic import BaseModel
 
 
@@ -13,6 +14,17 @@ class PastoralCareRequestBase(BaseModel):
     preferred_time_start: Optional[time] = None
     preferred_time_end: Optional[time] = None
     priority: Optional[str] = "normal"
+    
+    # Location information
+    address: Optional[str] = None
+    latitude: Optional[Decimal] = None
+    longitude: Optional[Decimal] = None
+    
+    # Additional contact info
+    contact_info: Optional[str] = None
+    
+    # Urgency flag
+    is_urgent: Optional[bool] = False
 
 
 class PastoralCareRequestCreate(PastoralCareRequestBase):
@@ -26,6 +38,17 @@ class PastoralCareRequestUpdate(BaseModel):
     preferred_time_end: Optional[time] = None
     priority: Optional[str] = None
     status: Optional[str] = None
+    
+    # Location information
+    address: Optional[str] = None
+    latitude: Optional[Decimal] = None
+    longitude: Optional[Decimal] = None
+    
+    # Additional contact info
+    contact_info: Optional[str] = None
+    
+    # Urgency flag
+    is_urgent: Optional[bool] = None
 
 
 class PastoralCareRequestAdminUpdate(PastoralCareRequestUpdate):
@@ -157,3 +180,15 @@ class PrayerRequestList(BaseModel):
     total: int
     page: int
     per_page: int
+
+
+# Location-based query schema
+class LocationQuery(BaseModel):
+    latitude: Decimal
+    longitude: Decimal
+    radius_km: Optional[float] = 5.0  # Default 5km radius
+
+
+# Enhanced response schema with location distance
+class PastoralCareRequestWithDistance(PastoralCareRequest):
+    distance_km: Optional[float] = None
