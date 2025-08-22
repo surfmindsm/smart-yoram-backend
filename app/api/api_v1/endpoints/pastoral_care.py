@@ -445,7 +445,10 @@ def get_pastoral_care_statistics(
 
 
 # Location-based endpoints
-@router.post("/admin/requests/search/location", response_model=List[PastoralCareRequestWithDistance])
+@router.post(
+    "/admin/requests/search/location",
+    response_model=List[PastoralCareRequestWithDistance],
+)
 def search_requests_by_location(
     *,
     db: Session = Depends(deps.get_db),
@@ -485,7 +488,10 @@ def search_requests_by_location(
             # Haversine formula
             dlat = lat2 - lat1
             dlon = lon2 - lon1
-            a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
+            a = (
+                math.sin(dlat / 2) ** 2
+                + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+            )
             c = 2 * math.asin(math.sqrt(a))
             distance = 6371 * c  # Radius of Earth in km
             
@@ -493,8 +499,11 @@ def search_requests_by_location(
             if distance <= location_query.radius_km:
                 # Convert request to dict and add distance
                 request_dict = {
-                    **{column.name: getattr(request, column.name) for column in request.__table__.columns},
-                    "distance_km": round(distance, 2)
+                    **{
+                        column.name: getattr(request, column.name)
+                        for column in request.__table__.columns
+                    },
+                    "distance_km": round(distance, 2),
                 }
                 requests_with_distance.append(request_dict)
     
@@ -522,7 +531,7 @@ def get_urgent_requests(
         .filter(
             PastoralCareRequest.church_id == current_user.church_id,
             PastoralCareRequest.is_urgent == True,
-            PastoralCareRequest.status.in_(["pending", "approved", "scheduled"])
+            PastoralCareRequest.status.in_(["pending", "approved", "scheduled"]),
         )
         .order_by(desc(PastoralCareRequest.created_at))
         .all()
@@ -531,7 +540,9 @@ def get_urgent_requests(
     return requests
 
 
-@router.get("/admin/requests/with-location", response_model=List[PastoralCareRequestSchema])
+@router.get(
+    "/admin/requests/with-location", response_model=List[PastoralCareRequestSchema]
+)
 def get_requests_with_location(
     *,
     db: Session = Depends(deps.get_db),

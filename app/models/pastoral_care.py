@@ -45,7 +45,9 @@ class PastoralCareRequest(Base):
     admin_notes = Column(Text, nullable=True)
     
     # Location information
-    address = Column(String(500), nullable=True)  # Visit address (basic + detailed combined)
+    address = Column(
+        String(500), nullable=True
+    )  # Visit address (basic + detailed combined)
     latitude = Column(Numeric(10, 8), nullable=True)  # Latitude (e.g., 37.5665000)
     longitude = Column(Numeric(11, 8), nullable=True)  # Longitude (e.g., 126.9780000)
     
