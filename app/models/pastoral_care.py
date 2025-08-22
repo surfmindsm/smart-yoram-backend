@@ -48,11 +48,11 @@ class PastoralCareRequest(Base):
     address = Column(
         String(500), nullable=True
     )  # Visit address (basic + detailed combined)
-    latitude = Column(Numeric(10, 8), nullable=True)  # Latitude (e.g., 37.5665000)
-    longitude = Column(Numeric(11, 8), nullable=True)  # Longitude (e.g., 126.9780000)
+    latitude = Column(Numeric(10, 8), nullable=True)  # Latitude
+    longitude = Column(Numeric(11, 8), nullable=True)  # Longitude
 
     # Additional contact info
-    contact_info = Column(String(500), nullable=True)  # Additional contact information
+    contact_info = Column(String(500), nullable=True)  # Additional contact info
 
     # Urgency flag
     is_urgent = Column(Boolean, default=False)  # Urgent status
