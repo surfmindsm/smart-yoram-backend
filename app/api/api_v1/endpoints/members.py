@@ -118,17 +118,19 @@ def create_member(
 
     # Create member with overridden church_id
     member = models.Member(**member_dict)
-    
+
     # Geocode address if provided
     if member.address:
         try:
             coords = asyncio.run(geocoding_service.get_coordinates(member.address))
             if coords:
                 member.latitude, member.longitude = coords
-                print(f"Geocoded address '{member.address}' to ({member.latitude}, {member.longitude})")
+                print(
+                    f"Geocoded address '{member.address}' to ({member.latitude}, {member.longitude})"
+                )
         except Exception as e:
             print(f"Geocoding failed for address '{member.address}': {e}")
-    
+
     db.add(member)
     db.flush()  # Flush to get member.id without committing
 
@@ -248,20 +250,24 @@ def update_member(
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
     update_data = member_in.dict(exclude_unset=True)
-    
+
     # Check if address is being updated
-    address_changed = 'address' in update_data and update_data['address'] != member.address
-    
+    address_changed = (
+        "address" in update_data and update_data["address"] != member.address
+    )
+
     for field, value in update_data.items():
         setattr(member, field, value)
-    
+
     # Geocode new address if changed
     if address_changed and member.address:
         try:
             coords = asyncio.run(geocoding_service.get_coordinates(member.address))
             if coords:
                 member.latitude, member.longitude = coords
-                print(f"Geocoded updated address '{member.address}' to ({member.latitude}, {member.longitude})")
+                print(
+                    f"Geocoded updated address '{member.address}' to ({member.latitude}, {member.longitude})"
+                )
         except Exception as e:
             print(f"Geocoding failed for address '{member.address}': {e}")
 

@@ -43,27 +43,24 @@ async def geocode_address(
     """
     if not request.address:
         raise HTTPException(status_code=400, detail="Address is required")
-    
+
     # Check if Naver Maps API is configured
     if not settings.NAVER_MAPS_CLIENT_ID or not settings.NAVER_MAPS_CLIENT_SECRET:
         raise HTTPException(
             status_code=503,
-            detail="Geocoding service is not configured. Please set NAVER_MAPS_CLIENT_ID and NAVER_MAPS_CLIENT_SECRET."
+            detail="Geocoding service is not configured. Please set NAVER_MAPS_CLIENT_ID and NAVER_MAPS_CLIENT_SECRET.",
         )
-    
+
     coords = await geocoding_service.get_coordinates(request.address)
-    
+
     if not coords:
         raise HTTPException(
-            status_code=404,
-            detail=f"Could not geocode address: {request.address}"
+            status_code=404, detail=f"Could not geocode address: {request.address}"
         )
-    
+
     latitude, longitude = coords
     return GeocodeResponse(
-        address=request.address,
-        latitude=latitude,
-        longitude=longitude
+        address=request.address, latitude=latitude, longitude=longitude
     )
 
 
@@ -77,25 +74,22 @@ async def batch_geocode_addresses(
     """
     if not request.addresses:
         raise HTTPException(status_code=400, detail="Addresses list is required")
-    
+
     # Check if Naver Maps API is configured
     if not settings.NAVER_MAPS_CLIENT_ID or not settings.NAVER_MAPS_CLIENT_SECRET:
         raise HTTPException(
             status_code=503,
-            detail="Geocoding service is not configured. Please set NAVER_MAPS_CLIENT_ID and NAVER_MAPS_CLIENT_SECRET."
+            detail="Geocoding service is not configured. Please set NAVER_MAPS_CLIENT_ID and NAVER_MAPS_CLIENT_SECRET.",
         )
-    
+
     results = await geocoding_service.batch_geocode(request.addresses)
-    
+
     # Convert results to proper format
     formatted_results = {}
     for address, coords in results.items():
         if coords:
-            formatted_results[address] = {
-                "latitude": coords[0],
-                "longitude": coords[1]
-            }
+            formatted_results[address] = {"latitude": coords[0], "longitude": coords[1]}
         else:
             formatted_results[address] = None
-    
+
     return BatchGeocodeResponse(results=formatted_results)
