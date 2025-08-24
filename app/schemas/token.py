@@ -1,5 +1,7 @@
-from typing import Optional, Any
+from typing import Optional
 from pydantic import BaseModel
+from app.schemas.user import User
+from app.schemas.member import Member
 
 
 class Token(BaseModel):
@@ -12,5 +14,5 @@ class TokenPayload(BaseModel):
 
 
 class TokenWithUser(Token):
-    user: Any
-    member: Optional[Any] = None
+    user: User
+    member: Optional[Member] = None
