@@ -16,7 +16,7 @@
             top: 0;
             bottom: 0;
             left: 0;
-            z-index: 1000;
+            z-index: 999;
             padding: 56px 0 0;
             box-shadow: 0 0 20px rgba(0,0,0,0.1);
             background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%);
@@ -49,7 +49,7 @@
         .navbar {
             background: #2c3e50 !important;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            z-index: 1001;
+            z-index: 1000;
             position: fixed;
             top: 0;
             left: 0;
@@ -61,10 +61,26 @@
         }
         main {
             margin-left: 260px;
-            padding-top: 80px;
+            padding: 80px 20px 20px 20px;
             min-height: 100vh;
             position: relative;
             z-index: 1;
+            background-color: #f8f9fa;
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+            main {
+                margin-left: 0;
+                padding: 80px 15px 20px 15px;
+            }
+            .sidebar.show {
+                transform: translateX(0);
+                z-index: 1050;
+            }
         }
         .hover-lift:hover {
             transform: translateY(-2px);
@@ -92,6 +108,9 @@
     <!-- Navbar -->
     <nav class="navbar navbar-dark fixed-top">
         <div class="container-fluid">
+            <button class="btn btn-outline-light d-md-none me-2" onclick="toggleSidebar()">
+                <i class="bi bi-list"></i>
+            </button>
             <a class="navbar-brand" href="#">
                 <i class="bi bi-shield-lock"></i> Smart Yoram System Admin
             </a>
@@ -160,7 +179,7 @@
     </nav>
 
     <!-- Main content -->
-    <main class="container-fluid">
+    <main>
         <!-- Overview Section -->
         <div id="overview-section" class="p-4">
             <h2 class="mb-4">System Overview</h2>
@@ -752,6 +771,25 @@
                 alert('Cache cleared successfully.');
             }
         }
+
+        // Toggle sidebar for mobile
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            sidebar.classList.toggle('show');
+        }
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', function(event) {
+            const sidebar = document.querySelector('.sidebar');
+            const toggleBtn = document.querySelector('[onclick="toggleSidebar()"]');
+            
+            if (window.innerWidth <= 768 && 
+                !sidebar.contains(event.target) && 
+                !toggleBtn.contains(event.target) &&
+                sidebar.classList.contains('show')) {
+                sidebar.classList.remove('show');
+            }
+        });
 
         // Logout
         function logout() {
