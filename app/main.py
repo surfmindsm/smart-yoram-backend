@@ -24,21 +24,12 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
 )
 
-# Set up CORS
-cors_origins = [
-    "http://localhost:3000",
-    "http://localhost:3001",
-    "http://localhost:8080",
-    "https://smart-yoram-admin.vercel.app",
-    "https://smart-yoram.vercel.app",
-    "*",  # Allow all origins for development
-]
-
+# Set up CORS - Allow all origins for development
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_origins=["*"],  # Allow all origins for development
+    allow_credentials=False,  # Set to False when using allow_origins=["*"]
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["*"],
 )
