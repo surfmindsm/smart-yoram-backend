@@ -136,9 +136,10 @@ class ChatMessage(ChatMessageBase):
 
 
 class ChatRequest(BaseModel):
-    chat_history_id: Union[int, str]
+    chat_history_id: Optional[Union[int, str]] = None
     agent_id: Union[int, str]
     content: str
+    create_history_if_needed: Optional[bool] = True  # Auto-create history if null
 
 
 class ChatResponse(BaseModel):
