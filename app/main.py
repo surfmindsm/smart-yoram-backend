@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 # Setup log interceptor for container logs
 try:
     from app.services.container_logs import setup_log_interceptor
+
     setup_log_interceptor()
     logger.info("Log interceptor initialized for container logs")
 except ImportError:

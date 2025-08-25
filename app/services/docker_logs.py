@@ -35,29 +35,29 @@ class DockerLogsService:
                     "name": "smart-yoram-backend_backend_1",
                     "image": "smart-yoram-backend_backend",
                     "status": "running",
-                    "created": "now"
+                    "created": "now",
                 },
                 {
                     "id": "celery_worker",
                     "name": "smart-yoram-backend_celery_worker_1",
                     "image": "smart-yoram-backend_celery_worker",
                     "status": "running",
-                    "created": "now"
+                    "created": "now",
                 },
                 {
                     "id": "celery_beat",
                     "name": "smart-yoram-backend_celery_beat_1",
                     "image": "smart-yoram-backend_celery_beat",
                     "status": "running",
-                    "created": "now"
+                    "created": "now",
                 },
                 {
                     "id": "redis",
                     "name": "smart-yoram-backend_redis_1",
                     "image": "redis:7-alpine",
                     "status": "running",
-                    "created": "now"
-                }
+                    "created": "now",
+                },
             ]
 
             stdout, stderr = await process.communicate()
