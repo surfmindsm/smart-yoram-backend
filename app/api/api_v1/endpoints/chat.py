@@ -8,6 +8,7 @@ import logging
 from app import models, schemas
 from app.api import deps
 from app.models.ai_agent import AIAgent, ChatHistory, ChatMessage
+from app.services.default_agent_service import DefaultAgentService
 from app.schemas.ai_agent import (
     ChatHistoryCreate,
     ChatHistoryUpdate,
@@ -55,13 +56,17 @@ def read_chat_histories(
 
     histories_data = []
     for history in histories:
-        # Get agent name
-        agent = db.query(AIAgent).filter(AIAgent.id == history.agent_id).first()
+        # Get agent name (handle default agent)
+        if DefaultAgentService.is_default_agent(history.agent_id):
+            agent_name = DefaultAgentService.get_default_agent()["name"]
+        else:
+            agent = db.query(AIAgent).filter(AIAgent.id == history.agent_id).first()
+            agent_name = agent.name if agent else "Unknown"
 
         history_dict = {
             "id": history.id,
             "title": history.title,
-            "agent_name": agent.name if agent else "Unknown",
+            "agent_name": agent_name,
             "is_bookmarked": history.is_bookmarked,
             "message_count": history.message_count,
             "timestamp": history.updated_at or history.created_at,
@@ -113,15 +118,20 @@ def create_chat_history(
     except (ValueError, TypeError):
         raise HTTPException(status_code=400, detail="Invalid agent_id format")
 
-    # Verify agent exists and belongs to church
-    agent = (
-        db.query(AIAgent)
-        .filter(AIAgent.id == agent_id, AIAgent.church_id == current_user.church_id)
-        .first()
-    )
+    # Handle default agent or verify church-specific agent
+    if DefaultAgentService.is_default_agent(agent_id):
+        # Default agent is always available
+        agent = DefaultAgentService.create_virtual_agent()
+    else:
+        # Verify church-specific agent exists and belongs to church
+        agent = (
+            db.query(AIAgent)
+            .filter(AIAgent.id == agent_id, AIAgent.church_id == current_user.church_id)
+            .first()
+        )
 
-    if not agent:
-        raise HTTPException(status_code=404, detail="Agent not found")
+        if not agent:
+            raise HTTPException(status_code=404, detail="Agent not found")
 
     # Create chat history
     history_data = history_in.dict()
@@ -221,10 +231,9 @@ async def send_message(
     if not history:
         raise HTTPException(status_code=404, detail="Chat history not found")
 
-    agent = (
-        db.query(AIAgent)
-        .filter(AIAgent.id == agent_id, AIAgent.church_id == current_user.church_id)
-        .first()
+    # Get agent (default or church-specific)
+    agent = DefaultAgentService.get_agent_for_church(
+        agent_id, current_user.church_id, db
     )
 
     if not agent:
@@ -350,14 +359,15 @@ async def send_message(
         )
         db.add(ai_message)
 
-        # Update usage statistics
-        agent.usage_count = (agent.usage_count or 0) + 1
-        agent.total_tokens_used = (agent.total_tokens_used or 0) + response[
-            "tokens_used"
-        ]
-        agent.total_cost = (agent.total_cost or 0) + openai_service.calculate_cost(
-            response["tokens_used"], church.gpt_model or "gpt-4o-mini"
-        )
+        # Update usage statistics (only for church-specific agents)
+        if not DefaultAgentService.is_default_agent(agent_id):
+            agent.usage_count = (agent.usage_count or 0) + 1
+            agent.total_tokens_used = (agent.total_tokens_used or 0) + response[
+                "tokens_used"
+            ]
+            agent.total_cost = (agent.total_cost or 0) + openai_service.calculate_cost(
+                response["tokens_used"], church.gpt_model or "gpt-4o-mini"
+            )
 
         # Update church usage
         church.current_month_tokens = (church.current_month_tokens or 0) + response[

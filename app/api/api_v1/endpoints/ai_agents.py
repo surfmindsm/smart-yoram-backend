@@ -7,6 +7,7 @@ import logging
 from app import models, schemas
 from app.api import deps
 from app.models.ai_agent import AIAgent, OfficialAgentTemplate
+from app.services.default_agent_service import DefaultAgentService
 from app.schemas.ai_agent import (
     AIAgentCreate,
     AIAgentUpdate,
@@ -74,57 +75,66 @@ def read_agents(
 ) -> Any:
     """
     Retrieve AI agents for the current user's church.
+    Always includes the global default agent (ID: 0).
     """
-    # Get agents
-    agents = (
-        db.query(AIAgent)
-        .filter(AIAgent.church_id == current_user.church_id)
-        .offset(skip)
-        .limit(limit)
-        .all()
+    # Get all available agents for this church (includes default agent)
+    all_agents_data = DefaultAgentService.get_available_agents_for_church(
+        current_user.church_id, db
     )
 
-    # Calculate stats
-    total_agents = (
-        db.query(AIAgent).filter(AIAgent.church_id == current_user.church_id).count()
+    # Apply pagination (but always include default agent)
+    default_agent = next((agent for agent in all_agents_data if agent["id"] == 0), None)
+    other_agents = [agent for agent in all_agents_data if agent["id"] != 0]
+
+    # Paginate other agents
+    paginated_others = (
+        other_agents[skip : skip + limit - 1]
+        if default_agent
+        else other_agents[skip : skip + limit]
     )
 
+    # Combine results (default agent always first)
+    if default_agent and (skip == 0):  # Only include default agent on first page
+        agents_data = [default_agent] + paginated_others
+    else:
+        agents_data = paginated_others
+
+    # Calculate stats (exclude default agent from database counts)
+    db_agents = (
+        db.query(AIAgent).filter(AIAgent.church_id == current_user.church_id).all()
+    )
+    total_agents = len(db_agents) + 1  # +1 for default agent
     active_agents = (
-        db.query(AIAgent)
-        .filter(AIAgent.church_id == current_user.church_id, AIAgent.is_active == True)
-        .count()
-    )
+        len([a for a in db_agents if a.is_active]) + 1
+    )  # +1 for default agent
+    total_usage = sum(agent.get("usage", 0) or 0 for agent in agents_data)
 
-    total_usage = sum(agent.usage_count or 0 for agent in agents)
-
-    # Format response
-    agents_data = []
-    for agent in agents:
+    # Format agent data for response
+    formatted_agents = []
+    for agent_data in agents_data:
         agent_dict = {
-            "id": agent.id,
-            "name": agent.name,
-            "category": agent.category,
-            "description": agent.description,
-            "detailed_description": agent.detailed_description,
-            "icon": agent.icon,
-            "usage": agent.usage_count,
-            "is_active": agent.is_active,
-            "created_at": agent.created_at,
-            "updated_at": agent.updated_at,
-            "total_tokens_used": agent.total_tokens_used,
-            "total_cost": agent.total_cost,
-            "system_prompt": agent.system_prompt,
-            "template_id": agent.template_id,
-            "church_data_sources": (
-                agent.church_data_sources if agent.church_data_sources else {}
-            ),
+            "id": agent_data["id"],
+            "name": agent_data["name"],
+            "category": agent_data["category"],
+            "description": agent_data["description"],
+            "detailed_description": agent_data["detailed_description"],
+            "icon": agent_data["icon"],
+            "usage": agent_data["usage_count"],
+            "is_active": agent_data["is_active"],
+            "created_at": agent_data["created_at"],
+            "updated_at": agent_data["updated_at"],
+            "total_tokens_used": agent_data["total_tokens_used"],
+            "total_cost": agent_data["total_cost"],
+            "system_prompt": agent_data["system_prompt"],
+            "template_id": agent_data.get("template_id"),
+            "church_data_sources": agent_data["church_data_sources"],
         }
-        agents_data.append(agent_dict)
+        formatted_agents.append(agent_dict)
 
     return {
         "success": True,
         "data": {
-            "agents": agents_data,
+            "agents": formatted_agents,
             "stats": {
                 "total_agents": total_agents,
                 "active_agents": active_agents,
@@ -247,7 +257,7 @@ def read_official_templates(
     return {"success": True, "data": templates_data}
 
 
-@router.get("/{agent_id}", response_model=AIAgentSchema)
+@router.get("/{agent_id}", response_model=dict)
 def read_agent(
     *,
     db: Session = Depends(deps.get_db),
@@ -255,8 +265,14 @@ def read_agent(
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    Get agent by ID.
+    Get agent by ID. Supports global default agent (ID: 0).
     """
+    # Handle default agent
+    if DefaultAgentService.is_default_agent(agent_id):
+        default_config = DefaultAgentService.get_default_agent()
+        return {"success": True, "data": default_config}
+
+    # Handle church-specific agent
     agent = (
         db.query(AIAgent)
         .filter(AIAgent.id == agent_id, AIAgent.church_id == current_user.church_id)
@@ -266,7 +282,27 @@ def read_agent(
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
 
-    return agent
+    # Format agent data
+    agent_data = {
+        "id": agent.id,
+        "church_id": agent.church_id,
+        "template_id": agent.template_id,
+        "name": agent.name,
+        "category": agent.category,
+        "description": agent.description,
+        "detailed_description": agent.detailed_description,
+        "icon": agent.icon,
+        "system_prompt": agent.system_prompt,
+        "church_data_sources": agent.church_data_sources or {},
+        "is_active": agent.is_active,
+        "usage_count": agent.usage_count or 0,
+        "total_tokens_used": agent.total_tokens_used or 0,
+        "total_cost": agent.total_cost or 0.0,
+        "created_at": agent.created_at,
+        "updated_at": agent.updated_at,
+    }
+
+    return {"success": True, "data": agent_data}
 
 
 @router.put("/{agent_id}", response_model=AIAgentSchema)
