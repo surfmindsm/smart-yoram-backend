@@ -242,10 +242,12 @@ async def send_message(
         )
 
         # Create new chat history
+        # Use NULL for default agent (ID: 0) to avoid foreign key constraint
+        db_agent_id = None if agent_id == 0 else agent_id
         new_history = ChatHistory(
             church_id=current_user.church_id,
             user_id=current_user.id,
-            agent_id=agent_id,
+            agent_id=db_agent_id,
             title=title_preview,
             is_bookmarked=False,
             message_count=0,
