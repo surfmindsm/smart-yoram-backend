@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Yoram System Admin Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -66,67 +66,9 @@
             position: relative;
             z-index: 1;
         }
-        .stat-card {
-            background: white;
-            border-radius: 10px;
-            padding: 1.5rem;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            transition: transform 0.3s;
-        }
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-        }
-        .stat-number {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #2c3e50;
-        }
-        .stat-label {
-            color: #7f8c8d;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        .church-card {
-            background: white;
-            border-radius: 8px;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            transition: all 0.3s;
-        }
-        .church-card:hover {
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-        .status-badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 500;
-        }
-        .status-active {
-            background-color: #d4edda;
-            color: #155724;
-        }
-        .status-inactive {
-            background-color: #f8d7da;
-            color: #721c24;
-        }
-        .status-trial {
-            background-color: #fff3cd;
-            color: #856404;
-        }
-        .chart-container {
-            background: white;
-            border-radius: 10px;
-            padding: 1.5rem;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            margin-bottom: 2rem;
-        }
-        .action-buttons {
-            display: flex;
-            gap: 0.5rem;
+        .hover-lift:hover {
+            transform: translateY(-2px);
+            transition: transform 0.3s ease;
         }
         .system-alert {
             background: #fff3cd;
@@ -227,38 +169,73 @@
             <div id="systemAlerts"></div>
             
             <!-- Statistics Cards -->
-            <div class="row mb-4">
+            <div class="row g-4 mb-4">
                 <div class="col-md-3">
-                    <div class="stat-card">
-                        <div class="stat-number" id="totalChurches">0</div>
-                        <div class="stat-label">Total Churches</div>
+                    <div class="card border-0 shadow-sm h-100 hover-lift">
+                        <div class="card-body text-center">
+                            <div class="d-flex align-items-center justify-content-center mb-3">
+                                <div class="rounded-circle bg-primary bg-opacity-10 p-3">
+                                    <i class="bi bi-building text-primary fs-2"></i>
+                                </div>
+                            </div>
+                            <h2 class="fw-bold text-primary mb-1" id="totalChurches">0</h2>
+                            <p class="text-muted mb-0 small text-uppercase fw-semibold">Total Churches</p>
+                        </div>
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="stat-card">
-                        <div class="stat-number" id="totalUsers">0</div>
-                        <div class="stat-label">Total Users</div>
+                    <div class="card border-0 shadow-sm h-100 hover-lift">
+                        <div class="card-body text-center">
+                            <div class="d-flex align-items-center justify-content-center mb-3">
+                                <div class="rounded-circle bg-success bg-opacity-10 p-3">
+                                    <i class="bi bi-people-fill text-success fs-2"></i>
+                                </div>
+                            </div>
+                            <h2 class="fw-bold text-success mb-1" id="totalUsers">0</h2>
+                            <p class="text-muted mb-0 small text-uppercase fw-semibold">Total Users</p>
+                        </div>
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="stat-card">
-                        <div class="stat-number" id="activeSubscriptions">0</div>
-                        <div class="stat-label">Active Subscriptions</div>
+                    <div class="card border-0 shadow-sm h-100 hover-lift">
+                        <div class="card-body text-center">
+                            <div class="d-flex align-items-center justify-content-center mb-3">
+                                <div class="rounded-circle bg-warning bg-opacity-10 p-3">
+                                    <i class="bi bi-credit-card text-warning fs-2"></i>
+                                </div>
+                            </div>
+                            <h2 class="fw-bold text-warning mb-1" id="activeSubscriptions">0</h2>
+                            <p class="text-muted mb-0 small text-uppercase fw-semibold">Active Subscriptions</p>
+                        </div>
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="stat-card">
-                        <div class="stat-number" id="systemUptime">0h</div>
-                        <div class="stat-label">System Uptime</div>
+                    <div class="card border-0 shadow-sm h-100 hover-lift">
+                        <div class="card-body text-center">
+                            <div class="d-flex align-items-center justify-content-center mb-3">
+                                <div class="rounded-circle bg-info bg-opacity-10 p-3">
+                                    <i class="bi bi-clock text-info fs-2"></i>
+                                </div>
+                            </div>
+                            <h2 class="fw-bold text-info mb-1" id="systemUptime">0h</h2>
+                            <p class="text-muted mb-0 small text-uppercase fw-semibold">System Uptime</p>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- Recent Activity -->
-            <div class="chart-container">
-                <h4>Recent System Activity</h4>
-                <div id="recentActivity" class="mt-3">
-                    <!-- Activity logs will be loaded here -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 py-3">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-activity text-primary me-2"></i>
+                        <h5 class="mb-0 fw-semibold">Recent System Activity</h5>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div id="recentActivity">
+                        <!-- Activity logs will be loaded here -->
+                    </div>
                 </div>
             </div>
         </div>
@@ -273,17 +250,34 @@
             </div>
             
             <!-- Church Search -->
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <input type="text" class="form-control" id="churchSearch" placeholder="Search churches..." onkeyup="searchChurches()">
-                </div>
-                <div class="col-md-3">
-                    <select class="form-select" id="churchFilter" onchange="filterChurches()">
-                        <option value="all">All Status</option>
-                        <option value="active">Active</option>
-                        <option value="trial">Trial</option>
-                        <option value="expired">Expired</option>
-                    </select>
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-0">
+                                    <i class="bi bi-search text-muted"></i>
+                                </span>
+                                <input type="text" class="form-control border-0 bg-light" id="churchSearch" 
+                                       placeholder="Search churches..." onkeyup="searchChurches()">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select border-0 bg-light" id="churchFilter" onchange="filterChurches()">
+                                <option value="all">All Status</option>
+                                <option value="active">Active</option>
+                                <option value="trial">Trial</option>
+                                <option value="expired">Expired</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="d-grid">
+                                <button class="btn btn-outline-primary" onclick="loadChurches()">
+                                    <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -410,7 +404,7 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let token = localStorage.getItem('access_token');
         const API_BASE = '/api/v1';
@@ -494,30 +488,52 @@
         // Load recent activity
         async function loadRecentActivity() {
             const activities = [
-                { time: '2 minutes ago', action: 'New church registered', church: 'Grace Church', type: 'info' },
-                { time: '15 minutes ago', action: 'User login', user: 'admin@church1.com', type: 'success' },
+                { time: '2 minutes ago', action: 'New church registered', church: 'Grace Church', type: 'success' },
+                { time: '15 minutes ago', action: 'User login', user: 'admin@church1.com', type: 'info' },
                 { time: '1 hour ago', action: 'Backup completed', size: '2.3 GB', type: 'success' },
                 { time: '3 hours ago', action: 'Subscription renewed', church: 'Faith Community', type: 'info' },
                 { time: '5 hours ago', action: 'System update applied', version: 'v2.1.0', type: 'warning' }
             ];
 
-            let html = '<div class="list-group">';
-            activities.forEach(activity => {
-                const icon = activity.type === 'success' ? 'check-circle' : 
-                             activity.type === 'warning' ? 'exclamation-triangle' : 'info-circle';
-                const color = activity.type === 'success' ? 'success' : 
-                              activity.type === 'warning' ? 'warning' : 'info';
+            let html = '<div class="list-group list-group-flush">';
+            activities.forEach((activity, index) => {
+                const iconMap = {
+                    'success': 'check-circle-fill',
+                    'warning': 'exclamation-triangle-fill',
+                    'info': 'info-circle-fill',
+                    'danger': 'x-circle-fill'
+                };
+                
+                const colorMap = {
+                    'success': 'success',
+                    'warning': 'warning',
+                    'info': 'primary',
+                    'danger': 'danger'
+                };
+                
+                const icon = iconMap[activity.type] || 'info-circle-fill';
+                const color = colorMap[activity.type] || 'primary';
                 
                 html += `
-                    <div class="list-group-item">
-                        <div class="d-flex w-100 justify-content-between">
-                            <div>
-                                <i class="bi bi-${icon}-fill text-${color}"></i>
-                                <strong class="ms-2">${activity.action}</strong>
-                                ${activity.church ? `<span class="text-muted"> - ${activity.church}</span>` : ''}
-                                ${activity.user ? `<span class="text-muted"> - ${activity.user}</span>` : ''}
+                    <div class="list-group-item border-0 py-3">
+                        <div class="d-flex align-items-center">
+                            <div class="rounded-circle bg-${color} bg-opacity-10 p-2 me-3">
+                                <i class="bi bi-${icon} text-${color}"></i>
                             </div>
-                            <small class="text-muted">${activity.time}</small>
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="mb-1 fw-semibold">${activity.action}</h6>
+                                        <p class="mb-0 text-muted small">
+                                            ${activity.church ? activity.church : ''}
+                                            ${activity.user ? activity.user : ''}
+                                            ${activity.size ? `(${activity.size})` : ''}
+                                            ${activity.version ? `${activity.version}` : ''}
+                                        </p>
+                                    </div>
+                                    <small class="text-muted">${activity.time}</small>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -547,36 +563,53 @@
         function displayChurches(churches) {
             let html = '';
             churches.forEach(church => {
-                const statusClass = church.subscription_status === 'active' ? 'status-active' : 
-                                   church.subscription_status === 'trial' ? 'status-trial' : 'status-inactive';
+                const statusBadge = church.subscription_status === 'active' ? 
+                    '<span class="badge bg-success">Active</span>' : 
+                    church.subscription_status === 'trial' ? 
+                    '<span class="badge bg-warning text-dark">Trial</span>' : 
+                    '<span class="badge bg-danger">Expired</span>';
                 
                 html += `
-                    <div class="church-card">
-                        <div class="row align-items-center">
-                            <div class="col-md-4">
-                                <h5>${church.name}</h5>
-                                <small class="text-muted">ID: ${church.id}</small>
-                            </div>
-                            <div class="col-md-2">
-                                <span class="status-badge ${statusClass}">${church.subscription_status}</span>
-                            </div>
-                            <div class="col-md-2">
-                                <small>Plan: ${church.subscription_plan || 'Basic'}</small>
-                            </div>
-                            <div class="col-md-2">
-                                <small>Members: ${church.member_count || 0}</small>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="action-buttons">
-                                    <button class="btn btn-sm btn-outline-primary" onclick="editChurch(${church.id})">
-                                        <i class="bi bi-pencil"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-info" onclick="viewChurchDetails(${church.id})">
-                                        <i class="bi bi-eye"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteChurch(${church.id})">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
+                    <div class="card border-0 shadow-sm mb-3 hover-lift">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-4">
+                                    <div class="d-flex align-items-center">
+                                        <div class="rounded-circle bg-primary bg-opacity-10 p-2 me-3">
+                                            <i class="bi bi-building text-primary"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-1 fw-semibold">${church.name}</h6>
+                                            <small class="text-muted">ID: ${church.id}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    ${statusBadge}
+                                </div>
+                                <div class="col-md-2">
+                                    <small class="text-muted d-block">Plan</small>
+                                    <span class="fw-semibold">${church.subscription_plan || 'Basic'}</span>
+                                </div>
+                                <div class="col-md-2">
+                                    <small class="text-muted d-block">Members</small>
+                                    <span class="fw-semibold">${church.member_count || 0}</span>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="btn-group" role="group">
+                                        <button class="btn btn-sm btn-outline-primary" onclick="editChurch(${church.id})" 
+                                                data-bs-toggle="tooltip" title="Edit">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-info" onclick="viewChurchDetails(${church.id})"
+                                                data-bs-toggle="tooltip" title="View Details">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteChurch(${church.id})"
+                                                data-bs-toggle="tooltip" title="Delete">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -584,7 +617,23 @@
                 `;
             });
             
-            document.getElementById('churchList').innerHTML = html || '<p class="text-muted">No churches found.</p>';
+            if (html === '') {
+                html = `
+                    <div class="text-center py-5">
+                        <i class="bi bi-building display-1 text-muted mb-3"></i>
+                        <h5 class="text-muted">No churches found</h5>
+                        <p class="text-muted">Add your first church to get started</p>
+                    </div>
+                `;
+            }
+            
+            document.getElementById('churchList').innerHTML = html;
+            
+            // Initialize tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
         }
 
         // Show section
