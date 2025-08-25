@@ -32,6 +32,7 @@ from app.api.api_v1.endpoints import (
     member_enhanced,
     geocoding,
     system_logs,
+    setup,
 )
 
 
@@ -91,3 +92,4 @@ api_router.include_router(geocoding.router, prefix="/geocoding", tags=["geocodin
 api_router.include_router(
     system_logs.router, prefix="/system-logs", tags=["system_logs"]
 )
+api_router.include_router(setup.router, prefix="/setup", tags=["setup"])
