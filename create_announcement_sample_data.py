@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
 from app import models
 
+
 def create_sample_announcements():
     db = SessionLocal()
     try:
@@ -15,21 +16,23 @@ def create_sample_announcements():
         if not church:
             print("No church found. Please run create_sample_data.py first.")
             return
-            
-        admin_user = db.query(models.User).filter(
-            models.User.church_id == church.id,
-            models.User.role == "admin"
-        ).first()
-        
-        minister_user = db.query(models.User).filter(
-            models.User.church_id == church.id,
-            models.User.role == "minister"
-        ).first()
-        
+
+        admin_user = (
+            db.query(models.User)
+            .filter(models.User.church_id == church.id, models.User.role == "admin")
+            .first()
+        )
+
+        minister_user = (
+            db.query(models.User)
+            .filter(models.User.church_id == church.id, models.User.role == "minister")
+            .first()
+        )
+
         if not admin_user:
             print("No admin user found.")
             return
-            
+
         # Sample announcements
         announcements = [
             {
@@ -44,7 +47,7 @@ def create_sample_announcements():
                 "author_id": admin_user.id,
                 "author_name": admin_user.full_name or admin_user.username,
                 "is_pinned": True,
-                "created_at": datetime.utcnow() - timedelta(days=1)
+                "created_at": datetime.utcnow() - timedelta(days=1),
             },
             {
                 "title": "주일학교 겨울 성경학교 등록 안내",
@@ -57,9 +60,11 @@ def create_sample_announcements():
 
 문의: 교육부서 각 부서장""",
                 "author_id": minister_user.id if minister_user else admin_user.id,
-                "author_name": minister_user.full_name if minister_user else admin_user.full_name,
+                "author_name": (
+                    minister_user.full_name if minister_user else admin_user.full_name
+                ),
                 "target_audience": "youth",
-                "created_at": datetime.utcnow() - timedelta(days=3)
+                "created_at": datetime.utcnow() - timedelta(days=3),
             },
             {
                 "title": "2024년 성탄절 예배 및 행사 안내",
@@ -76,7 +81,7 @@ def create_sample_announcements():
 모든 성도님들과 함께 아기 예수님의 탄생을 축하하며 기뻐하는 시간이 되길 소망합니다.""",
                 "author_id": admin_user.id,
                 "author_name": admin_user.full_name or admin_user.username,
-                "created_at": datetime.utcnow() - timedelta(days=7)
+                "created_at": datetime.utcnow() - timedelta(days=7),
             },
             {
                 "title": "교회 주차장 이용 안내",
@@ -90,7 +95,7 @@ def create_sample_announcements():
 서로 배려하는 마음으로 주차해 주시기 바랍니다.""",
                 "author_id": admin_user.id,
                 "author_name": admin_user.full_name or admin_user.username,
-                "created_at": datetime.utcnow() - timedelta(days=14)
+                "created_at": datetime.utcnow() - timedelta(days=14),
             },
             {
                 "title": "구역 모임 변경 안내",
@@ -101,8 +106,10 @@ def create_sample_announcements():
 
 성탄절 준비 관계로 일정이 변경되었으니 각 구역장님들은 구역원들에게 전달 부탁드립니다.""",
                 "author_id": minister_user.id if minister_user else admin_user.id,
-                "author_name": minister_user.full_name if minister_user else admin_user.full_name,
-                "created_at": datetime.utcnow() - timedelta(days=20)
+                "author_name": (
+                    minister_user.full_name if minister_user else admin_user.full_name
+                ),
+                "created_at": datetime.utcnow() - timedelta(days=20),
             },
             {
                 "title": "교회 앱 사용 안내",
@@ -121,7 +128,7 @@ def create_sample_announcements():
                 "author_id": admin_user.id,
                 "author_name": admin_user.full_name or admin_user.username,
                 "is_pinned": True,
-                "created_at": datetime.utcnow() - timedelta(days=30)
+                "created_at": datetime.utcnow() - timedelta(days=30),
             },
             {
                 "title": "2024년 추수감사절 예배",
@@ -134,26 +141,24 @@ def create_sample_announcements():
                 "author_id": admin_user.id,
                 "author_name": admin_user.full_name or admin_user.username,
                 "is_active": False,  # 지난 공지
-                "created_at": datetime.utcnow() - timedelta(days=45)
-            }
+                "created_at": datetime.utcnow() - timedelta(days=45),
+            },
         ]
-        
+
         # Create announcements
         for announcement_data in announcements:
-            announcement = models.Announcement(
-                church_id=church.id,
-                **announcement_data
-            )
+            announcement = models.Announcement(church_id=church.id, **announcement_data)
             db.add(announcement)
-        
+
         db.commit()
         print(f"Created {len(announcements)} sample announcements for {church.name}")
-        
+
     except Exception as e:
         print(f"Error: {e}")
         db.rollback()
     finally:
         db.close()
+
 
 if __name__ == "__main__":
     create_sample_announcements()

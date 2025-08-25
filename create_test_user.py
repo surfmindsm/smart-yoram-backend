@@ -15,11 +15,13 @@ test_user = models.User(
     role="admin",
     church_id=6,
     is_active=True,
-    is_superuser=True  # Make superuser for testing
+    is_superuser=True,  # Make superuser for testing
 )
 
 # Check if user exists
-existing_user = db.query(models.User).filter(models.User.email == test_user.email).first()
+existing_user = (
+    db.query(models.User).filter(models.User.email == test_user.email).first()
+)
 if not existing_user:
     db.add(test_user)
     db.commit()

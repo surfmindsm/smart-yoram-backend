@@ -1,4 +1,5 @@
 """Suppress bcrypt warnings for passlib."""
+
 import warnings
 import sys
 
@@ -9,4 +10,5 @@ warnings.filterwarnings("ignore", message=".*error reading bcrypt version.*")
 if not sys.warnoptions:
     warnings.simplefilter("ignore")
     import os
+
     os.environ["PYTHONWARNINGS"] = "ignore"

@@ -18,16 +18,19 @@ categories = [
     ("주일예배", "주일에 드리는 예배", 1),
     ("주중예배", "주중에 드리는 예배", 2),
     ("부서예배", "각 부서별 예배", 3),
-    ("새벽기도회", "새벽에 드리는 기도회", 4)
+    ("새벽기도회", "새벽에 드리는 기도회", 4),
 ]
 
 print("Inserting worship categories...")
 for name, description, order_index in categories:
-    cur.execute("""
+    cur.execute(
+        """
         INSERT INTO worship_service_categories (church_id, name, description, order_index)
         VALUES (%s, %s, %s, %s)
         ON CONFLICT DO NOTHING
-    """, (church_id, name, description, order_index))
+    """,
+        (church_id, name, description, order_index),
+    )
 
 # Insert worship services
 services = [
@@ -40,7 +43,7 @@ services = [
         "service_type": "sunday_worship",
         "target_group": "all",
         "is_online": False,
-        "order_index": 1
+        "order_index": 1,
     },
     {
         "name": "주일예배 2부",
@@ -50,7 +53,7 @@ services = [
         "service_type": "sunday_worship",
         "target_group": "all",
         "is_online": False,
-        "order_index": 2
+        "order_index": 2,
     },
     {
         "name": "주일예배 3부",
@@ -60,7 +63,7 @@ services = [
         "service_type": "sunday_worship",
         "target_group": "all",
         "is_online": False,
-        "order_index": 3
+        "order_index": 3,
     },
     # 부서예배
     {
@@ -71,7 +74,7 @@ services = [
         "service_type": "sunday_worship",
         "target_group": "children",
         "is_online": False,
-        "order_index": 4
+        "order_index": 4,
     },
     {
         "name": "어린이부",
@@ -81,7 +84,7 @@ services = [
         "service_type": "sunday_worship",
         "target_group": "children",
         "is_online": False,
-        "order_index": 5
+        "order_index": 5,
     },
     {
         "name": "청소년부",
@@ -91,7 +94,7 @@ services = [
         "service_type": "sunday_worship",
         "target_group": "youth",
         "is_online": False,
-        "order_index": 6
+        "order_index": 6,
     },
     {
         "name": "대학청년부",
@@ -101,7 +104,7 @@ services = [
         "service_type": "sunday_worship",
         "target_group": "college",
         "is_online": False,
-        "order_index": 7
+        "order_index": 7,
     },
     # 수요예배
     {
@@ -112,7 +115,7 @@ services = [
         "service_type": "wednesday_worship",
         "target_group": "all",
         "is_online": False,
-        "order_index": 8
+        "order_index": 8,
     },
     # 새벽기도회 (월요일)
     {
@@ -123,7 +126,7 @@ services = [
         "service_type": "dawn_prayer",
         "target_group": "all",
         "is_online": True,
-        "order_index": 9
+        "order_index": 9,
     },
     # 새벽기도회 (화요일)
     {
@@ -134,7 +137,7 @@ services = [
         "service_type": "dawn_prayer",
         "target_group": "all",
         "is_online": True,
-        "order_index": 10
+        "order_index": 10,
     },
     # 새벽기도회 (수요일)
     {
@@ -145,7 +148,7 @@ services = [
         "service_type": "dawn_prayer",
         "target_group": "all",
         "is_online": True,
-        "order_index": 11
+        "order_index": 11,
     },
     # 새벽기도회 (목요일)
     {
@@ -156,7 +159,7 @@ services = [
         "service_type": "dawn_prayer",
         "target_group": "all",
         "is_online": True,
-        "order_index": 12
+        "order_index": 12,
     },
     # 새벽기도회 (금요일)
     {
@@ -167,30 +170,33 @@ services = [
         "service_type": "dawn_prayer",
         "target_group": "all",
         "is_online": True,
-        "order_index": 13
-    }
+        "order_index": 13,
+    },
 ]
 
 print("\nInserting worship services...")
 for service in services:
-    cur.execute("""
+    cur.execute(
+        """
         INSERT INTO worship_services (
             church_id, name, location, day_of_week, start_time, 
             service_type, target_group, is_online, is_active, order_index
         )
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-    """, (
-        church_id,
-        service["name"],
-        service["location"],
-        service["day_of_week"],
-        service["start_time"],
-        service["service_type"],
-        service["target_group"],
-        service["is_online"],
-        True,  # is_active
-        service["order_index"]
-    ))
+    """,
+        (
+            church_id,
+            service["name"],
+            service["location"],
+            service["day_of_week"],
+            service["start_time"],
+            service["service_type"],
+            service["target_group"],
+            service["is_online"],
+            True,  # is_active
+            service["order_index"],
+        ),
+    )
     print(f"  - Added: {service['name']}")
 
 # Commit the transaction

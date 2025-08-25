@@ -34,7 +34,7 @@ def check_system_admin(
     current_user: models.User = Depends(deps.get_current_active_user),
 ):
     """시스템 어드민 권한 체크"""
-    if not current_user.is_superuser and current_user.role != "admin":
+    if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="System admin access required")
     return current_user
 
@@ -175,7 +175,7 @@ async def websocket_logs(
         user = db.query(models.User).filter(models.User.id == user_id).first()
         db.close()
 
-        if not user or (not user.is_superuser and user.role != "admin"):
+        if not user or not user.is_superuser:
             await websocket.close(code=4003, reason="Unauthorized")
             return
 

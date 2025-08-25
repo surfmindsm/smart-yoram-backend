@@ -29,6 +29,14 @@ async def dashboard_page(request: Request):
     return templates.TemplateResponse("dashboard.html", {"request": request})
 
 
+@router.get("/system-admin", response_class=HTMLResponse)
+async def system_admin_dashboard(request: Request):
+    """System admin dashboard (superuser only)"""
+    return templates.TemplateResponse(
+        "system_admin_dashboard.html", {"request": request}
+    )
+
+
 @router.get("/system-logs", response_class=HTMLResponse)
 async def system_logs_page(request: Request):
     """System logs viewer page (for system admins only)"""

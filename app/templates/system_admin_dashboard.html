@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Yoram System Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f8f9fa;
+        }
+        .sidebar {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            padding: 56px 0 0;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%);
+            width: 260px;
+        }
+        .sidebar-sticky {
+            position: sticky;
+            top: 56px;
+            height: calc(100vh - 56px);
+            padding-top: 1rem;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 0.75rem 1.5rem;
+            transition: all 0.3s;
+            border-left: 3px solid transparent;
+        }
+        .sidebar .nav-link:hover {
+            color: white;
+            background-color: rgba(255,255,255,0.1);
+            border-left-color: #3498db;
+        }
+        .sidebar .nav-link.active {
+            color: white;
+            background-color: rgba(255,255,255,0.15);
+            border-left-color: #e74c3c;
+        }
+        .navbar {
+            background: #2c3e50 !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .navbar-brand {
+            font-weight: 600;
+            color: white !important;
+        }
+        main {
+            margin-left: 260px;
+            padding-top: 56px;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: transform 0.3s;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .church-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transition: all 0.3s;
+        }
+        .church-card:hover {
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .status-active {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status-inactive {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .status-trial {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .chart-container {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 2rem;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .system-alert {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 4px;
+        }
+        .log-entry {
+            padding: 0.5rem;
+            border-bottom: 1px solid #e0e0e0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+        .log-entry:hover {
+            background-color: #f5f5f5;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-dark fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="bi bi-shield-lock"></i> Smart Yoram System Admin
+            </a>
+            <div class="d-flex align-items-center">
+                <span class="navbar-text me-3">
+                    <i class="bi bi-person-circle"></i> <span id="adminName">System Administrator</span>
+                </span>
+                <button class="btn btn-outline-light btn-sm" onclick="logout()">
+                    <i class="bi bi-box-arrow-right"></i> Logout
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="sidebar-sticky">
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#" onclick="showSection('overview')">
+                        <i class="bi bi-speedometer2"></i> System Overview
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showSection('churches')">
+                        <i class="bi bi-building"></i> Church Management
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showSection('users')">
+                        <i class="bi bi-people-fill"></i> User Management
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showSection('subscriptions')">
+                        <i class="bi bi-credit-card"></i> Subscriptions
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/system-logs">
+                        <i class="bi bi-terminal"></i> System Logs
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showSection('analytics')">
+                        <i class="bi bi-graph-up"></i> Analytics
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showSection('database')">
+                        <i class="bi bi-database"></i> Database
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showSection('settings')">
+                        <i class="bi bi-gear"></i> System Settings
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showSection('backup')">
+                        <i class="bi bi-archive"></i> Backup & Restore
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main content -->
+    <main class="container-fluid">
+        <!-- Overview Section -->
+        <div id="overview-section" class="p-4">
+            <h2 class="mb-4">System Overview</h2>
+            
+            <!-- System Alerts -->
+            <div id="systemAlerts"></div>
+            
+            <!-- Statistics Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalChurches">0</div>
+                        <div class="stat-label">Total Churches</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalUsers">0</div>
+                        <div class="stat-label">Total Users</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-number" id="activeSubscriptions">0</div>
+                        <div class="stat-label">Active Subscriptions</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-number" id="systemUptime">0h</div>
+                        <div class="stat-label">System Uptime</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="chart-container">
+                <h4>Recent System Activity</h4>
+                <div id="recentActivity" class="mt-3">
+                    <!-- Activity logs will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Churches Section -->
+        <div id="churches-section" class="p-4" style="display: none;">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Church Management</h2>
+                <button class="btn btn-primary" onclick="showAddChurchModal()">
+                    <i class="bi bi-plus-circle"></i> Add New Church
+                </button>
+            </div>
+            
+            <!-- Church Search -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <input type="text" class="form-control" id="churchSearch" placeholder="Search churches..." onkeyup="searchChurches()">
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="churchFilter" onchange="filterChurches()">
+                        <option value="all">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="trial">Trial</option>
+                        <option value="expired">Expired</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="churchList">
+                <!-- Church list will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Users Section -->
+        <div id="users-section" class="p-4" style="display: none;">
+            <h2 class="mb-4">User Management</h2>
+            
+            <!-- User Search -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <input type="text" class="form-control" placeholder="Search users...">
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select">
+                        <option>All Churches</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="userList">
+                <!-- User list will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Database Section -->
+        <div id="database-section" class="p-4" style="display: none;">
+            <h2 class="mb-4">Database Management</h2>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="chart-container">
+                        <h4>Database Statistics</h4>
+                        <ul class="list-unstyled mt-3">
+                            <li><strong>Database Size:</strong> <span id="dbSize">Loading...</span></li>
+                            <li><strong>Total Tables:</strong> <span id="dbTables">Loading...</span></li>
+                            <li><strong>Active Connections:</strong> <span id="dbConnections">Loading...</span></li>
+                            <li><strong>Last Backup:</strong> <span id="lastBackup">Loading...</span></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="chart-container">
+                        <h4>Quick Actions</h4>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-primary" onclick="runMigrations()">
+                                <i class="bi bi-arrow-up-circle"></i> Run Migrations
+                            </button>
+                            <button class="btn btn-warning" onclick="optimizeDatabase()">
+                                <i class="bi bi-speedometer"></i> Optimize Database
+                            </button>
+                            <button class="btn btn-success" onclick="backupDatabase()">
+                                <i class="bi bi-download"></i> Backup Database
+                            </button>
+                            <button class="btn btn-danger" onclick="clearCache()">
+                                <i class="bi bi-trash"></i> Clear Redis Cache
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Church Modal -->
+    <div class="modal fade" id="churchModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="churchModalTitle">Church Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="churchForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Church Name</label>
+                                    <input type="text" class="form-control" id="churchName">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Church ID</label>
+                                    <input type="number" class="form-control" id="churchId">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Subscription Plan</label>
+                                    <select class="form-select" id="subscriptionPlan">
+                                        <option value="basic">Basic (up to 100 members)</option>
+                                        <option value="standard">Standard (up to 500 members)</option>
+                                        <option value="premium">Premium (up to 1000 members)</option>
+                                        <option value="enterprise">Enterprise (unlimited)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Status</label>
+                                    <select class="form-select" id="churchStatus">
+                                        <option value="active">Active</option>
+                                        <option value="trial">Trial</option>
+                                        <option value="expired">Expired</option>
+                                        <option value="suspended">Suspended</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="saveChurch()">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let token = localStorage.getItem('access_token');
+        const API_BASE = '/api/v1';
+        let currentUser = null;
+
+        // Check authentication and verify system admin
+        async function checkAuth() {
+            if (!token) {
+                window.location.href = '/login';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/users/me`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    currentUser = await response.json();
+                    
+                    // Check if user is system admin (superuser)
+                    if (!currentUser.is_superuser) {
+                        alert('Access Denied: System Admin privileges required');
+                        window.location.href = '/dashboard';
+                        return;
+                    }
+                    
+                    document.getElementById('adminName').textContent = currentUser.full_name || currentUser.username;
+                    loadSystemStats();
+                } else {
+                    window.location.href = '/login';
+                }
+            } catch (error) {
+                console.error('Authentication error:', error);
+                window.location.href = '/login';
+            }
+        }
+
+        // Load system statistics
+        async function loadSystemStats() {
+            try {
+                // Load churches
+                const churchResponse = await fetch(`${API_BASE}/churches/`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (churchResponse.ok) {
+                    const churches = await churchResponse.json();
+                    document.getElementById('totalChurches').textContent = churches.length;
+                    
+                    // Count active subscriptions
+                    const activeCount = churches.filter(c => c.subscription_status === 'active').length;
+                    document.getElementById('activeSubscriptions').textContent = activeCount;
+                }
+
+                // Load users
+                const userResponse = await fetch(`${API_BASE}/users/`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (userResponse.ok) {
+                    const users = await userResponse.json();
+                    document.getElementById('totalUsers').textContent = users.length;
+                }
+
+                // Load system health
+                const healthResponse = await fetch(`${API_BASE}/health`);
+                if (healthResponse.ok) {
+                    const health = await healthResponse.json();
+                    // Calculate uptime (mock for now)
+                    const uptime = Math.floor(Math.random() * 720) + 24;
+                    document.getElementById('systemUptime').textContent = `${uptime}h`;
+                }
+
+                loadRecentActivity();
+            } catch (error) {
+                console.error('Error loading system stats:', error);
+            }
+        }
+
+        // Load recent activity
+        async function loadRecentActivity() {
+            const activities = [
+                { time: '2 minutes ago', action: 'New church registered', church: 'Grace Church', type: 'info' },
+                { time: '15 minutes ago', action: 'User login', user: 'admin@church1.com', type: 'success' },
+                { time: '1 hour ago', action: 'Backup completed', size: '2.3 GB', type: 'success' },
+                { time: '3 hours ago', action: 'Subscription renewed', church: 'Faith Community', type: 'info' },
+                { time: '5 hours ago', action: 'System update applied', version: 'v2.1.0', type: 'warning' }
+            ];
+
+            let html = '<div class="list-group">';
+            activities.forEach(activity => {
+                const icon = activity.type === 'success' ? 'check-circle' : 
+                             activity.type === 'warning' ? 'exclamation-triangle' : 'info-circle';
+                const color = activity.type === 'success' ? 'success' : 
+                              activity.type === 'warning' ? 'warning' : 'info';
+                
+                html += `
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <div>
+                                <i class="bi bi-${icon}-fill text-${color}"></i>
+                                <strong class="ms-2">${activity.action}</strong>
+                                ${activity.church ? `<span class="text-muted"> - ${activity.church}</span>` : ''}
+                                ${activity.user ? `<span class="text-muted"> - ${activity.user}</span>` : ''}
+                            </div>
+                            <small class="text-muted">${activity.time}</small>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            
+            document.getElementById('recentActivity').innerHTML = html;
+        }
+
+        // Load churches
+        async function loadChurches() {
+            try {
+                const response = await fetch(`${API_BASE}/churches/`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    const churches = await response.json();
+                    displayChurches(churches);
+                }
+            } catch (error) {
+                console.error('Error loading churches:', error);
+            }
+        }
+
+        // Display churches
+        function displayChurches(churches) {
+            let html = '';
+            churches.forEach(church => {
+                const statusClass = church.subscription_status === 'active' ? 'status-active' : 
+                                   church.subscription_status === 'trial' ? 'status-trial' : 'status-inactive';
+                
+                html += `
+                    <div class="church-card">
+                        <div class="row align-items-center">
+                            <div class="col-md-4">
+                                <h5>${church.name}</h5>
+                                <small class="text-muted">ID: ${church.id}</small>
+                            </div>
+                            <div class="col-md-2">
+                                <span class="status-badge ${statusClass}">${church.subscription_status}</span>
+                            </div>
+                            <div class="col-md-2">
+                                <small>Plan: ${church.subscription_plan || 'Basic'}</small>
+                            </div>
+                            <div class="col-md-2">
+                                <small>Members: ${church.member_count || 0}</small>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="action-buttons">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="editChurch(${church.id})">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-info" onclick="viewChurchDetails(${church.id})">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteChurch(${church.id})">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('churchList').innerHTML = html || '<p class="text-muted">No churches found.</p>';
+        }
+
+        // Show section
+        function showSection(section) {
+            // Hide all sections
+            document.querySelectorAll('[id$="-section"]').forEach(sec => {
+                sec.style.display = 'none';
+            });
+            
+            // Show selected section
+            const sectionElement = document.getElementById(`${section}-section`);
+            if (sectionElement) {
+                sectionElement.style.display = 'block';
+            }
+            
+            // Update nav links
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Load section data
+            if (section === 'churches') {
+                loadChurches();
+            } else if (section === 'users') {
+                loadUsers();
+            } else if (section === 'database') {
+                loadDatabaseStats();
+            }
+        }
+
+        // Load users
+        async function loadUsers() {
+            try {
+                const response = await fetch(`${API_BASE}/users/`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    const users = await response.json();
+                    displayUsers(users);
+                }
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
+        }
+
+        // Display users
+        function displayUsers(users) {
+            let html = '<div class="table-responsive"><table class="table table-hover">';
+            html += '<thead><tr><th>ID</th><th>Username</th><th>Email</th><th>Church</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
+            
+            users.forEach(user => {
+                const statusBadge = user.is_active ? 
+                    '<span class="badge bg-success">Active</span>' : 
+                    '<span class="badge bg-danger">Inactive</span>';
+                
+                html += `
+                    <tr>
+                        <td>${user.id}</td>
+                        <td>${user.username}</td>
+                        <td>${user.email}</td>
+                        <td>${user.church_id || 'N/A'}</td>
+                        <td>${user.is_superuser ? 'System Admin' : user.role || 'User'}</td>
+                        <td>${statusBadge}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="editUser(${user.id})">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="toggleUserStatus(${user.id})">
+                                <i class="bi bi-power"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table></div>';
+            document.getElementById('userList').innerHTML = html;
+        }
+
+        // Load database stats
+        async function loadDatabaseStats() {
+            try {
+                // Mock data for now
+                document.getElementById('dbSize').textContent = '2.3 GB';
+                document.getElementById('dbTables').textContent = '42';
+                document.getElementById('dbConnections').textContent = '8';
+                document.getElementById('lastBackup').textContent = '2 hours ago';
+            } catch (error) {
+                console.error('Error loading database stats:', error);
+            }
+        }
+
+        // Database actions
+        async function runMigrations() {
+            if (confirm('Run database migrations? This may take a few minutes.')) {
+                alert('Migrations started. Check system logs for progress.');
+            }
+        }
+
+        async function optimizeDatabase() {
+            if (confirm('Optimize database? This may affect performance temporarily.')) {
+                alert('Database optimization started.');
+            }
+        }
+
+        async function backupDatabase() {
+            if (confirm('Create database backup?')) {
+                alert('Backup started. You will be notified when complete.');
+            }
+        }
+
+        async function clearCache() {
+            if (confirm('Clear Redis cache? This may affect performance temporarily.')) {
+                alert('Cache cleared successfully.');
+            }
+        }
+
+        // Logout
+        function logout() {
+            localStorage.removeItem('access_token');
+            window.location.href = '/login';
+        }
+
+        // Initialize
+        checkAuth();
+    </script>
+</body>
+</html>

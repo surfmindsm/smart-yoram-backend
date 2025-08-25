@@ -7,6 +7,7 @@ from app.db.session import SessionLocal
 from app import models
 from datetime import datetime, timedelta, timezone
 
+
 def create_test_church():
     db = SessionLocal()
     try:
@@ -15,7 +16,7 @@ def create_test_church():
         if existing_church:
             print(f"Church already exists: {existing_church.name}")
             return
-        
+
         # Create new church
         church = models.Church(
             id=1,
@@ -27,20 +28,21 @@ def create_test_church():
             subscription_status="active",
             subscription_end_date=datetime.now(timezone.utc) + timedelta(days=365),
             member_limit=1000,
-            is_active=True
+            is_active=True,
         )
-        
+
         db.add(church)
         db.commit()
         db.refresh(church)
-        
+
         print(f"Church created successfully: {church.name}")
-        
+
     except Exception as e:
         print(f"Error creating church: {e}")
         db.rollback()
     finally:
         db.close()
+
 
 if __name__ == "__main__":
     create_test_church()
