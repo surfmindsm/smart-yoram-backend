@@ -78,3 +78,5 @@ migrate_to_supabase.md
 supabase_schema.sql
 setup_supabase.py
 .encryption_key
+
+/Bootstrap5    
