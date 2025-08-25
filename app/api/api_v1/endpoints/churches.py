@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app import models, schemas
 from app.api import deps
+from app.services.church_default_agent_service import ChurchDefaultAgentService
 
 router = APIRouter()
 
@@ -26,10 +27,24 @@ def create_church(
     church_in: schemas.ChurchCreate,
     current_user: models.User = Depends(deps.get_current_active_superuser),
 ) -> Any:
+    # Create church
     church = models.Church(**church_in.dict())
     db.add(church)
     db.commit()
     db.refresh(church)
+
+    # Create default agent for the new church
+    try:
+        default_agent = ChurchDefaultAgentService.create_default_agent_for_church(
+            church.id, db
+        )
+        print(
+            f"✅ Created default agent (ID: {default_agent.id}) for new church: {church.name}"
+        )
+    except Exception as e:
+        print(f"⚠️ Failed to create default agent for church {church.name}: {str(e)}")
+        # Don't fail church creation if agent creation fails
+
     return church
 
 
