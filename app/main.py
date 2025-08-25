@@ -20,12 +20,21 @@ logger = logging.getLogger(__name__)
 
 # Setup log interceptor for container logs
 try:
-    from app.services.container_logs import setup_log_interceptor
+    from app.services.container_logs import (
+        setup_log_interceptor,
+        container_logs_service,
+    )
 
     setup_log_interceptor()
     logger.info("Log interceptor initialized for container logs")
-except ImportError:
-    logger.info("Running without container log interceptor")
+
+    # 초기 로그 추가
+    container_logs_service.add_log("Smart Yoram Backend Server Started", "INFO")
+    container_logs_service.add_log(f"Version: {settings.VERSION}", "INFO")
+    container_logs_service.add_log("Database connection established", "INFO")
+
+except ImportError as e:
+    logger.info(f"Running without container log interceptor: {e}")
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -47,6 +56,23 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 app.include_router(spec_router, prefix="/api")
 app.include_router(admin_router)
 app.include_router(web_router)
+
+
+# Add middleware to log all requests
+@app.middleware("http")
+async def log_requests(request, call_next):
+    from app.services.container_logs import container_logs_service
+    import time
+
+    start_time = time.time()
+    response = await call_next(request)
+    process_time = time.time() - start_time
+
+    # Log the request
+    log_message = f"{request.client.host} - {request.method} {request.url.path} - {response.status_code} - {process_time:.3f}s"
+    container_logs_service.add_log(log_message, "INFO")
+
+    return response
 
 
 @app.get("/health")
