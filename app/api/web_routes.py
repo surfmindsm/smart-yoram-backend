@@ -41,15 +41,15 @@ async def first_time_setup_page(request: Request):
     # Check if setup is needed
     from app.db.session import SessionLocal
     from app import models
-    
+
     db = SessionLocal()
     needs_setup = db.query(models.Church).count() == 0
     db.close()
-    
+
     if not needs_setup:
         # Redirect to login if setup is already done
         return templates.TemplateResponse("login.html", {"request": request})
-    
+
     # Create a simple setup page if template doesn't exist
     setup_html = """
     <!DOCTYPE html>
@@ -246,6 +246,7 @@ async def first_time_setup_page(request: Request):
     </body>
     </html>
     """
-    
+
     from fastapi.responses import HTMLResponse
+
     return HTMLResponse(content=setup_html)
