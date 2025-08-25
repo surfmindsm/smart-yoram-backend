@@ -18,6 +18,25 @@ def test_authentication(
     """
     Test authentication - returns current user info if authenticated.
     """
+
+
+@router.get("/test-superuser")
+def test_superuser_status(
+    request: Request,
+    current_user: models.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    Test superuser status - returns detailed user permissions
+    """
+    return {
+        "user_id": current_user.id,
+        "email": current_user.email,
+        "role": current_user.role,
+        "is_superuser": current_user.is_superuser,
+        "is_active": current_user.is_active,
+        "church_id": current_user.church_id,
+        "can_access_system_logs": current_user.is_superuser and current_user.is_active,
+    }
     logger.info(f"Test auth endpoint called by user {current_user.id}")
 
     # Log headers for debugging

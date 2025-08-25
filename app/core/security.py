@@ -35,6 +35,17 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 
+def decode_access_token(token: str) -> dict:
+    """Decode and validate JWT access token"""
+    try:
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
+        return payload
+    except JWTError as e:
+        raise ValueError(f"Invalid token: {str(e)}")
+
+
 # Encryption functions
 def get_encryption_key() -> bytes:
     """Get or create encryption key"""
