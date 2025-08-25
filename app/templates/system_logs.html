@@ -420,7 +420,9 @@
             const lines = document.getElementById('linesInput').value;
             
             // Use WebSocket for real-time streaming
-            const wsUrl = `ws://${window.location.host}/api/v1/system-logs/ws/${container}?token=${token}`;
+            // Use wss:// for HTTPS, ws:// for HTTP
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/api/v1/system-logs/ws/${container}?token=${token}`;
             ws = new WebSocket(wsUrl);
             
             ws.onopen = () => {
