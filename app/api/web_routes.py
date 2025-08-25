@@ -7,9 +7,7 @@ router = APIRouter()
 
 # Setup templates directory
 # In Docker container, the structure is /app/app/templates
-templates_dir = os.path.join(
-    os.path.dirname(os.path.dirname(__file__)), "templates"
-)
+templates_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates")
 templates = Jinja2Templates(directory=templates_dir)
 
 
