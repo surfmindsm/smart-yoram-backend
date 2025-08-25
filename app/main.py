@@ -18,6 +18,14 @@ from app.core.config import settings
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+# Setup log interceptor for container logs
+try:
+    from app.services.container_logs import setup_log_interceptor
+    setup_log_interceptor()
+    logger.info("Log interceptor initialized for container logs")
+except ImportError:
+    logger.info("Running without container log interceptor")
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,

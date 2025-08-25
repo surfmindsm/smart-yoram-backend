@@ -19,7 +19,12 @@ import json
 
 from app import models
 from app.api import deps
-from app.services.docker_logs import docker_logs_service
+try:
+    # 먼저 container_logs 서비스 시도 (컨테이너 내부 실행용)
+    from app.services.container_logs import container_logs_service as logs_service
+except ImportError:
+    # 실패하면 docker_logs 서비스 사용 (호스트 실행용)
+    from app.services.docker_logs import logs_service as logs_service
 
 router = APIRouter()
 
@@ -38,7 +43,7 @@ async def get_containers(current_user: models.User = Depends(check_system_admin)
     """
     실행 중인 Docker 컨테이너 목록 조회
     """
-    containers = await docker_logs_service.get_containers()
+    containers = await logs_service.get_containers()
     return containers
 
 
@@ -57,7 +62,7 @@ async def get_logs(
         lines: 조회할 로그 라인 수
         since_minutes: 최근 N분 간의 로그
     """
-    logs = await docker_logs_service.get_logs_json(
+    logs = await logs_service.get_logs_json(
         container_name=container_name, lines=lines, since_minutes=since_minutes
     )
 
@@ -78,7 +83,7 @@ async def get_error_logs(
     """
     특정 컨테이너의 에러 로그만 조회
     """
-    error_logs = await docker_logs_service.get_error_logs(
+    error_logs = await logs_service.get_error_logs(
         container_name=container_name, lines=lines
     )
 
@@ -102,7 +107,7 @@ async def search_logs(
     if not q:
         raise HTTPException(status_code=400, detail="Search term is required")
 
-    matching_logs = await docker_logs_service.search_logs(
+    matching_logs = await logs_service.search_logs(
         container_name=container_name, search_term=q, lines=lines
     )
 
@@ -126,7 +131,7 @@ async def stream_logs(
 
     async def generate():
         try:
-            async for log_line in docker_logs_service.get_logs(
+            async for log_line in logs_service.get_logs(
                 container_name=container_name, lines=lines, follow=True
             ):
                 # SSE 형식으로 전송
@@ -190,7 +195,7 @@ async def websocket_logs(
         )
 
         # 실시간 로그 스트리밍
-        async for log_line in docker_logs_service.get_logs(
+        async for log_line in logs_service.get_logs(
             container_name=container_name, lines=50, follow=True
         ):
             await websocket.send_json(
@@ -227,7 +232,7 @@ async def clear_logs(
 
     주의: 컨테이너가 재시작되므로 일시적으로 서비스가 중단될 수 있습니다.
     """
-    success = await docker_logs_service.clear_logs(container_name)
+    success = await logs_service.clear_logs(container_name)
 
     if not success:
         raise HTTPException(
@@ -253,7 +258,7 @@ async def get_logs_summary(
 
     for container in containers:
         try:
-            logs = await docker_logs_service.get_logs_json(
+            logs = await logs_service.get_logs_json(
                 container_name=container, lines=1000, since_minutes=since_minutes
             )
 
