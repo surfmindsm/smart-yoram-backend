@@ -471,12 +471,7 @@
             
             // Fallback to Server-Sent Events
             eventSource = new EventSource(
-                `/api/v1/system-logs/logs/${container}/stream?lines=${lines}`,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                }
+                `/api/v1/system-logs/logs/${container}/stream?lines=${lines}&token=${token}`
             );
             
             eventSource.onmessage = (event) => {

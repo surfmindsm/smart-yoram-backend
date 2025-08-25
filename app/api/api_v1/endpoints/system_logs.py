@@ -124,11 +124,28 @@ async def search_logs(
 async def stream_logs(
     container_name: str,
     lines: int = Query(50, description="Initial number of log lines"),
-    current_user: models.User = Depends(check_system_admin),
+    token: str = Query(..., description="Access token"),
 ):
     """
     로그 실시간 스트리밍 (Server-Sent Events)
     """
+    # 토큰 검증
+    try:
+        from app.core.security import decode_access_token
+        from app.db.session import SessionLocal
+
+        payload = decode_access_token(token)
+        user_id = payload.get("sub")
+
+        db = SessionLocal()
+        user = db.query(models.User).filter(models.User.id == user_id).first()
+        db.close()
+
+        if not user or not user.is_superuser:
+            raise HTTPException(status_code=403, detail="System admin access required")
+
+    except Exception as e:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
 
     async def generate():
         try:
