@@ -213,13 +213,17 @@ async def send_message(
         )
     except (ValueError, TypeError) as e:
         logger.error(f"Invalid agent_id format: {e}")
-        raise HTTPException(status_code=400, detail="Invalid agent_id format in request")
+        raise HTTPException(
+            status_code=400, detail="Invalid agent_id format in request"
+        )
 
     # Get agent first to validate it exists
-    agent = DefaultAgentService.get_agent_for_church(agent_id, current_user.church_id, db)
+    agent = DefaultAgentService.get_agent_for_church(
+        agent_id, current_user.church_id, db
+    )
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
-    
+
     # Check if agent is active
     if not agent.is_active:
         raise HTTPException(status_code=400, detail="Agent is not active")
@@ -229,10 +233,14 @@ async def send_message(
     # Auto-create history if needed
     if chat_history_id is None and chat_request.create_history_if_needed:
         logger.info(f"Auto-creating chat history for agent {agent_id}")
-        
+
         # Generate title from first part of message content
-        title_preview = chat_request.content[:50] + "..." if len(chat_request.content) > 50 else chat_request.content
-        
+        title_preview = (
+            chat_request.content[:50] + "..."
+            if len(chat_request.content) > 50
+            else chat_request.content
+        )
+
         # Create new chat history
         new_history = ChatHistory(
             church_id=current_user.church_id,
@@ -240,17 +248,17 @@ async def send_message(
             agent_id=agent_id,
             title=title_preview,
             is_bookmarked=False,
-            message_count=0
+            message_count=0,
         )
-        
+
         db.add(new_history)
         db.commit()
         db.refresh(new_history)
-        
+
         chat_history_id = new_history.id
         history = new_history
         logger.info(f"Created new chat history with ID: {chat_history_id}")
-    
+
     elif chat_history_id is not None:
         # Convert string ID to int if needed
         try:
@@ -261,23 +269,29 @@ async def send_message(
             )
         except (ValueError, TypeError) as e:
             logger.error(f"Invalid chat_history_id format: {e}")
-            raise HTTPException(status_code=400, detail="Invalid chat_history_id format")
+            raise HTTPException(
+                status_code=400, detail="Invalid chat_history_id format"
+            )
 
         # Verify existing chat history
         history = (
             db.query(ChatHistory)
             .filter(
-                ChatHistory.id == chat_history_id, ChatHistory.user_id == current_user.id
+                ChatHistory.id == chat_history_id,
+                ChatHistory.user_id == current_user.id,
             )
             .first()
         )
 
         if not history:
             raise HTTPException(status_code=404, detail="Chat history not found")
-    
+
     else:
         # chat_history_id is None and create_history_if_needed is False
-        raise HTTPException(status_code=400, detail="chat_history_id is required when create_history_if_needed is False")
+        raise HTTPException(
+            status_code=400,
+            detail="chat_history_id is required when create_history_if_needed is False",
+        )
 
     # Agent was already validated above
 
