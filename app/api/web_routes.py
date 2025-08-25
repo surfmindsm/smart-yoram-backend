@@ -28,3 +28,9 @@ async def login_page(request: Request):
 async def dashboard_page(request: Request):
     """Dashboard page"""
     return templates.TemplateResponse("dashboard.html", {"request": request})
+
+
+@router.get("/system-logs", response_class=HTMLResponse)
+async def system_logs_page(request: Request):
+    """System logs viewer page (for system admins only)"""
+    return templates.TemplateResponse("system_logs.html", {"request": request})

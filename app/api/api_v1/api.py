@@ -31,6 +31,7 @@ from app.api.api_v1.endpoints import (
     financial,
     member_enhanced,
     geocoding,
+    system_logs,
 )
 
 
@@ -87,3 +88,4 @@ api_router.include_router(
     member_enhanced.router, prefix="/members", tags=["member_enhanced"]
 )
 api_router.include_router(geocoding.router, prefix="/geocoding", tags=["geocoding"])
+api_router.include_router(system_logs.router, prefix="/system-logs", tags=["system_logs"])
