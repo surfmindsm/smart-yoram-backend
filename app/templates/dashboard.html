@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>스마트 요람 관리자 대시보드</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+        .sidebar {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            padding: 48px 0 0;
+            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+        }
+        .sidebar-sticky {
+            position: sticky;
+            top: 48px;
+            height: calc(100vh - 48px);
+            padding-top: .5rem;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        .navbar-brand {
+            padding-top: .75rem;
+            padding-bottom: .75rem;
+        }
+        main {
+            margin-left: 240px;
+            padding-top: 48px;
+        }
+        .announcement-item {
+            border-left: 3px solid #007bff;
+            transition: all 0.3s;
+        }
+        .announcement-item:hover {
+            background-color: #f8f9fa;
+        }
+        .announcement-item.pinned {
+            border-left-color: #ffc107;
+            background-color: #fffbf0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-dark bg-dark fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">스마트 요람 관리자</a>
+            <div class="navbar-nav">
+                <span class="navbar-text me-3" id="userName">관리자</span>
+                <button class="btn btn-outline-light btn-sm" onclick="logout()">로그아웃</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sidebar -->
+    <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
+        <div class="sidebar-sticky">
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showSection('dashboard')">
+                        <i class="bi bi-house-door"></i> 대시보드
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showSection('members')">
+                        <i class="bi bi-people"></i> 교인 관리
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="#" onclick="showSection('announcements')">
+                        <i class="bi bi-megaphone"></i> 공지사항
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showSection('attendance')">
+                        <i class="bi bi-check2-square"></i> 출석 관리
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showSection('bulletins')">
+                        <i class="bi bi-journal-text"></i> 주보 관리
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showSection('calendar')">
+                        <i class="bi bi-calendar3"></i> 일정 관리
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main content -->
+    <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-md-4">
+        <div id="announcements-section">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">공지사항 관리</h1>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#announcementModal">
+                    <i class="bi bi-plus-circle"></i> 새 공지사항
+                </button>
+            </div>
+
+            <!-- Filter buttons -->
+            <div class="btn-group mb-3" role="group">
+                <button type="button" class="btn btn-outline-primary active" onclick="filterAnnouncements('all')">전체</button>
+                <button type="button" class="btn btn-outline-primary" onclick="filterAnnouncements('active')">활성</button>
+                <button type="button" class="btn btn-outline-primary" onclick="filterAnnouncements('pinned')">고정</button>
+            </div>
+
+            <!-- Announcements list -->
+            <div id="announcementsList" class="mt-3">
+                <!-- Announcements will be loaded here -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Announcement Modal -->
+    <div class="modal fade" id="announcementModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="announcementModalTitle">새 공지사항</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="announcementForm">
+                        <input type="hidden" id="announcementId">
+                        <div class="mb-3">
+                            <label for="title" class="form-label">제목</label>
+                            <input type="text" class="form-control" id="title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="content" class="form-label">내용</label>
+                            <textarea class="form-control" id="content" rows="8" required></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="target_audience" class="form-label">대상</label>
+                                    <select class="form-select" id="target_audience">
+                                        <option value="all">전체</option>
+                                        <option value="member">일반 교인</option>
+                                        <option value="youth">청소년부</option>
+                                        <option value="leader">리더</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check mt-4">
+                                    <input class="form-check-input" type="checkbox" id="is_pinned">
+                                    <label class="form-check-label" for="is_pinned">
+                                        상단 고정
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="is_active" checked>
+                                    <label class="form-check-label" for="is_active">
+                                        활성화
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="btn btn-primary" onclick="saveAnnouncement()">저장</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let token = localStorage.getItem('access_token');
+        const API_BASE = '/api/v1';
+
+        // Check authentication
+        if (!token) {
+            window.location.href = '/login';
+        }
+
+        // Load user info
+        async function loadUserInfo() {
+            try {
+                const response = await fetch(`${API_BASE}/users/me`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                if (response.ok) {
+                    const user = await response.json();
+                    document.getElementById('userName').textContent = user.full_name || user.username;
+                }
+            } catch (error) {
+                console.error('Error loading user info:', error);
+            }
+        }
+
+        // Load announcements
+        async function loadAnnouncements(filter = 'all') {
+            try {
+                let url = `${API_BASE}/announcements/`;
+                if (filter === 'active') {
+                    url += '?is_active=true';
+                } else if (filter === 'pinned') {
+                    url += '?is_pinned=true';
+                }
+
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const announcements = await response.json();
+                    displayAnnouncements(announcements);
+                }
+            } catch (error) {
+                console.error('Error loading announcements:', error);
+            }
+        }
+
+        // Display announcements
+        function displayAnnouncements(announcements) {
+            const container = document.getElementById('announcementsList');
+            container.innerHTML = '';
+
+            if (announcements.length === 0) {
+                container.innerHTML = '<p class="text-muted">공지사항이 없습니다.</p>';
+                return;
+            }
+
+            announcements.forEach(announcement => {
+                const date = new Date(announcement.created_at).toLocaleDateString('ko-KR');
+                const isPinned = announcement.is_pinned ? 'pinned' : '';
+                const pinIcon = announcement.is_pinned ? '<i class="bi bi-pin-angle-fill text-warning"></i>' : '';
+                const activeClass = announcement.is_active ? '' : 'text-muted';
+
+                const card = `
+                    <div class="card announcement-item ${isPinned} mb-3 ${activeClass}">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h5 class="card-title">
+                                        ${pinIcon} ${announcement.title}
+                                        ${!announcement.is_active ? '<span class="badge bg-secondary">비활성</span>' : ''}
+                                    </h5>
+                                    <p class="card-text">${announcement.content.replace(/\n/g, '<br>')}</p>
+                                    <p class="card-text">
+                                        <small class="text-muted">
+                                            작성자: ${announcement.author_name} | 
+                                            작성일: ${date} | 
+                                            대상: ${getTargetAudienceText(announcement.target_audience)}
+                                        </small>
+                                    </p>
+                                </div>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary" onclick="editAnnouncement(${announcement.id})">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-outline-warning" onclick="togglePin(${announcement.id})">
+                                        <i class="bi bi-pin"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger" onclick="deleteAnnouncement(${announcement.id})">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += card;
+            });
+        }
+
+        // Get target audience text
+        function getTargetAudienceText(audience) {
+            const map = {
+                'all': '전체',
+                'member': '일반 교인',
+                'youth': '청소년부',
+                'leader': '리더'
+            };
+            return map[audience] || audience;
+        }
+
+        // Save announcement
+        async function saveAnnouncement() {
+            const id = document.getElementById('announcementId').value;
+            const data = {
+                title: document.getElementById('title').value,
+                content: document.getElementById('content').value,
+                target_audience: document.getElementById('target_audience').value,
+                is_pinned: document.getElementById('is_pinned').checked,
+                is_active: document.getElementById('is_active').checked
+            };
+
+            try {
+                const url = id ? `${API_BASE}/announcements/${id}` : `${API_BASE}/announcements/`;
+                const method = id ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    bootstrap.Modal.getInstance(document.getElementById('announcementModal')).hide();
+                    loadAnnouncements();
+                    alert('공지사항이 저장되었습니다.');
+                } else {
+                    const error = await response.json();
+                    alert(`오류: ${error.detail}`);
+                }
+            } catch (error) {
+                console.error('Error saving announcement:', error);
+                alert('공지사항 저장 중 오류가 발생했습니다.');
+            }
+        }
+
+        // Edit announcement
+        async function editAnnouncement(id) {
+            try {
+                const response = await fetch(`${API_BASE}/announcements/${id}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const announcement = await response.json();
+                    document.getElementById('announcementId').value = announcement.id;
+                    document.getElementById('title').value = announcement.title;
+                    document.getElementById('content').value = announcement.content;
+                    document.getElementById('target_audience').value = announcement.target_audience;
+                    document.getElementById('is_pinned').checked = announcement.is_pinned;
+                    document.getElementById('is_active').checked = announcement.is_active;
+                    document.getElementById('announcementModalTitle').textContent = '공지사항 수정';
+                    
+                    new bootstrap.Modal(document.getElementById('announcementModal')).show();
+                }
+            } catch (error) {
+                console.error('Error loading announcement:', error);
+            }
+        }
+
+        // Toggle pin
+        async function togglePin(id) {
+            try {
+                const response = await fetch(`${API_BASE}/announcements/${id}/toggle-pin`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    loadAnnouncements();
+                } else {
+                    const error = await response.json();
+                    alert(`오류: ${error.detail}`);
+                }
+            } catch (error) {
+                console.error('Error toggling pin:', error);
+            }
+        }
+
+        // Delete announcement
+        async function deleteAnnouncement(id) {
+            if (!confirm('정말로 이 공지사항을 삭제하시겠습니까?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/announcements/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    loadAnnouncements();
+                    alert('공지사항이 삭제되었습니다.');
+                } else {
+                    const error = await response.json();
+                    alert(`오류: ${error.detail}`);
+                }
+            } catch (error) {
+                console.error('Error deleting announcement:', error);
+            }
+        }
+
+        // Filter announcements
+        function filterAnnouncements(filter) {
+            // Update button states
+            document.querySelectorAll('.btn-group button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Load filtered announcements
+            loadAnnouncements(filter);
+        }
+
+        // Logout
+        function logout() {
+            localStorage.removeItem('access_token');
+            window.location.href = '/login';
+        }
+
+        // Reset modal when closing
+        document.getElementById('announcementModal').addEventListener('hidden.bs.modal', function () {
+            document.getElementById('announcementForm').reset();
+            document.getElementById('announcementId').value = '';
+            document.getElementById('announcementModalTitle').textContent = '새 공지사항';
+        });
+
+        // Initialize
+        loadUserInfo();
+        loadAnnouncements();
+    </script>
+</body>
+</html>
