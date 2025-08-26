@@ -533,3 +533,21 @@ def run_sermon_materials_migration(db: Session = Depends(deps.get_db)) -> Any:
             "error": str(e),
             "timestamp": "2025-08-26T12:55:00Z",
         }
+
+
+@router.options("/")
+@router.options("/{path:path}")
+def handle_options():
+    """
+    Handle OPTIONS requests for CORS preflight
+    """
+    from fastapi import Response
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+            "Access-Control-Allow-Credentials": "true",
+        }
+    )
