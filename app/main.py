@@ -50,6 +50,7 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         "https://smart-yoram.vercel.app",
         "https://smart-yoram-frontend.vercel.app",
+        "https://smart-yoram-admin.vercel.app",
         "https://api.surfmind-team.com",
     ],
     allow_credentials=True,  # Enable credentials for authentication
