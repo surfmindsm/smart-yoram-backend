@@ -66,16 +66,23 @@ class OpenAIService:
             logger.debug(f"Calling OpenAI API with model: {normalized_model}")
 
             # Call OpenAI API using the new client
-            # GPT-5 models use max_completion_tokens instead of max_tokens
+            # GPT-5 models have specific parameter requirements
             if normalized_model.startswith("gpt-5"):
+                # GPT-5 models require specific parameters
+                adjusted_temperature = 1.0  # GPT-5 only supports temperature=1.0
+                if temperature != 1.0:
+                    logger.warning(
+                        f"🔧 GPT-5 Temperature 조정: {temperature} → 1.0 (모델 제약)"
+                    )
+
                 logger.info(
-                    f"Using max_completion_tokens for GPT-5 model: {max_tokens}"
+                    f"Using GPT-5 parameters - max_completion_tokens: {max_tokens}, temperature: 1.0"
                 )
                 response = self.client.chat.completions.create(
                     model=normalized_model,
                     messages=messages,
                     max_completion_tokens=max_tokens,
-                    temperature=temperature,
+                    temperature=adjusted_temperature,
                 )
             else:
                 response = self.client.chat.completions.create(
@@ -203,13 +210,20 @@ class OpenAIService:
                 messages = [{"role": "system", "content": system_prompt}] + messages
 
             # Call OpenAI API
-            # GPT-5 models use max_completion_tokens instead of max_tokens
+            # GPT-5 models have specific parameter requirements
             if model.startswith("gpt-5"):
+                # GPT-5 models require specific parameters
+                adjusted_temperature = 1.0  # GPT-5 only supports temperature=1.0
+                if temperature != 1.0:
+                    logger.warning(
+                        f"🔧 GPT-5 Temperature 조정: {temperature} → 1.0 (모델 제약)"
+                    )
+
                 response = self.client.chat.completions.create(
                     model=model,
                     messages=messages,
                     max_completion_tokens=max_tokens,
-                    temperature=temperature,
+                    temperature=adjusted_temperature,
                 )
             else:
                 response = self.client.chat.completions.create(
