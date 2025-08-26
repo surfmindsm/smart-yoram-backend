@@ -47,6 +47,11 @@ pandas==2.2.3
 jinja2==3.1.2
 aiofiles==23.2.1
 
+# File processing
+python-magic==0.4.24
+PyPDF2==3.0.1
+python-docx==1.1.0
+
 # Redis and Celery
 redis==5.0.1
 celery==5.3.4
