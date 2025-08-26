@@ -26,6 +26,7 @@ from .ai_agent import (
     ChurchDatabaseConfig,
 )
 from .pastoral_care import PastoralCareRequest, PrayerRequest, PrayerParticipation
+from .sermon_material import SermonMaterial, SermonCategory
 
 # Enhanced models
 from .member_enhanced import (

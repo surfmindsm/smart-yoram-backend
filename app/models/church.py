@@ -58,3 +58,4 @@ class Church(Base):
     )
     prayer_requests = relationship("PrayerRequest", back_populates="church")
     prayer_participations = relationship("PrayerParticipation", back_populates="church")
+    sermon_materials = relationship("SermonMaterial", back_populates="church")
