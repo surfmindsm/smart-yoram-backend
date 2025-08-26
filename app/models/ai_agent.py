@@ -69,7 +69,7 @@ class ChatHistory(Base):
     id = Column(Integer, primary_key=True, index=True)
     church_id = Column(Integer, ForeignKey("churches.id"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    agent_id = Column(Integer, ForeignKey("ai_agents.id"), nullable=True)
+    agent_id = Column(Integer, ForeignKey("ai_agents.id"), nullable=False)
     title = Column(String(255), nullable=False)
     is_bookmarked = Column(Boolean, default=False)
     message_count = Column(Integer, default=0)
