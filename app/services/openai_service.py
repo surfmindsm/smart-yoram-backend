@@ -108,7 +108,12 @@ class OpenAIService:
             elif "invalid request" in error_str or "model" in error_str:
                 logger.error(f"OpenAI invalid request/model error: {e}")
                 # Try fallback to gpt-4o-mini if different model was requested
-                if model != "gpt-4o-mini" and "model" in error_str:
+                # But don't fallback for GPT-5 models - user specifically wants GPT-5
+                if (
+                    model != "gpt-4o-mini"
+                    and "model" in error_str
+                    and not model.lower().startswith("gpt-5")
+                ):
                     logger.warning(
                         f"Model '{model}' failed, trying fallback to gpt-4o-mini"
                     )
@@ -135,6 +140,12 @@ class OpenAIService:
                         raise Exception(
                             f"모델 '{model}'를 사용할 수 없습니다. 기본 모델로도 실패했습니다: {str(fallback_error)}"
                         )
+                else:
+                    # GPT-5 models or gpt-4o-mini failed without fallback
+                    if model.lower().startswith("gpt-5"):
+                        raise Exception(
+                            f"GPT-5 모델 '{model}'은 아직 지원되지 않습니다. GPT-4o 또는 GPT-4o-mini를 사용해주세요."
+                        )
                 raise Exception(
                     f"잘못된 요청입니다. 모델 '{model}'를 확인해주세요: {str(e)}"
                 )
@@ -146,13 +157,11 @@ class OpenAIService:
         """Normalize model name to handle variations"""
         model_lower = model.lower().strip()
 
-        # Handle common variations and typos
+        # Handle common variations and typos (but preserve original GPT-5 models)
         if model_lower in ["gpt-5-mini", "gpt5-mini", "gpt-5mini"]:
-            # GPT-5 models may not be available yet, fallback to gpt-4o-mini
-            logger.warning(
-                f"GPT-5 model '{model}' may not be available, consider using 'gpt-4o-mini'"
-            )
-            return "gpt-4o-mini"  # Fallback for now
+            # Keep GPT-5 models as is - let OpenAI API handle availability
+            logger.info(f"Using GPT-5 model as configured: {model}")
+            return "gpt-5-mini"  # Use as configured
         elif model_lower in ["gpt-4o-mini", "gpt4o-mini", "gpt-4omini"]:
             return "gpt-4o-mini"
         elif model_lower in ["gpt-4o", "gpt4o", "gpt-4-omni"]:
