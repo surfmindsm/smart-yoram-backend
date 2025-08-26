@@ -535,7 +535,15 @@ def run_sermon_materials_migration(db: Session = Depends(deps.get_db)) -> Any:
         }
 
 
+# OPTIONS handlers for CORS preflight requests
 @router.options("/")
+@router.options("/categories/")
+@router.options("/authors/")
+@router.options("/tags/")
+@router.options("/stats/")
+@router.options("/search/")
+@router.options("/{material_id}")
+@router.options("/categories/{category_id}")
 @router.options("/{path:path}")
 def handle_options():
     """
