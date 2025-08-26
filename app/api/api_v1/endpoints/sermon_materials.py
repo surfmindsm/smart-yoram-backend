@@ -504,64 +504,32 @@ def run_sermon_materials_migration(db: Session = Depends(deps.get_db)) -> Any:
     Manually run sermon materials migration (public endpoint for testing)
     """
     try:
-        from sqlalchemy import text
+        # Use SQLAlchemy models to create tables
+        from app.models.sermon_material import SermonMaterial, SermonCategory
+        from sqlalchemy import inspect
 
-        # Create sermon_materials table manually
-        create_materials_table = text("""
-        CREATE TABLE IF NOT EXISTS sermon_materials (
-            id SERIAL PRIMARY KEY,
-            church_id INTEGER NOT NULL,
-            user_id INTEGER NOT NULL,
-            title VARCHAR(255) NOT NULL,
-            author VARCHAR(255),
-            content TEXT,
-            file_url VARCHAR(500),
-            file_type VARCHAR(50),
-            file_size INTEGER,
-            category VARCHAR(100),
-            scripture_reference VARCHAR(200),
-            date_preached DATE,
-            tags JSON,
-            is_public BOOLEAN DEFAULT FALSE,
-            view_count INTEGER DEFAULT 0,
-            download_count INTEGER DEFAULT 0,
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (church_id) REFERENCES churches(id),
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        )
-        """)
+        inspector = inspect(db.bind)
+        existing_tables = inspector.get_table_names()
 
-        # Create sermon_categories table manually
-        create_categories_table = text("""
-        CREATE TABLE IF NOT EXISTS sermon_categories (
-            id SERIAL PRIMARY KEY,
-            church_id INTEGER NOT NULL,
-            name VARCHAR(100) NOT NULL,
-            description VARCHAR(500),
-            color VARCHAR(7) DEFAULT '#3B82F6',
-            order_index INTEGER DEFAULT 0,
-            is_active BOOLEAN DEFAULT TRUE,
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (church_id) REFERENCES churches(id)
-        )
-        """)
+        tables_created = []
+        if "sermon_materials" not in existing_tables:
+            SermonMaterial.__table__.create(db.bind)
+            tables_created.append("sermon_materials")
 
-        # Execute table creation
-        db.execute(create_materials_table)
-        db.execute(create_categories_table)
-        db.commit()
+        if "sermon_categories" not in existing_tables:
+            SermonCategory.__table__.create(db.bind)
+            tables_created.append("sermon_categories")
 
         return {
             "status": "success",
-            "message": "Sermon materials tables created successfully",
-            "timestamp": "2025-08-26T12:52:00Z",
+            "message": f"Tables created: {tables_created}",
+            "existing_tables": existing_tables,
+            "timestamp": "2025-08-26T12:55:00Z",
         }
 
     except Exception as e:
         return {
             "status": "error",
             "error": str(e),
-            "timestamp": "2025-08-26T12:52:00Z",
+            "timestamp": "2025-08-26T12:55:00Z",
         }
