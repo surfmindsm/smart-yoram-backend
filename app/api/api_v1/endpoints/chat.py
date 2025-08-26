@@ -400,13 +400,25 @@ async def send_message(
             else agent.system_prompt
         )
 
+        # Log OpenAI request details
+        requested_model = church.gpt_model or "gpt-4o-mini"
+        logger.info(f"🚀 OpenAI 호출 - 요청 모델: {requested_model}")
+        logger.info(f"📝 DB 모델 설정: {church.gpt_model}")
+        logger.info(f"📋 최대 토큰: {church.max_tokens or 4000}")
+        logger.info(f"🌡️ 온도: {church.temperature or 0.7}")
+
         response = await church_openai_service.generate_response(
             messages=messages,
-            model=church.gpt_model or "gpt-4o-mini",
+            model=requested_model,
             max_tokens=church.max_tokens or 4000,
             temperature=church.temperature or 0.7,
             system_prompt=final_system_prompt,
         )
+
+        # Log OpenAI response details
+        logger.info(f"✅ OpenAI 응답 - 실제 모델: {response.get('model', 'Unknown')}")
+        logger.info(f"📊 사용 토큰: {response.get('tokens_used', 0)}")
+        logger.info(f"🔄 완료 이유: {response.get('finish_reason', 'Unknown')}")
 
         # Save AI response
         ai_message = ChatMessage(
@@ -442,7 +454,8 @@ async def send_message(
         db.commit()
         db.refresh(ai_message)
 
-        return {
+        # Prepare response data
+        response_data = {
             "success": True,
             "data": {
                 "user_message": {
@@ -462,8 +475,27 @@ async def send_message(
                     "church_data_context": church_context if church_context else None,
                     "timestamp": ai_message.created_at,
                 },
+                "model": response.get("model", church.gpt_model or "gpt-4o-mini"),
+                "gpt_model": response.get("model", church.gpt_model or "gpt-4o-mini"),
+                "actual_model": response.get(
+                    "model", church.gpt_model or "gpt-4o-mini"
+                ),
+                "total_tokens": response.get("tokens_used", 0),
+                "tokensUsed": response.get("tokens_used", 0),
+                "prompt_tokens": 0,  # OpenAI response doesn't separate these in our current setup
+                "completion_tokens": response.get("tokens_used", 0),
+                "chat_history_id": chat_history_id,
             },
         }
+
+        # Log final response data for debugging
+        logger.info(
+            f"📤 클라이언트 전송 - 모델: {response.get('model', 'Unknown')}, "
+            f"토큰: {response.get('tokens_used', 0)}, "
+            f"채팅 히스토리 ID: {chat_history_id}"
+        )
+
+        return response_data
 
     except Exception as e:
         # Delete the user message if AI response failed
