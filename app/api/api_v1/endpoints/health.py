@@ -30,6 +30,7 @@ async def database_health(db: Session = Depends(get_db)):
     try:
         # Execute a simple query
         from sqlalchemy import text
+
         result = db.execute(text("SELECT 1")).scalar()
         return {
             "status": "healthy",

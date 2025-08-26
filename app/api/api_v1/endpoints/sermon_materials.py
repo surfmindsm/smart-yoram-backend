@@ -431,31 +431,35 @@ def test_database_connection(db: Session = Depends(deps.get_db)) -> Any:
     """
     try:
         from sqlalchemy import text
-        
+
         # Test basic connection
         result = db.execute(text("SELECT 1")).scalar()
-        
+
         # Check if sermon_materials table exists
-        table_check = db.execute(text(
-            "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'sermon_materials'"
-        )).scalar()
-        
+        table_check = db.execute(
+            text(
+                "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'sermon_materials'"
+            )
+        ).scalar()
+
         # Check if sermon_categories table exists
-        category_check = db.execute(text(
-            "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'sermon_categories'"
-        )).scalar()
-        
+        category_check = db.execute(
+            text(
+                "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'sermon_categories'"
+            )
+        ).scalar()
+
         return {
             "status": "success",
             "database_connected": result == 1,
             "sermon_materials_table_exists": table_check > 0,
             "sermon_categories_table_exists": category_check > 0,
-            "timestamp": "2025-08-26T12:45:00Z"
+            "timestamp": "2025-08-26T12:45:00Z",
         }
-        
+
     except Exception as e:
         return {
             "status": "error",
             "error": str(e),
-            "timestamp": "2025-08-26T12:45:00Z"
+            "timestamp": "2025-08-26T12:45:00Z",
         }
