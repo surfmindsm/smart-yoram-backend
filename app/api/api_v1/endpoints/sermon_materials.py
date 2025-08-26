@@ -463,3 +463,105 @@ def test_database_connection(db: Session = Depends(deps.get_db)) -> Any:
             "error": str(e),
             "timestamp": "2025-08-26T12:45:00Z",
         }
+
+
+@router.get("/test/migration")
+def test_migration_status(db: Session = Depends(deps.get_db)) -> Any:
+    """
+    Check alembic migration status (public endpoint for testing)
+    """
+    try:
+        from sqlalchemy import text
+
+        # Check alembic version table
+        version_check = db.execute(
+            text("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'alembic_version'")
+        ).scalar()
+
+        current_version = None
+        if version_check > 0:
+            current_version = db.execute(text("SELECT version_num FROM alembic_version")).scalar()
+
+        return {
+            "status": "success",
+            "alembic_version_table_exists": version_check > 0,
+            "current_migration_version": current_version,
+            "sermon_materials_migration_id": "de7501bc3e2f",
+            "timestamp": "2025-08-26T12:50:00Z",
+        }
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e),
+            "timestamp": "2025-08-26T12:50:00Z",
+        }
+
+
+@router.post("/test/run-migration")
+def run_sermon_materials_migration(db: Session = Depends(deps.get_db)) -> Any:
+    """
+    Manually run sermon materials migration (public endpoint for testing)
+    """
+    try:
+        from sqlalchemy import text
+
+        # Create sermon_materials table manually
+        create_materials_table = text("""
+        CREATE TABLE IF NOT EXISTS sermon_materials (
+            id SERIAL PRIMARY KEY,
+            church_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            title VARCHAR(255) NOT NULL,
+            author VARCHAR(255),
+            content TEXT,
+            file_url VARCHAR(500),
+            file_type VARCHAR(50),
+            file_size INTEGER,
+            category VARCHAR(100),
+            scripture_reference VARCHAR(200),
+            date_preached DATE,
+            tags JSON,
+            is_public BOOLEAN DEFAULT FALSE,
+            view_count INTEGER DEFAULT 0,
+            download_count INTEGER DEFAULT 0,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (church_id) REFERENCES churches(id),
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+        """)
+
+        # Create sermon_categories table manually
+        create_categories_table = text("""
+        CREATE TABLE IF NOT EXISTS sermon_categories (
+            id SERIAL PRIMARY KEY,
+            church_id INTEGER NOT NULL,
+            name VARCHAR(100) NOT NULL,
+            description VARCHAR(500),
+            color VARCHAR(7) DEFAULT '#3B82F6',
+            order_index INTEGER DEFAULT 0,
+            is_active BOOLEAN DEFAULT TRUE,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (church_id) REFERENCES churches(id)
+        )
+        """)
+
+        # Execute table creation
+        db.execute(create_materials_table)
+        db.execute(create_categories_table)
+        db.commit()
+
+        return {
+            "status": "success",
+            "message": "Sermon materials tables created successfully",
+            "timestamp": "2025-08-26T12:52:00Z",
+        }
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e),
+            "timestamp": "2025-08-26T12:52:00Z",
+        }
