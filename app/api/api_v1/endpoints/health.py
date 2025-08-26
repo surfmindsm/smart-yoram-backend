@@ -29,7 +29,8 @@ async def database_health(db: Session = Depends(get_db)):
     """Check database connectivity and health"""
     try:
         # Execute a simple query
-        result = db.execute("SELECT 1").scalar()
+        from sqlalchemy import text
+        result = db.execute(text("SELECT 1")).scalar()
         return {
             "status": "healthy",
             "timestamp": datetime.utcnow().isoformat(),
