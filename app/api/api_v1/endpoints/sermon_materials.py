@@ -37,16 +37,23 @@ def read_sermon_materials(
     """
     교회별 설교 자료 목록 조회
     """
-    items, total = crud.sermon_material.get_by_church(
-        db=db, church_id=current_user.church_id, skip=skip, limit=limit
-    )
-
-    pages = math.ceil(total / limit) if total > 0 else 1
-    page = (skip // limit) + 1
-
-    return SermonMaterialListResponse(
-        items=items, total=total, page=page, size=limit, pages=pages
-    )
+    try:
+        logger.info(f"Getting sermon materials for church_id: {current_user.church_id}, skip: {skip}, limit: {limit}")
+        items, total = crud.sermon_material.get_by_church(
+            db=db, church_id=current_user.church_id, skip=skip, limit=limit
+        )
+        
+        pages = math.ceil(total / limit) if total > 0 else 1
+        page = (skip // limit) + 1
+        
+        logger.info(f"Retrieved {len(items)} items, total: {total}")
+        return SermonMaterialListResponse(
+            items=items, total=total, page=page, size=limit, pages=pages
+        )
+    except Exception as e:
+        logger.error(f"Error getting sermon materials: {str(e)}")
+        logger.exception("Full traceback:")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @router.post("/", response_model=SermonMaterialResponse)
@@ -301,8 +308,15 @@ def get_sermon_stats(
     """
     설교 자료 통계 조회
     """
-    stats = crud.sermon_material.get_stats(db=db, church_id=current_user.church_id)
-    return SermonStatsResponse(**stats)
+    try:
+        logger.info(f"Getting stats for church_id: {current_user.church_id}")
+        stats = crud.sermon_material.get_stats(db=db, church_id=current_user.church_id)
+        logger.info(f"Stats retrieved: {stats}")
+        return SermonStatsResponse(**stats)
+    except Exception as e:
+        logger.error(f"Error getting sermon stats: {str(e)}")
+        logger.exception("Full traceback:")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @router.get("/authors/", response_model=List[str])
@@ -314,8 +328,15 @@ def get_sermon_authors(
     """
     설교자 목록 조회
     """
-    authors = crud.sermon_material.get_authors(db=db, church_id=current_user.church_id)
-    return authors
+    try:
+        logger.info(f"Getting authors for church_id: {current_user.church_id}")
+        authors = crud.sermon_material.get_authors(db=db, church_id=current_user.church_id)
+        logger.info(f"Found {len(authors)} authors: {authors}")
+        return authors
+    except Exception as e:
+        logger.error(f"Error getting sermon authors: {str(e)}")
+        logger.exception("Full traceback:")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @router.get("/tags/", response_model=List[str])
@@ -327,8 +348,15 @@ def get_sermon_tags(
     """
     태그 목록 조회
     """
-    tags = crud.sermon_material.get_tags(db=db, church_id=current_user.church_id)
-    return tags
+    try:
+        logger.info(f"Getting tags for church_id: {current_user.church_id}")
+        tags = crud.sermon_material.get_tags(db=db, church_id=current_user.church_id)
+        logger.info(f"Found {len(tags)} tags: {tags}")
+        return tags
+    except Exception as e:
+        logger.error(f"Error getting sermon tags: {str(e)}")
+        logger.exception("Full traceback:")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 # 카테고리 관련 엔드포인트
@@ -341,10 +369,17 @@ def read_sermon_categories(
     """
     설교 카테고리 목록 조회
     """
-    categories = crud.sermon_category.get_by_church(
-        db=db, church_id=current_user.church_id
-    )
-    return categories
+    try:
+        logger.info(f"Getting categories for church_id: {current_user.church_id}")
+        categories = crud.sermon_category.get_by_church(
+            db=db, church_id=current_user.church_id
+        )
+        logger.info(f"Found {len(categories)} categories")
+        return categories
+    except Exception as e:
+        logger.error(f"Error getting sermon categories: {str(e)}")
+        logger.exception("Full traceback:")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @router.post("/categories/", response_model=SermonCategoryResponse)
