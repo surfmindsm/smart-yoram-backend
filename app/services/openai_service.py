@@ -48,7 +48,9 @@ class OpenAIService:
             raise Exception("OpenAI client not initialized. Please provide an API key.")
 
         # Log request details for debugging
-        logger.info(f"OpenAI Request - Model: {model}, Max Tokens: {max_tokens}, Temperature: {temperature}")
+        logger.info(
+            f"OpenAI Request - Model: {model}, Max Tokens: {max_tokens}, Temperature: {temperature}"
+        )
         logger.info(f"Messages count: {len(messages)}")
 
         try:
@@ -56,13 +58,13 @@ class OpenAIService:
             normalized_model = self._normalize_model_name(model)
             if normalized_model != model:
                 logger.warning(f"Model '{model}' normalized to '{normalized_model}'")
-            
+
             # Prepare messages
             if system_prompt:
                 messages = [{"role": "system", "content": system_prompt}] + messages
 
             logger.debug(f"Calling OpenAI API with model: {normalized_model}")
-            
+
             # Call OpenAI API using the new client
             response = self.client.chat.completions.create(
                 model=normalized_model,
@@ -89,7 +91,7 @@ class OpenAIService:
             logger.error(f"  Model: {model}")
             logger.error(f"  Error Type: {type(e).__name__}")
             logger.error(f"  Error Message: {str(e)}")
-            
+
             error_str = str(e).lower()
             if (
                 "authentication" in error_str
@@ -107,7 +109,9 @@ class OpenAIService:
                 logger.error(f"OpenAI invalid request/model error: {e}")
                 # Try fallback to gpt-4o-mini if different model was requested
                 if model != "gpt-4o-mini" and "model" in error_str:
-                    logger.warning(f"Model '{model}' failed, trying fallback to gpt-4o-mini")
+                    logger.warning(
+                        f"Model '{model}' failed, trying fallback to gpt-4o-mini"
+                    )
                     try:
                         response = self.client.chat.completions.create(
                             model="gpt-4o-mini",
@@ -117,7 +121,9 @@ class OpenAIService:
                         )
                         content = response.choices[0].message.content
                         tokens_used = response.usage.total_tokens
-                        logger.info(f"Fallback successful with gpt-4o-mini - Tokens: {tokens_used}")
+                        logger.info(
+                            f"Fallback successful with gpt-4o-mini - Tokens: {tokens_used}"
+                        )
                         return {
                             "content": content,
                             "tokens_used": tokens_used,
@@ -126,8 +132,12 @@ class OpenAIService:
                         }
                     except Exception as fallback_error:
                         logger.error(f"Fallback also failed: {fallback_error}")
-                        raise Exception(f"모델 '{model}'를 사용할 수 없습니다. 기본 모델로도 실패했습니다: {str(fallback_error)}")
-                raise Exception(f"잘못된 요청입니다. 모델 '{model}'를 확인해주세요: {str(e)}")
+                        raise Exception(
+                            f"모델 '{model}'를 사용할 수 없습니다. 기본 모델로도 실패했습니다: {str(fallback_error)}"
+                        )
+                raise Exception(
+                    f"잘못된 요청입니다. 모델 '{model}'를 확인해주세요: {str(e)}"
+                )
             else:
                 logger.error(f"OpenAI API error: {e}")
                 raise Exception(f"AI 응답 생성 중 오류가 발생했습니다: {str(e)}")
@@ -135,11 +145,13 @@ class OpenAIService:
     def _normalize_model_name(self, model: str) -> str:
         """Normalize model name to handle variations"""
         model_lower = model.lower().strip()
-        
+
         # Handle common variations and typos
         if model_lower in ["gpt-5-mini", "gpt5-mini", "gpt-5mini"]:
             # GPT-5 models may not be available yet, fallback to gpt-4o-mini
-            logger.warning(f"GPT-5 model '{model}' may not be available, consider using 'gpt-4o-mini'")
+            logger.warning(
+                f"GPT-5 model '{model}' may not be available, consider using 'gpt-4o-mini'"
+            )
             return "gpt-4o-mini"  # Fallback for now
         elif model_lower in ["gpt-4o-mini", "gpt4o-mini", "gpt-4omini"]:
             return "gpt-4o-mini"
