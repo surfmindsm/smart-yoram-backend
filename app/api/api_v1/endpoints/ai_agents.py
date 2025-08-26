@@ -55,9 +55,9 @@ def read_agent_templates(
                 "system_prompt": template.system_prompt,
                 "icon": template.icon,
                 "config": {
-                    "model": template.model,
-                    "temperature": template.temperature,
-                    "max_tokens": template.max_tokens,
+                    "model": "gpt-4o-mini",  # Default model for templates
+                    "temperature": 0.7,     # Default temperature
+                    "max_tokens": 4000,     # Default max tokens
                 },
             }
         )
