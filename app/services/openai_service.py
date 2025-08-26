@@ -66,12 +66,24 @@ class OpenAIService:
             logger.debug(f"Calling OpenAI API with model: {normalized_model}")
 
             # Call OpenAI API using the new client
-            response = self.client.chat.completions.create(
-                model=normalized_model,
-                messages=messages,
-                max_tokens=max_tokens,
-                temperature=temperature,
-            )
+            # GPT-5 models use max_completion_tokens instead of max_tokens
+            if normalized_model.startswith("gpt-5"):
+                logger.info(
+                    f"Using max_completion_tokens for GPT-5 model: {max_tokens}"
+                )
+                response = self.client.chat.completions.create(
+                    model=normalized_model,
+                    messages=messages,
+                    max_completion_tokens=max_tokens,
+                    temperature=temperature,
+                )
+            else:
+                response = self.client.chat.completions.create(
+                    model=normalized_model,
+                    messages=messages,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                )
 
             # Extract response
             content = response.choices[0].message.content
@@ -191,12 +203,21 @@ class OpenAIService:
                 messages = [{"role": "system", "content": system_prompt}] + messages
 
             # Call OpenAI API
-            response = self.client.chat.completions.create(
-                model=model,
-                messages=messages,
-                max_tokens=max_tokens,
-                temperature=temperature,
-            )
+            # GPT-5 models use max_completion_tokens instead of max_tokens
+            if model.startswith("gpt-5"):
+                response = self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    max_completion_tokens=max_tokens,
+                    temperature=temperature,
+                )
+            else:
+                response = self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                )
 
             # Extract response
             content = response.choices[0].message.content
