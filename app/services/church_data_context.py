@@ -52,7 +52,7 @@ def get_church_context_data(
             context_data["pastoral_care_requests"] = get_recent_pastoral_care_requests(db, church_id)
             
         if church_data_sources.get("offerings"):
-            context_data["offerings"] = get_recent_offerings(db, church_id)
+            context_data["offerings"] = get_all_offerings(db, church_id)  # 전체 데이터
             
         if church_data_sources.get("attendances"):
             context_data["attendances"] = get_attendance_stats(db, church_id)
@@ -67,7 +67,7 @@ def get_church_context_data(
 
 
 def get_recent_announcements(
-    db: Session, church_id: int, limit: int = 10
+    db: Session, church_id: int, limit: int = 50
 ) -> List[Dict]:
     """
     Get recent announcements for the church.
@@ -101,7 +101,7 @@ def get_recent_announcements(
 
 
 def get_recent_prayer_requests(
-    db: Session, church_id: int, limit: int = 10
+    db: Session, church_id: int, limit: int = 50
 ) -> List[Dict]:
     """
     Get recent prayer requests for the church.
@@ -140,7 +140,7 @@ def get_recent_prayer_requests(
 
 
 def get_recent_pastoral_care_requests(
-    db: Session, church_id: int, limit: int = 10
+    db: Session, church_id: int, limit: int = 50
 ) -> List[Dict]:
     """
     Get recent pastoral care requests for the church.
@@ -181,18 +181,18 @@ def get_recent_pastoral_care_requests(
         return []
 
 
-def get_recent_offerings(
-    db: Session, church_id: int, days: int = 30
+def get_all_offerings(
+    db: Session, church_id: int
 ) -> Dict:
     """
-    Get comprehensive offering statistics for the church.
+    Get comprehensive offering statistics for the church (all data).
     """
     try:
         from datetime import datetime, timedelta
         
         # Calculate multiple date ranges
         end_date = datetime.now().date()
-        start_date = end_date - timedelta(days=days)
+        # Remove start_date limitation - get all data
         
         # This year and last year
         current_year = end_date.year
@@ -208,10 +208,9 @@ def get_recent_offerings(
         else:
             last_month_start = current_month_start.replace(month=current_month_start.month - 1)
         
-        # Get total offering for recent period
-        total_recent = db.query(func.sum(Offering.amount)).filter(
+        # Get total offering for all time
+        total_all_time = db.query(func.sum(Offering.amount)).filter(
             Offering.church_id == church_id,
-            Offering.offered_on >= start_date,
             Offering.offered_on <= end_date
         ).scalar() or 0
         
@@ -304,9 +303,9 @@ def get_recent_offerings(
         )
         
         return {
-            "period_days": days,
+            "period_days": "전체 기간",
             "totals": {
-                "recent_period": float(total_recent),
+                "all_time": float(total_all_time),
                 "this_year": float(total_this_year),
                 "last_year": float(total_last_year),
                 "this_month": float(total_this_month),
@@ -347,7 +346,7 @@ def get_recent_offerings(
     except Exception as e:
         logger.error(f"Error fetching offering statistics: {e}")
         return {
-            "period_days": days,
+            "period_days": "전체 기간",
             "total_amount": 0,
             "fund_breakdown": [],
             "recent_offerings": []
@@ -402,8 +401,7 @@ def get_attendance_stats(db: Session, church_id: int) -> Dict:
             .all()
         )
         
-        # Monthly attendance trends (last 12 months)
-        twelve_months_ago = today - timedelta(days=365)
+        # Monthly attendance trends (전체 기간)
         monthly_attendance = (
             db.query(
                 func.extract('year', Attendance.service_date).label('year'),
@@ -413,7 +411,6 @@ def get_attendance_stats(db: Session, church_id: int) -> Dict:
             )
             .filter(
                 Attendance.church_id == church_id,
-                Attendance.service_date >= twelve_months_ago,
                 Attendance.present == True
             )
             .group_by(
@@ -673,13 +670,12 @@ def get_enhanced_member_statistics(db: Session, church_id: int) -> Dict:
             .scalar()
         )
 
-        # Recent baptisms (last 6 months)
-        six_months_ago = datetime.now().date() - timedelta(days=180)
+        # All baptisms (전체 기간)
         recent_baptisms = (
             db.query(Member)
             .filter(
                 Member.church_id == church_id,
-                Member.baptism_date >= six_months_ago,
+                Member.baptism_date.isnot(None),
                 Member.status == "active"
             )
             .count()
