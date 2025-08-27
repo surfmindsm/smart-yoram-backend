@@ -7,6 +7,7 @@ import logging
 from app.models.announcement import Announcement
 from app.models.user import User
 from app.models.worship_schedule import WorshipService
+from app.models.pastoral_care import PastoralCareRequest, PrayerRequest
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,12 @@ def get_church_context_data(
 
         if church_data_sources.get("worship_services"):
             context_data["worship_services"] = get_worship_schedule(db, church_id)
+            
+        if church_data_sources.get("prayer_requests"):
+            context_data["prayer_requests"] = get_recent_prayer_requests(db, church_id)
+            
+        if church_data_sources.get("pastoral_care_requests"):
+            context_data["pastoral_care_requests"] = get_recent_pastoral_care_requests(db, church_id)
 
     except Exception as e:
         logger.error(f"Error retrieving church context data: {e}")
@@ -78,6 +85,87 @@ def get_recent_announcements(
         ]
     except Exception as e:
         logger.error(f"Error fetching announcements: {e}")
+        return []
+
+
+def get_recent_prayer_requests(
+    db: Session, church_id: int, limit: int = 10
+) -> List[Dict]:
+    """
+    Get recent prayer requests for the church.
+    """
+    try:
+        prayer_requests = (
+            db.query(PrayerRequest)
+            .filter(
+                PrayerRequest.church_id == church_id,
+                PrayerRequest.status == "active",
+                PrayerRequest.is_public == True
+            )
+            .order_by(desc(PrayerRequest.created_at))
+            .limit(limit)
+            .all()
+        )
+
+        return [
+            {
+                "id": req.id,
+                "requester_name": req.requester_name if not req.is_anonymous else "익명",
+                "prayer_type": req.prayer_type,
+                "prayer_content": (
+                    req.prayer_content[:150] + "..." if len(req.prayer_content) > 150 else req.prayer_content
+                ),
+                "is_urgent": req.is_urgent,
+                "created_at": req.created_at.isoformat() if req.created_at else None,
+                "prayer_count": req.prayer_count,
+                "expires_at": req.expires_at.isoformat() if req.expires_at else None,
+            }
+            for req in prayer_requests
+        ]
+    except Exception as e:
+        logger.error(f"Error fetching prayer requests: {e}")
+        return []
+
+
+def get_recent_pastoral_care_requests(
+    db: Session, church_id: int, limit: int = 10
+) -> List[Dict]:
+    """
+    Get recent pastoral care requests for the church.
+    """
+    try:
+        pastoral_requests = (
+            db.query(PastoralCareRequest)
+            .filter(
+                PastoralCareRequest.church_id == church_id,
+                PastoralCareRequest.status.in_(["pending", "approved", "scheduled"])
+            )
+            .order_by(desc(PastoralCareRequest.created_at))
+            .limit(limit)
+            .all()
+        )
+
+        return [
+            {
+                "id": req.id,
+                "requester_name": req.requester_name,
+                "request_type": req.request_type,
+                "request_content": (
+                    req.request_content[:150] + "..." if len(req.request_content) > 150 else req.request_content
+                ),
+                "priority": req.priority,
+                "is_urgent": req.is_urgent,
+                "status": req.status,
+                "preferred_date": req.preferred_date.isoformat() if req.preferred_date else None,
+                "scheduled_date": req.scheduled_date.isoformat() if req.scheduled_date else None,
+                "scheduled_time": req.scheduled_time.isoformat() if req.scheduled_time else None,
+                "created_at": req.created_at.isoformat() if req.created_at else None,
+                "address": req.address,
+            }
+            for req in pastoral_requests
+        ]
+    except Exception as e:
+        logger.error(f"Error fetching pastoral care requests: {e}")
         return []
 
 
@@ -219,6 +307,31 @@ def format_context_for_prompt(context_data: Dict) -> str:
             context_parts.append("\n[교회 공지사항]")
             for ann in announcements[:5]:  # Limit to 5 most recent
                 context_parts.append(f"- {ann['title']}: {ann['content']}")
+
+    if context_data.get("prayer_requests"):
+        prayer_requests = context_data["prayer_requests"]
+        if prayer_requests:
+            context_parts.append("\n[중보기도 요청]")
+            for req in prayer_requests[:5]:  # Limit to 5 most recent
+                urgency = " (긴급)" if req['is_urgent'] else ""
+                context_parts.append(
+                    f"- {req['requester_name']}: {req['prayer_content']}{urgency} "
+                    f"[{req['prayer_type']}, 기도수: {req['prayer_count']}]"
+                )
+
+    if context_data.get("pastoral_care_requests"):
+        pastoral_requests = context_data["pastoral_care_requests"]
+        if pastoral_requests:
+            context_parts.append("\n[심방 요청]")
+            for req in pastoral_requests[:5]:  # Limit to 5 most recent
+                urgency = " (긴급)" if req['is_urgent'] else ""
+                status_text = {"pending": "대기중", "approved": "승인됨", "scheduled": "예약됨"}.get(req['status'], req['status'])
+                date_info = f", 희망일: {req['preferred_date']}" if req['preferred_date'] else ""
+                scheduled_info = f", 예약일시: {req['scheduled_date']} {req['scheduled_time']}" if req['scheduled_date'] else ""
+                context_parts.append(
+                    f"- {req['requester_name']}: {req['request_content']}{urgency} "
+                    f"[{req['request_type']}, {status_text}{date_info}{scheduled_info}]"
+                )
 
     if context_data.get("attendances"):
         stats = context_data["attendances"]
