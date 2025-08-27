@@ -8,6 +8,7 @@ from app import models, schemas
 from app.api import deps
 from app.models.ai_agent import AIAgent, OfficialAgentTemplate
 from app.services.church_default_agent_service import ChurchDefaultAgentService
+from app.services.secretary_agent_service import secretary_agent_service
 from app.schemas.ai_agent import (
     AIAgentCreate,
     AIAgentUpdate,
@@ -80,6 +81,11 @@ def read_agents(
     # Get all agents for this church
     # Ensure church has at least one default agent
     ChurchDefaultAgentService.ensure_church_has_default_agent(
+        current_user.church_id, db
+    )
+    
+    # Ensure church has secretary agent
+    secretary_agent_service.ensure_church_secretary_agent(
         current_user.church_id, db
     )
 

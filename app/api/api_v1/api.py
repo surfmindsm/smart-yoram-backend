@@ -34,6 +34,7 @@ from app.api.api_v1.endpoints import (
     system_logs,
     setup,
     sermon_materials,
+    smart_assistant,
 )
 
 
@@ -96,4 +97,7 @@ api_router.include_router(
 api_router.include_router(setup.router, prefix="/setup", tags=["setup"])
 api_router.include_router(
     sermon_materials.router, prefix="/sermon-materials", tags=["sermon_materials"]
+)
+api_router.include_router(
+    smart_assistant.router, prefix="/smart-assistant", tags=["smart_assistant"]
 )

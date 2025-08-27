@@ -23,6 +23,7 @@ from app.services.church_data_context import (
     get_church_context_data,
     format_context_for_prompt,
 )
+from app.services.secretary_agent_service import secretary_agent_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -333,7 +334,47 @@ async def send_message(
     db.refresh(user_message)
 
     try:
-        # Get church data based on agent's data sources configuration
+        # 비서 에이전트인 경우 Smart Assistant 로직 사용
+        if agent.category == "secretary" and agent.enable_church_data:
+            logger.info(f"Processing secretary agent message for agent {agent.id}")
+            
+            secretary_result = await secretary_agent_service.process_secretary_message(
+                agent=agent,
+                user_message=chat_request.content,
+                user_id=current_user.id,
+                db=db,
+                chat_history_id=chat_history_id
+            )
+            
+            # 비서 응답 저장
+            assistant_message = ChatMessage(
+                chat_history_id=chat_history_id,
+                content=secretary_result["response"],
+                role="assistant",
+                tokens_used=secretary_result.get("tokens_used", 0),
+            )
+            db.add(assistant_message)
+            
+            # 통계 업데이트
+            agent.usage_count += 1
+            agent.total_tokens_used += secretary_result.get("tokens_used", 0)
+            history.message_count += 2  # user + assistant
+            
+            db.commit()
+            db.refresh(assistant_message)
+            
+            return {
+                "success": True,
+                "message": secretary_result["response"],
+                "tokens_used": secretary_result.get("tokens_used", 0),
+                "model": secretary_result.get("model", "gpt-4o-mini"),
+                "query_type": secretary_result.get("query_type", "secretary_assistance"),
+                "data_sources": secretary_result.get("data_sources", []),
+                "is_secretary_agent": True,
+                "message_id": assistant_message.id,
+            }
+        
+        # 기존 일반 에이전트 로직
         church_context = {}
         if agent.church_data_sources:
             church_context = get_church_context_data(
