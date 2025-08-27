@@ -121,66 +121,77 @@ async def migrate_secretary_agents(
 
 
 @router.post("/migrate-urgent")
-async def migrate_urgent(db: Session = Depends(deps.get_db)):
+async def migrate_urgent():
     """Emergency migration endpoint - no authentication required"""
     try:
         from app.services.secretary_agent_service import secretary_agent_service
         from app.models.church import Church
         from app.models.ai_agent import AIAgent
-        from sqlalchemy import text
+        from sqlalchemy import text, create_engine
+        from sqlalchemy.orm import sessionmaker
+        from app.core.config import settings
         
         logger.info("Starting urgent secretary agent migration...")
         
+        # Create new engine and session for clean state
+        engine = create_engine(settings.SQLALCHEMY_DATABASE_URI)
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        
         # Step 1: Apply database migration
-        try:
-            db.execute(text("SELECT is_default FROM ai_agents LIMIT 1"))
-            logger.info("Migration already applied")
-        except:
-            # Rollback any existing transaction first
-            db.rollback()
+        with SessionLocal() as db:
+            try:
+                db.execute(text("SELECT is_default FROM ai_agents LIMIT 1"))
+                logger.info("Migration already applied")
+                migration_needed = False
+            except:
+                migration_needed = True
+                
+        if migration_needed:
             logger.info("Applying migration...")
             try:
-                db.execute(text("ALTER TABLE ai_agents ADD COLUMN is_default BOOLEAN DEFAULT FALSE NOT NULL"))
-                db.commit()
-                
-                db.execute(text("ALTER TABLE ai_agents ADD COLUMN enable_church_data BOOLEAN DEFAULT FALSE NOT NULL"))  
-                db.commit()
-                
-                db.execute(text("ALTER TABLE ai_agents ADD COLUMN created_by_system BOOLEAN DEFAULT FALSE NOT NULL"))
-                db.commit()
-                
-                db.execute(text("ALTER TABLE ai_agents ADD COLUMN gpt_model VARCHAR(50)"))
-                db.commit()
-                
-                db.execute(text("ALTER TABLE ai_agents ADD COLUMN max_tokens INTEGER"))
-                db.commit()
-                
-                db.execute(text("ALTER TABLE ai_agents ADD COLUMN temperature FLOAT"))
-                db.commit()
-                
+                # Use raw connection for DDL
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE ai_agents ADD COLUMN is_default BOOLEAN DEFAULT FALSE NOT NULL"))
+                    conn.commit()
+                    
+                    conn.execute(text("ALTER TABLE ai_agents ADD COLUMN enable_church_data BOOLEAN DEFAULT FALSE NOT NULL"))  
+                    conn.commit()
+                    
+                    conn.execute(text("ALTER TABLE ai_agents ADD COLUMN created_by_system BOOLEAN DEFAULT FALSE NOT NULL"))
+                    conn.commit()
+                    
+                    conn.execute(text("ALTER TABLE ai_agents ADD COLUMN gpt_model VARCHAR(50)"))
+                    conn.commit()
+                    
+                    conn.execute(text("ALTER TABLE ai_agents ADD COLUMN max_tokens INTEGER"))
+                    conn.commit()
+                    
+                    conn.execute(text("ALTER TABLE ai_agents ADD COLUMN temperature FLOAT"))
+                    conn.commit()
+                    
                 logger.info("Migration applied successfully")
             except Exception as e:
-                db.rollback()
                 logger.error(f"Migration failed: {e}")
                 return {"success": False, "error": str(e)}
         
-        # Step 2: Create secretary agents
-        churches = db.query(Church).all()
-        created = 0
-        
-        for church in churches:
-            try:
-                existing = db.query(AIAgent).filter(
-                    AIAgent.church_id == church.id,
-                    AIAgent.category == "secretary"
-                ).first()
-                
-                if not existing:
-                    secretary_agent_service.ensure_church_secretary_agent(church.id, db)
-                    created += 1
-                    logger.info(f"Created secretary agent for church {church.id}")
-            except Exception as e:
-                logger.error(f"Failed for church {church.id}: {e}")
+        # Step 2: Create secretary agents with new session
+        with SessionLocal() as db:
+            churches = db.query(Church).all()
+            created = 0
+            
+            for church in churches:
+                try:
+                    existing = db.query(AIAgent).filter(
+                        AIAgent.church_id == church.id,
+                        AIAgent.category == "secretary"
+                    ).first()
+                    
+                    if not existing:
+                        secretary_agent_service.ensure_church_secretary_agent(church.id, db)
+                        created += 1
+                        logger.info(f"Created secretary agent for church {church.id}")
+                except Exception as e:
+                    logger.error(f"Failed for church {church.id}: {e}")
         
         return {
             "success": True,
