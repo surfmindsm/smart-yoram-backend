@@ -79,15 +79,24 @@ def read_agents(
     Always includes the global default agent (ID: 0).
     """
     # Get all agents for this church
-    # Ensure church has at least one default agent (임시 주석 처리)
-    # ChurchDefaultAgentService.ensure_church_has_default_agent(
-    #     current_user.church_id, db
-    # )
+    # Ensure church has at least one default agent
+    try:
+        ChurchDefaultAgentService.ensure_church_has_default_agent(
+            current_user.church_id, db
+        )
+    except Exception as e:
+        logger.warning(f"Failed to ensure default agent for church {current_user.church_id}: {e}")
+        # Continue without failing the request
     
     # Ensure church has secretary agent
-    # secretary_agent_service.ensure_church_secretary_agent(
-    #     current_user.church_id, db
-    # )
+    try:
+        from app.services.secretary_agent_service import secretary_agent_service
+        secretary_agent_service.ensure_church_secretary_agent(
+            current_user.church_id, db
+        )
+    except Exception as e:
+        logger.warning(f"Failed to ensure secretary agent for church {current_user.church_id}: {e}")
+        # Continue without failing the request
 
     # Get all church agents (simplified query to avoid new fields)
     try:

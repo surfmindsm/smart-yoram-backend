@@ -46,17 +46,18 @@ def create_church(
         print(f"⚠️ Failed to create default agent for church {church.name}: {str(e)}")
         # Don't fail church creation if agent creation fails
     
-    # Create secretary agent for the new church (임시 주석 처리)
-    # try:
-    #     secretary_agent = secretary_agent_service.ensure_church_secretary_agent(
-    #         church.id, db
-    #     )
-    #     print(
-    #         f"✅ Created secretary agent (ID: {secretary_agent.id}) for new church: {church.name}"
-    #     )
-    # except Exception as e:
-    #     print(f"⚠️ Failed to create secretary agent for church {church.name}: {str(e)}")
-    #     # Don't fail church creation if secretary agent creation fails
+    # Create secretary agent for the new church
+    try:
+        from app.services.secretary_agent_service import secretary_agent_service
+        secretary_agent = secretary_agent_service.ensure_church_secretary_agent(
+            church.id, db
+        )
+        print(
+            f"✅ Created secretary agent (ID: {secretary_agent.id}) for new church: {church.name}"
+        )
+    except Exception as e:
+        print(f"⚠️ Failed to create secretary agent for church {church.name}: {str(e)}")
+        # Don't fail church creation if secretary agent creation fails
 
     return church
 
