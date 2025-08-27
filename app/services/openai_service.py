@@ -97,6 +97,13 @@ class OpenAIService:
             tokens_used = response.usage.total_tokens
 
             logger.info(f"OpenAI Response successful - Tokens used: {tokens_used}")
+            logger.info(f"OpenAI Response content length: {len(content or '')}")
+            logger.info(f"OpenAI Response content preview: '{(content or '')[:100]}...'")
+            
+            # Handle empty content
+            if not content:
+                logger.warning("OpenAI returned empty content, using fallback")
+                content = "죄송합니다. 응답을 생성하는 중에 문제가 발생했습니다. 다시 시도해 주세요."
 
             return {
                 "content": content,

@@ -476,6 +476,7 @@ async def send_message(
         logger.info(f"✅ OpenAI 응답 - 실제 모델: {response.get('model', 'Unknown')}")
         logger.info(f"📊 사용 토큰: {response.get('tokens_used', 0)}")
         logger.info(f"🔄 완료 이유: {response.get('finish_reason', 'Unknown')}")
+        logger.info(f"📝 응답 내용: '{response.get('content', '')[:100]}...' (길이: {len(response.get('content', ''))})")
 
         # Save AI response
         ai_message = ChatMessage(
