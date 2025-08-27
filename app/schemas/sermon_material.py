@@ -14,6 +14,9 @@ class SermonMaterialBase(BaseModel):
     date_preached: Optional[date] = None
     tags: List[str] = []
     is_public: bool = False
+    file_url: Optional[str] = None
+    file_type: Optional[str] = None
+    file_size: Optional[int] = None
 
 
 class SermonMaterialCreate(SermonMaterialBase):
@@ -33,6 +36,9 @@ class SermonMaterialUpdate(BaseModel):
     date_preached: Optional[date] = None
     tags: Optional[List[str]] = None
     is_public: Optional[bool] = None
+    file_url: Optional[str] = None
+    file_type: Optional[str] = None
+    file_size: Optional[int] = None
 
 
 class SermonMaterialResponse(SermonMaterialBase):

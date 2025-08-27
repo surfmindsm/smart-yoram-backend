@@ -66,20 +66,29 @@ def create_sermon_material(
     """
     설교 자료 생성
     """
-    # 권한 확인 (관리자, 목사, 리더만 가능)
-    if current_user.role not in ["admin", "minister", "leader"]:
-        raise HTTPException(
-            status_code=403,
-            detail="Only admins, ministers, and leaders can create sermon materials",
-        )
+    try:
+        logger.info(f"Creating sermon material for church_id: {current_user.church_id}")
+        logger.info(f"Input data: {material_in.dict()}")
+        
+        # 권한 확인 (관리자, 목사, 리더만 가능)
+        if current_user.role not in ["admin", "minister", "leader"]:
+            raise HTTPException(
+                status_code=403,
+                detail="Only admins, ministers, and leaders can create sermon materials",
+            )
 
-    material = crud.sermon_material.create_with_church_and_user(
-        db=db,
-        obj_in=material_in,
-        church_id=current_user.church_id,
-        user_id=current_user.id,
-    )
-    return material
+        material = crud.sermon_material.create_with_church_and_user(
+            db=db,
+            obj_in=material_in,
+            church_id=current_user.church_id,
+            user_id=current_user.id,
+        )
+        logger.info(f"Created material: ID={material.id}, file_url={material.file_url}")
+        return material
+    except Exception as e:
+        logger.error(f"Error creating sermon material: {str(e)}")
+        logger.exception("Full traceback:")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @router.get("/{material_id}", response_model=SermonMaterialResponse)
