@@ -190,47 +190,40 @@ async def update_secretary_data_sources(
 
 
 @router.post("/update-secretary-agents-urgent") 
-async def update_secretary_agents_urgent():
+async def update_secretary_agents_urgent(db: Session = Depends(deps.get_db)):
     """Emergency endpoint to update secretary agents - no auth required"""
     try:
         from app.models.ai_agent import AIAgent
-        from app.core.config import settings
-        from sqlalchemy import create_engine
-        from sqlalchemy.orm import sessionmaker
+        import json
         
         logger.info("Starting urgent secretary agent data sources update...")
         
-        # Create new engine and session
-        engine = create_engine(str(settings.DATABASE_URL))
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        secretary_agents = db.query(AIAgent).filter(
+            AIAgent.category == "secretary"
+        ).all()
         
-        with SessionLocal() as db:
-            secretary_agents = db.query(AIAgent).filter(
-                AIAgent.category == "secretary"
-            ).all()
-            
-            updated = 0
-            new_sources = {
-                "pastoral_care_requests": True,
-                "prayer_requests": True, 
-                "announcements": True,
-                "offerings": True,
-                "attendances": True,
-                "members": True,
-                "worship_services": True,
-                "visits": True,
-                "users": True
-            }
-            
-            for agent in secretary_agents:
-                try:
-                    agent.church_data_sources = new_sources
-                    updated += 1
-                    logger.info(f"Updated agent {agent.id} data sources")
-                except Exception as e:
-                    logger.error(f"Failed to update agent {agent.id}: {e}")
-            
-            db.commit()
+        updated = 0
+        new_sources = {
+            "pastoral_care_requests": True,
+            "prayer_requests": True, 
+            "announcements": True,
+            "offerings": True,
+            "attendances": True,
+            "members": True,
+            "worship_services": True,
+            "visits": True,
+            "users": True
+        }
+        
+        for agent in secretary_agents:
+            try:
+                agent.church_data_sources = new_sources
+                updated += 1
+                logger.info(f"Updated agent {agent.id} data sources")
+            except Exception as e:
+                logger.error(f"Failed to update agent {agent.id}: {e}")
+        
+        db.commit()
             
         return {
             "success": True,
