@@ -48,6 +48,10 @@ class SecretaryAgentService:
                     "pastoral_care_requests": True,
                     "prayer_requests": True, 
                     "announcements": True,
+                    "offerings": True,
+                    "attendances": True,
+                    "members": True,
+                    "worship_services": True,
                     "visits": True,
                     "users": True
                 },
