@@ -240,6 +240,30 @@ jobs:
             fi
           fi
           
+          # Nginx 설정 업데이트 (파일 업로드 지원)
+          echo "🔧 Updating Nginx configuration..."
+          if [ -f nginx.conf ]; then
+            # Nginx 설정 파일 백업
+            sudo cp /etc/nginx/sites-available/default /etc/nginx/sites-available/default.backup.$(date +%Y%m%d_%H%M%S) || true
+            
+            # 새 설정 적용
+            sudo cp nginx.conf /etc/nginx/sites-available/smart-yoram-backend
+            sudo ln -sf /etc/nginx/sites-available/smart-yoram-backend /etc/nginx/sites-enabled/smart-yoram-backend || true
+            
+            # Nginx 설정 테스트
+            if sudo nginx -t; then
+              echo "✅ Nginx configuration is valid"
+              sudo systemctl reload nginx || echo "⚠️  Nginx reload failed (continuing)"
+            else
+              echo "❌ Nginx configuration test failed"
+              # 원본 설정으로 되돌리기
+              sudo rm -f /etc/nginx/sites-enabled/smart-yoram-backend || true
+              sudo systemctl reload nginx || true
+            fi
+          else
+            echo "⚠️  nginx.conf not found, skipping nginx configuration update"
+          fi
+          
           # API 헬스 체크
           echo "🧪 Testing API endpoint..."
           sleep 5

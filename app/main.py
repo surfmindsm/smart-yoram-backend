@@ -2,7 +2,7 @@ import warnings
 
 warnings.filterwarnings("ignore", message=".*error reading bcrypt version.*")
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
@@ -64,6 +64,23 @@ app.include_router(spec_router, prefix="/api")
 app.include_router(admin_router)
 app.include_router(web_router)
 
+
+# Add middleware to limit file upload size (50MB = 52428800 bytes)
+@app.middleware("http")
+async def limit_upload_size(request: Request, call_next):
+    if request.method == "POST" and "upload" in request.url.path:
+        content_length = request.headers.get("content-length")
+        if content_length:
+            content_length = int(content_length)
+            max_size = 52428800  # 50MB in bytes
+            if content_length > max_size:
+                raise HTTPException(
+                    status_code=413,
+                    detail=f"File too large. Maximum size allowed is {max_size // 1048576}MB"
+                )
+    
+    response = await call_next(request)
+    return response
 
 # Add middleware to log all requests
 @app.middleware("http")
