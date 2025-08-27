@@ -79,10 +79,10 @@ def read_agents(
     Always includes the global default agent (ID: 0).
     """
     # Get all agents for this church
-    # Ensure church has at least one default agent
-    ChurchDefaultAgentService.ensure_church_has_default_agent(
-        current_user.church_id, db
-    )
+    # Ensure church has at least one default agent (임시 주석 처리)
+    # ChurchDefaultAgentService.ensure_church_has_default_agent(
+    #     current_user.church_id, db
+    # )
     
     # Ensure church has secretary agent
     # secretary_agent_service.ensure_church_secretary_agent(
