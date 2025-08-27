@@ -189,47 +189,4 @@ async def update_secretary_data_sources(
         }
 
 
-@router.post("/update-secretary-agents-urgent") 
-async def update_secretary_agents_urgent(db: Session = Depends(deps.get_db)):
-    """Emergency endpoint to update secretary agents - no auth required"""
-    try:
-        from app.models.ai_agent import AIAgent
-        import json
-        
-        logger.info("Starting urgent secretary agent data sources update...")
-        
-        secretary_agents = db.query(AIAgent).filter(
-            AIAgent.category == "secretary"
-        ).all()
-        
-        updated = 0
-        new_sources = {
-            "pastoral_care_requests": True,
-            "prayer_requests": True, 
-            "announcements": True,
-            "offerings": True,
-            "attendances": True,
-            "members": True,
-            "worship_services": True,
-            "visits": True,
-            "users": True
-        }
-        
-        for agent in secretary_agents:
-            try:
-                agent.church_data_sources = new_sources
-                updated += 1
-                logger.info(f"Updated agent {agent.id} data sources")
-            except Exception as e:
-                logger.error(f"Failed to update agent {agent.id}: {e}")
-        
-        db.commit()
-            
-        return {
-            "success": True,
-            "message": f"Updated {updated} secretary agents out of {len(secretary_agents)} total"
-        }
-        
-    except Exception as e:
-        logger.error(f"Urgent secretary agent update failed: {e}")
-        return {"success": False, "error": str(e)}
+# Secretary agent update endpoint removed - update completed successfully
