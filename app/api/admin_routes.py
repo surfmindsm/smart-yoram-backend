@@ -136,17 +136,31 @@ async def migrate_urgent(db: Session = Depends(deps.get_db)):
             db.execute(text("SELECT is_default FROM ai_agents LIMIT 1"))
             logger.info("Migration already applied")
         except:
+            # Rollback any existing transaction first
+            db.rollback()
             logger.info("Applying migration...")
             try:
                 db.execute(text("ALTER TABLE ai_agents ADD COLUMN is_default BOOLEAN DEFAULT FALSE NOT NULL"))
+                db.commit()
+                
                 db.execute(text("ALTER TABLE ai_agents ADD COLUMN enable_church_data BOOLEAN DEFAULT FALSE NOT NULL"))  
+                db.commit()
+                
                 db.execute(text("ALTER TABLE ai_agents ADD COLUMN created_by_system BOOLEAN DEFAULT FALSE NOT NULL"))
+                db.commit()
+                
                 db.execute(text("ALTER TABLE ai_agents ADD COLUMN gpt_model VARCHAR(50)"))
+                db.commit()
+                
                 db.execute(text("ALTER TABLE ai_agents ADD COLUMN max_tokens INTEGER"))
+                db.commit()
+                
                 db.execute(text("ALTER TABLE ai_agents ADD COLUMN temperature FLOAT"))
                 db.commit()
+                
                 logger.info("Migration applied successfully")
             except Exception as e:
+                db.rollback()
                 logger.error(f"Migration failed: {e}")
                 return {"success": False, "error": str(e)}
         
