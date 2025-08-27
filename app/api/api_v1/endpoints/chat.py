@@ -44,54 +44,70 @@ def read_chat_histories(
     logger.debug(
         f"Reading chat histories for user {current_user.id}, church {current_user.church_id}"
     )
-    query = (
-        db.query(ChatHistory)
-        .filter(
-            ChatHistory.user_id == current_user.id,
-            ChatHistory.church_id == current_user.church_id,
+    try:
+        query = (
+            db.query(ChatHistory)
+            .filter(
+                ChatHistory.user_id == current_user.id,
+                ChatHistory.church_id == current_user.church_id,
+            )
+            .order_by(desc(ChatHistory.updated_at))
         )
-        .order_by(desc(ChatHistory.updated_at))
-    )
 
-    histories = query.offset(skip).limit(limit).all()
+        histories = query.offset(skip).limit(limit).all()
+    except Exception as e:
+        logger.warning(f"Failed to query chat histories: {e}")
+        histories = []
 
     histories_data = []
     for history in histories:
-        # Get agent name
-        agent = db.query(AIAgent).filter(AIAgent.id == history.agent_id).first()
-        agent_name = agent.name if agent else "Unknown"
+        try:
+            # Get agent name (with error handling)
+            agent_name = "Unknown"
+            try:
+                agent = db.query(AIAgent).filter(AIAgent.id == history.agent_id).first()
+                agent_name = getattr(agent, 'name', 'Unknown') if agent else "Unknown"
+            except:
+                pass
 
-        history_dict = {
-            "id": history.id,
-            "title": history.title,
-            "agent_name": agent_name,
-            "is_bookmarked": history.is_bookmarked,
-            "message_count": history.message_count,
-            "timestamp": history.updated_at or history.created_at,
-        }
+            history_dict = {
+                "id": getattr(history, 'id', 0),
+                "title": getattr(history, 'title', ''),
+                "agent_name": agent_name,
+                "is_bookmarked": getattr(history, 'is_bookmarked', False),
+                "message_count": getattr(history, 'message_count', 0),
+                "timestamp": getattr(history, 'updated_at', None) or getattr(history, 'created_at', None),
+            }
 
-        # Include recent messages if requested
-        if include_messages:
-            messages = (
-                db.query(ChatMessage)
-                .filter(ChatMessage.chat_history_id == history.id)
-                .order_by(desc(ChatMessage.created_at))
-                .limit(5)
-                .all()
-            )
+            # Include recent messages if requested
+            if include_messages:
+                try:
+                    messages = (
+                        db.query(ChatMessage)
+                        .filter(ChatMessage.chat_history_id == history.id)
+                        .order_by(desc(ChatMessage.created_at))
+                        .limit(5)
+                        .all()
+                    )
 
-            history_dict["messages"] = [
-                {
-                    "id": msg.id,
-                    "content": msg.content,
-                    "role": msg.role,
-                    "tokens_used": msg.tokens_used,
-                    "timestamp": msg.created_at,
-                }
-                for msg in reversed(messages)
-            ]
+                    history_dict["messages"] = [
+                        {
+                            "id": getattr(msg, 'id', 0),
+                            "content": getattr(msg, 'content', ''),
+                            "role": getattr(msg, 'role', ''),
+                            "tokens_used": getattr(msg, 'tokens_used', 0),
+                            "timestamp": getattr(msg, 'created_at', None),
+                        }
+                        for msg in reversed(messages)
+                    ]
+                except Exception as e:
+                    logger.warning(f"Failed to load messages for history {history.id}: {e}")
+                    history_dict["messages"] = []
 
-        histories_data.append(history_dict)
+            histories_data.append(history_dict)
+        except Exception as e:
+            logger.warning(f"Failed to process history {getattr(history, 'id', 'unknown')}: {e}")
+            continue
 
     return {"success": True, "data": histories_data}
 

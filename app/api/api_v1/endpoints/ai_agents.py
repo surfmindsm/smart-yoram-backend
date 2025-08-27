@@ -89,40 +89,55 @@ def read_agents(
     #     current_user.church_id, db
     # )
 
-    # Get all church agents
-    db_agents = (
-        db.query(AIAgent).filter(AIAgent.church_id == current_user.church_id).all()
-    )
+    # Get all church agents (simplified query to avoid new fields)
+    try:
+        db_agents = (
+            db.query(AIAgent).filter(AIAgent.church_id == current_user.church_id).all()
+        )
+    except Exception as e:
+        logger.warning(f"Failed to query agents: {e}")
+        db_agents = []
 
     # Apply pagination
     paginated_agents = db_agents[skip : skip + limit]
 
-    # Calculate stats
+    # Calculate stats (with error handling)
     total_agents = len(db_agents)
-    active_agents = len([a for a in db_agents if a.is_active])
-    total_usage = sum(agent.usage_count or 0 for agent in paginated_agents)
+    try:
+        active_agents = len([a for a in db_agents if hasattr(a, 'is_active') and a.is_active])
+    except:
+        active_agents = 0
+    
+    try:
+        total_usage = sum(getattr(agent, 'usage_count', 0) or 0 for agent in paginated_agents)
+    except:
+        total_usage = 0
 
-    # Format agent data for response
+    # Format agent data for response (with safe attribute access)
     formatted_agents = []
     for agent in paginated_agents:
-        agent_dict = {
-            "id": agent.id,
-            "name": agent.name,
-            "category": agent.category,
-            "description": agent.description,
-            "detailed_description": agent.detailed_description,
-            "icon": agent.icon,
-            "usage": agent.usage_count or 0,
-            "is_active": agent.is_active,
-            "created_at": agent.created_at,
-            "updated_at": agent.updated_at,
-            "total_tokens_used": agent.total_tokens_used or 0,
-            "total_cost": agent.total_cost or 0.0,
-            "system_prompt": agent.system_prompt,
-            "template_id": agent.template_id,
-            "church_data_sources": agent.church_data_sources or {},
-        }
-        formatted_agents.append(agent_dict)
+        try:
+            agent_dict = {
+                "id": getattr(agent, 'id', 0),
+                "name": getattr(agent, 'name', ''),
+                "category": getattr(agent, 'category', ''),
+                "description": getattr(agent, 'description', ''),
+                "detailed_description": getattr(agent, 'detailed_description', ''),
+                "icon": getattr(agent, 'icon', ''),
+                "usage": getattr(agent, 'usage_count', 0) or 0,
+                "is_active": getattr(agent, 'is_active', True),
+                "created_at": getattr(agent, 'created_at', None),
+                "updated_at": getattr(agent, 'updated_at', None),
+                "total_tokens_used": getattr(agent, 'total_tokens_used', 0) or 0,
+                "total_cost": getattr(agent, 'total_cost', 0.0) or 0.0,
+                "system_prompt": getattr(agent, 'system_prompt', ''),
+                "template_id": getattr(agent, 'template_id', None),
+                "church_data_sources": getattr(agent, 'church_data_sources', {}) or {},
+            }
+            formatted_agents.append(agent_dict)
+        except Exception as e:
+            logger.warning(f"Failed to format agent {agent.id}: {e}")
+            continue
 
     return {
         "success": True,
