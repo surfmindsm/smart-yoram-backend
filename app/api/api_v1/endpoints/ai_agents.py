@@ -8,7 +8,7 @@ from app import models, schemas
 from app.api import deps
 from app.models.ai_agent import AIAgent, OfficialAgentTemplate
 from app.services.church_default_agent_service import ChurchDefaultAgentService
-# from app.services.secretary_agent_service import secretary_agent_service
+from app.services.secretary_agent_service import secretary_agent_service
 from app.schemas.ai_agent import (
     AIAgentCreate,
     AIAgentUpdate,
@@ -90,7 +90,6 @@ def read_agents(
     
     # Ensure church has secretary agent
     try:
-        from app.services.secretary_agent_service import secretary_agent_service
         secretary_agent_service.ensure_church_secretary_agent(
             current_user.church_id, db
         )
@@ -100,9 +99,13 @@ def read_agents(
 
     # Get all church agents (simplified query to avoid new fields)
     try:
+        logger.info(f"Querying agents for church_id: {current_user.church_id}")
         db_agents = (
             db.query(AIAgent).filter(AIAgent.church_id == current_user.church_id).all()
         )
+        logger.info(f"Found {len(db_agents)} agents for church_id {current_user.church_id}")
+        for agent in db_agents:
+            logger.info(f"Agent: ID={agent.id}, name={agent.name}, category={agent.category}")
     except Exception as e:
         logger.warning(f"Failed to query agents: {e}")
         db_agents = []
