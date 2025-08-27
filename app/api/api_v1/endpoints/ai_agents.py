@@ -78,12 +78,19 @@ def read_agents(
     Retrieve AI agents for the current user's church.
     Always includes the global default agent (ID: 0).
     """
+    logger.info(f"=== AGENTS API CALLED ===")
+    logger.info(f"Current user ID: {current_user.id}")
+    logger.info(f"Current user email: {current_user.email}")
+    logger.info(f"Current user church_id: {current_user.church_id}")
+    
     # Get all agents for this church
     # Ensure church has at least one default agent
     try:
+        logger.info(f"Ensuring default agent for church_id: {current_user.church_id}")
         ChurchDefaultAgentService.ensure_church_has_default_agent(
             current_user.church_id, db
         )
+        logger.info(f"Default agent check completed")
     except Exception as e:
         logger.warning(f"Failed to ensure default agent for church {current_user.church_id}: {e}")
         # Continue without failing the request
@@ -151,6 +158,11 @@ def read_agents(
             logger.warning(f"Failed to format agent {agent.id}: {e}")
             continue
 
+    logger.info(f"=== FINAL RESPONSE ===")
+    logger.info(f"Total agents found: {total_agents}")
+    logger.info(f"Formatted agents count: {len(formatted_agents)}")
+    logger.info(f"Response data structure: {{'success': True, 'data': {{'agents': [{len(formatted_agents)} items], 'stats': ...}}}}")
+    
     return {
         "success": True,
         "data": {
