@@ -51,6 +51,15 @@ class AIAgent(Base):
     system_prompt = Column(Text)
     church_data_sources = Column(JSON, default={})
     is_active = Column(Boolean, default=True)
+    is_default = Column(Boolean, default=False)  # 기본 에이전트 여부
+    enable_church_data = Column(Boolean, default=False)  # 교회 데이터 조회 기능 활성화
+    created_by_system = Column(Boolean, default=False)  # 시스템에서 자동 생성된 에이전트
+    
+    # GPT 설정 (에이전트별 개별 설정)
+    gpt_model = Column(String(50), nullable=True)  # None이면 교회 설정 사용
+    max_tokens = Column(Integer, nullable=True)
+    temperature = Column(Float, nullable=True)
+    
     usage_count = Column(Integer, default=0)
     total_tokens_used = Column(Integer, default=0)
     total_cost = Column(Float, default=0.0)
