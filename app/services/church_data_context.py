@@ -185,28 +185,87 @@ def get_recent_offerings(
     db: Session, church_id: int, days: int = 30
 ) -> Dict:
     """
-    Get recent offering statistics for the church.
+    Get comprehensive offering statistics for the church.
     """
     try:
         from datetime import datetime, timedelta
         
-        # Calculate date range
+        # Calculate multiple date ranges
         end_date = datetime.now().date()
         start_date = end_date - timedelta(days=days)
         
-        # Get total offering for the period
-        total_query = (
-            db.query(func.sum(Offering.amount))
+        # This year and last year
+        current_year = end_date.year
+        last_year = current_year - 1
+        this_year_start = datetime(current_year, 1, 1).date()
+        last_year_start = datetime(last_year, 1, 1).date()
+        last_year_end = datetime(last_year, 12, 31).date()
+        
+        # Current month and last month
+        current_month_start = end_date.replace(day=1)
+        if current_month_start.month == 1:
+            last_month_start = current_month_start.replace(year=current_month_start.year - 1, month=12)
+        else:
+            last_month_start = current_month_start.replace(month=current_month_start.month - 1)
+        
+        # Get total offering for recent period
+        total_recent = db.query(func.sum(Offering.amount)).filter(
+            Offering.church_id == church_id,
+            Offering.offered_on >= start_date,
+            Offering.offered_on <= end_date
+        ).scalar() or 0
+        
+        # Get this year total
+        total_this_year = db.query(func.sum(Offering.amount)).filter(
+            Offering.church_id == church_id,
+            Offering.offered_on >= this_year_start,
+            Offering.offered_on <= end_date
+        ).scalar() or 0
+        
+        # Get last year total
+        total_last_year = db.query(func.sum(Offering.amount)).filter(
+            Offering.church_id == church_id,
+            Offering.offered_on >= last_year_start,
+            Offering.offered_on <= last_year_end
+        ).scalar() or 0
+        
+        # Get this month total
+        total_this_month = db.query(func.sum(Offering.amount)).filter(
+            Offering.church_id == church_id,
+            Offering.offered_on >= current_month_start,
+            Offering.offered_on <= end_date
+        ).scalar() or 0
+        
+        # Get last month total
+        if current_month_start.month == 1:
+            last_month_end = datetime(current_month_start.year - 1, 12, 31).date()
+        else:
+            last_month_end = current_month_start - timedelta(days=1)
+            
+        total_last_month = db.query(func.sum(Offering.amount)).filter(
+            Offering.church_id == church_id,
+            Offering.offered_on >= last_month_start,
+            Offering.offered_on <= last_month_end
+        ).scalar() or 0
+        
+        # Monthly breakdown for this year
+        monthly_breakdown = (
+            db.query(
+                func.extract('month', Offering.offered_on).label('month'),
+                func.sum(Offering.amount).label('total')
+            )
             .filter(
                 Offering.church_id == church_id,
-                Offering.offered_on >= start_date,
+                Offering.offered_on >= this_year_start,
                 Offering.offered_on <= end_date
             )
+            .group_by(func.extract('month', Offering.offered_on))
+            .order_by('month')
+            .all()
         )
-        total_amount = total_query.scalar() or 0
         
-        # Get offering by fund type
-        fund_stats = (
+        # Fund type breakdown for this year
+        fund_stats_year = (
             db.query(
                 Offering.fund_type,
                 func.sum(Offering.amount).label('total'),
@@ -214,36 +273,67 @@ def get_recent_offerings(
             )
             .filter(
                 Offering.church_id == church_id,
-                Offering.offered_on >= start_date,
+                Offering.offered_on >= this_year_start,
                 Offering.offered_on <= end_date
             )
             .group_by(Offering.fund_type)
+            .order_by(desc('total'))
             .all()
         )
         
-        # Get recent individual offerings
+        # Average offering per member (if member data available)
+        total_members = (
+            db.query(Member)
+            .filter(Member.church_id == church_id, Member.status == "active")
+            .count()
+        )
+        
+        avg_offering_per_member = (total_this_month / total_members) if total_members > 0 else 0
+        
+        # Get recent individual offerings (more details)
         recent_offerings = (
             db.query(Offering)
-            .join(Member)
+            .join(Member, isouter=True)
             .filter(
                 Offering.church_id == church_id,
                 Offering.offered_on >= start_date
             )
             .order_by(desc(Offering.offered_on))
-            .limit(5)
+            .limit(10)
             .all()
         )
         
         return {
             "period_days": days,
-            "total_amount": float(total_amount) if total_amount else 0,
+            "totals": {
+                "recent_period": float(total_recent),
+                "this_year": float(total_this_year),
+                "last_year": float(total_last_year),
+                "this_month": float(total_this_month),
+                "last_month": float(total_last_month),
+                "year_over_year_change": float((total_this_year - total_last_year) / total_last_year * 100) if total_last_year > 0 else 0,
+                "month_over_month_change": float((total_this_month - total_last_month) / total_last_month * 100) if total_last_month > 0 else 0,
+            },
+            "monthly_breakdown": [
+                {
+                    "month": int(month.month),
+                    "month_name": ["", "1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"][int(month.month)],
+                    "total": float(month.total)
+                } for month in monthly_breakdown
+            ],
             "fund_breakdown": [
                 {
                     "fund_type": fund.fund_type,
                     "total": float(fund.total),
-                    "count": fund.count
-                } for fund in fund_stats
+                    "count": fund.count,
+                    "percentage": float(fund.total / total_this_year * 100) if total_this_year > 0 else 0
+                } for fund in fund_stats_year
             ],
+            "statistics": {
+                "total_members": total_members,
+                "avg_offering_per_member_this_month": round(avg_offering_per_member, 0),
+                "total_offerings_count_this_year": sum(fund.count for fund in fund_stats_year),
+            },
             "recent_offerings": [
                 {
                     "member_name": offering.member.name if offering.member else "익명",
@@ -312,6 +402,68 @@ def get_attendance_stats(db: Session, church_id: int) -> Dict:
             .all()
         )
         
+        # Monthly attendance trends (last 12 months)
+        twelve_months_ago = today - timedelta(days=365)
+        monthly_attendance = (
+            db.query(
+                func.extract('year', Attendance.service_date).label('year'),
+                func.extract('month', Attendance.service_date).label('month'),
+                func.count(Attendance.id).label('attendance_count'),
+                func.count(func.distinct(Attendance.member_id)).label('unique_attendees')
+            )
+            .filter(
+                Attendance.church_id == church_id,
+                Attendance.service_date >= twelve_months_ago,
+                Attendance.present == True
+            )
+            .group_by(
+                func.extract('year', Attendance.service_date),
+                func.extract('month', Attendance.service_date)
+            )
+            .order_by('year', 'month')
+            .all()
+        )
+        
+        # Attendance by member (top attendees this year)
+        year_start = today.replace(month=1, day=1)
+        top_attendees = (
+            db.query(
+                Member.name,
+                func.count(Attendance.id).label('attendance_count')
+            )
+            .join(Attendance)
+            .filter(
+                Attendance.church_id == church_id,
+                Attendance.service_date >= year_start,
+                Attendance.present == True
+            )
+            .group_by(Member.id, Member.name)
+            .order_by(desc('attendance_count'))
+            .limit(10)
+            .all()
+        )
+        
+        # Weekly attendance pattern (last 8 weeks)
+        eight_weeks_ago = today - timedelta(weeks=8)
+        weekly_attendance = (
+            db.query(
+                func.extract('week', Attendance.service_date).label('week'),
+                func.extract('year', Attendance.service_date).label('year'),
+                func.count(Attendance.id).label('attendance_count')
+            )
+            .filter(
+                Attendance.church_id == church_id,
+                Attendance.service_date >= eight_weeks_ago,
+                Attendance.present == True
+            )
+            .group_by(
+                func.extract('year', Attendance.service_date),
+                func.extract('week', Attendance.service_date)
+            )
+            .order_by('year', 'week')
+            .all()
+        )
+        
         # Get recent attendance records
         recent_attendance = (
             db.query(Attendance)
@@ -342,8 +494,31 @@ def get_attendance_stats(db: Session, church_id: int) -> Dict:
                 {
                     "service_type": stat.service_type,
                     "avg_attendance": stat.total_attendance // stat.service_count if stat.service_count > 0 else 0,
-                    "service_count": stat.service_count
+                    "service_count": stat.service_count,
+                    "total_attendance": stat.total_attendance
                 } for stat in service_stats
+            ],
+            "monthly_trends": [
+                {
+                    "year": int(month.year),
+                    "month": int(month.month),
+                    "month_name": ["", "1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"][int(month.month)],
+                    "total_attendance": month.attendance_count,
+                    "unique_attendees": month.unique_attendees
+                } for month in monthly_attendance
+            ],
+            "weekly_trends": [
+                {
+                    "year": int(week.year),
+                    "week": int(week.week),
+                    "attendance_count": week.attendance_count
+                } for week in weekly_attendance
+            ],
+            "top_attendees": [
+                {
+                    "member_name": attendee.name,
+                    "attendance_count": attendee.attendance_count
+                } for attendee in top_attendees
             ],
             "recent_attendances": [
                 {
@@ -450,7 +625,7 @@ def get_enhanced_member_statistics(db: Session, church_id: int) -> Dict:
             )
             age_stats[range_name] = count
 
-        # Gender statistics
+        # Gender statistics (more detailed)
         gender_stats = (
             db.query(Member.gender, func.count(Member.id).label("count"))
             .filter(
@@ -460,6 +635,42 @@ def get_enhanced_member_statistics(db: Session, church_id: int) -> Dict:
             )
             .group_by(Member.gender)
             .all()
+        )
+        
+        # Marital status statistics
+        marital_stats = (
+            db.query(Member.marital_status, func.count(Member.id).label("count"))
+            .filter(
+                Member.church_id == church_id,
+                Member.status == "active",
+                Member.marital_status.isnot(None)
+            )
+            .group_by(Member.marital_status)
+            .all()
+        )
+        
+        # Detailed age statistics (actual ages, not just ranges)
+        age_distribution = (
+            db.query(Member.age, func.count(Member.id).label("count"))
+            .filter(
+                Member.church_id == church_id,
+                Member.status == "active",
+                Member.age.isnot(None)
+            )
+            .group_by(Member.age)
+            .order_by(Member.age)
+            .all()
+        )
+        
+        # Average age calculation
+        avg_age = (
+            db.query(func.avg(Member.age))
+            .filter(
+                Member.church_id == church_id,
+                Member.status == "active",
+                Member.age.isnot(None)
+            )
+            .scalar()
         )
 
         # Recent baptisms (last 6 months)
@@ -486,11 +697,14 @@ def get_enhanced_member_statistics(db: Session, church_id: int) -> Dict:
             "new_members_this_month": new_members_this_month,
             "recent_baptisms": recent_baptisms,
             "family_count": family_count,
+            "average_age": round(avg_age, 1) if avg_age else 0,
             "members_by_position": {pos: count for pos, count in position_stats if pos},
             "members_by_department": {dept: count for dept, count in department_stats if dept},
             "members_by_district": {district: count for district, count in district_stats if district},
             "age_demographics": age_stats,
+            "detailed_age_distribution": {age: count for age, count in age_distribution},
             "gender_distribution": {gender: count for gender, count in gender_stats if gender},
+            "marital_status_distribution": {status: count for status, count in marital_stats if status},
         }
     except Exception as e:
         logger.error(f"Error fetching enhanced member statistics: {e}")
@@ -597,13 +811,26 @@ def format_context_for_prompt(context_data: Dict) -> str:
 
     if context_data.get("offerings"):
         offering_data = context_data["offerings"]
-        if offering_data["total_amount"] > 0:
+        if offering_data.get("totals", {}).get("this_year", 0) > 0:
+            totals = offering_data["totals"]
             context_parts.append("\n[헌금 현황]")
-            context_parts.append(f"- 최근 {offering_data['period_days']}일 총 헌금: {offering_data['total_amount']:,.0f}원")
-            if offering_data["fund_breakdown"]:
+            context_parts.append(f"- 올해 총 헌금: {totals['this_year']:,.0f}원")
+            context_parts.append(f"- 작년 대비: {totals['year_over_year_change']:+.1f}% ({totals['last_year']:,.0f}원)")
+            context_parts.append(f"- 이번달: {totals['this_month']:,.0f}원 (전월 대비 {totals['month_over_month_change']:+.1f}%)")
+            
+            stats = offering_data.get("statistics", {})
+            if stats.get("total_members", 0) > 0:
+                context_parts.append(f"- 교인 1인당 월평균: {stats['avg_offering_per_member_this_month']:,.0f}원")
+            
+            if offering_data.get("fund_breakdown"):
                 context_parts.append("- 헌금 종류별:")
-                for fund in offering_data["fund_breakdown"]:
-                    context_parts.append(f"  • {fund['fund_type']}: {fund['total']:,.0f}원 ({fund['count']}건)")
+                for fund in offering_data["fund_breakdown"][:3]:  # Top 3
+                    context_parts.append(f"  • {fund['fund_type']}: {fund['total']:,.0f}원 ({fund['percentage']:.1f}%)")
+            
+            if offering_data.get("monthly_breakdown"):
+                context_parts.append("- 월별 추이 (최근):")
+                for month in offering_data["monthly_breakdown"][-3:]:  # Last 3 months
+                    context_parts.append(f"  • {month['month_name']}: {month['total']:,.0f}원")
 
     if context_data.get("attendances"):
         stats = context_data["attendances"]
@@ -612,30 +839,65 @@ def format_context_for_prompt(context_data: Dict) -> str:
             context_parts.append(f"- 등록 교인: {stats['total_members']}명")
             context_parts.append(f"- 지난주 출석: {stats['last_week_attendance']}명 ({stats['attendance_rate']}%)")
             context_parts.append(f"- 평균 주간 출석: {stats['average_weekly_attendance']}명")
-            if stats["service_breakdown"]:
-                context_parts.append("- 예배별 평균 출석:")
+            
+            if stats.get("service_breakdown"):
+                context_parts.append("- 예배별 출석:")
                 service_names = {"sunday_morning": "주일 오전", "sunday_evening": "주일 오후", "wednesday": "수요예배", "friday": "금요예배"}
                 for service in stats["service_breakdown"]:
                     service_name = service_names.get(service["service_type"], service["service_type"])
-                    context_parts.append(f"  • {service_name}: {service['avg_attendance']}명")
+                    context_parts.append(f"  • {service_name}: 평균 {service['avg_attendance']}명 (총 {service['total_attendance']}회)")
+            
+            if stats.get("monthly_trends"):
+                context_parts.append("- 월별 출석 추이 (최근):")
+                for trend in stats["monthly_trends"][-3:]:  # Last 3 months
+                    context_parts.append(f"  • {trend['month_name']}: {trend['total_attendance']}회 (고유 출석자 {trend['unique_attendees']}명)")
+            
+            if stats.get("top_attendees"):
+                context_parts.append("- 올해 최다 출석자:")
+                for attendee in stats["top_attendees"][:3]:  # Top 3
+                    context_parts.append(f"  • {attendee['member_name']}: {attendee['attendance_count']}회")
 
     if context_data.get("members"):
         stats = context_data["members"]
         if stats["total_members"] > 0:
             context_parts.append("\n[교인 현황]")
-            context_parts.append(f"- 전체 등록 교인: {stats['total_members']}명")
+            context_parts.append(f"- 전체 등록 교인: {stats['total_members']}명 (평균연령: {stats.get('average_age', 0)}세)")
             context_parts.append(f"- 이번달 새신자: {stats['new_members_this_month']}명")
             context_parts.append(f"- 최근 6개월 세례자: {stats['recent_baptisms']}명")
             context_parts.append(f"- 등록 가정수: {stats['family_count']}가정")
             
-            if stats["members_by_position"]:
+            # Gender distribution
+            if stats.get("gender_distribution"):
+                gender_stats = stats["gender_distribution"]
+                male_count = gender_stats.get("M", 0) + gender_stats.get("male", 0)
+                female_count = gender_stats.get("F", 0) + gender_stats.get("female", 0)
+                if male_count > 0 or female_count > 0:
+                    context_parts.append(f"- 성별 분포: 남성 {male_count}명, 여성 {female_count}명")
+            
+            # Marital status
+            if stats.get("marital_status_distribution"):
+                marital_names = {"single": "미혼", "married": "기혼", "divorced": "이혼", "widowed": "사별"}
+                marital_stats = []
+                for status, count in stats["marital_status_distribution"].items():
+                    if count > 0:
+                        status_name = marital_names.get(status, status)
+                        marital_stats.append(f"{status_name} {count}명")
+                if marital_stats:
+                    context_parts.append(f"- 혼인상태: {', '.join(marital_stats)}")
+            
+            if stats.get("members_by_position"):
                 context_parts.append("- 직분별 분포:")
                 position_names = {"pastor": "목사", "elder": "장로", "deacon": "집사", "member": "성도", "youth": "청년", "child": "아동"}
                 for pos, count in stats["members_by_position"].items():
                     pos_name = position_names.get(pos, pos)
                     context_parts.append(f"  • {pos_name}: {count}명")
                     
-            if stats["age_demographics"]:
+            if stats.get("members_by_department"):
+                context_parts.append("- 부서별 분포:")
+                for dept, count in list(stats["members_by_department"].items())[:5]:  # Top 5 departments
+                    context_parts.append(f"  • {dept}: {count}명")
+                    
+            if stats.get("age_demographics"):
                 context_parts.append("- 연령대별 분포:")
                 age_names = {"children": "아동(0-12세)", "youth": "청소년(13-18세)", "young_adult": "청년(19-35세)", "adult": "장년(36-60세)", "senior": "노년(61세+)"}
                 for age_range, count in stats["age_demographics"].items():
