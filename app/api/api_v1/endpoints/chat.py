@@ -393,12 +393,14 @@ async def send_message(
         # 기존 일반 에이전트 로직
         church_context = {}
         if agent.church_data_sources:
+            logger.info(f"🔍 Fetching church context for church_id={current_user.church_id}, sources={agent.church_data_sources}")
             church_context = get_church_context_data(
                 db=db,
                 church_id=current_user.church_id,
                 church_data_sources=agent.church_data_sources,
                 user_query=chat_request.content,
             )
+            logger.info(f"📊 Church context retrieved: {list(church_context.keys()) if church_context else 'No data'}")
 
         # Get recent conversation history
         recent_messages = (
@@ -416,11 +418,13 @@ async def send_message(
         messages.append({"role": "user", "content": chat_request.content})
 
         # Add church data context if available
+        enhanced_system_prompt = agent.system_prompt
         if church_context:
             context_text = format_context_for_prompt(church_context)
             if context_text:
                 # Add context to the system prompt, not the user message
                 enhanced_system_prompt = agent.system_prompt + "\n\n" + context_text
+                logger.info(f"Added church context to system prompt: {len(context_text)} characters")
 
         # Use test service if no valid API key is configured
         use_test_service = False
@@ -450,12 +454,8 @@ async def send_message(
             church_openai_service = OpenAIService(api_key=api_key)
 
         # Generate AI response
-        # Use enhanced system prompt if church context is available
-        final_system_prompt = (
-            enhanced_system_prompt
-            if church_context and "enhanced_system_prompt" in locals()
-            else agent.system_prompt
-        )
+        # Use enhanced system prompt (which includes church context if available)
+        final_system_prompt = enhanced_system_prompt
 
         # Log OpenAI request details
         requested_model = church.gpt_model or "gpt-4o-mini"

@@ -71,7 +71,8 @@ def get_recent_announcements(
                 ),
                 "category": ann.category,
                 "created_at": ann.created_at.isoformat() if ann.created_at else None,
-                "importance": ann.importance,
+                "is_pinned": getattr(ann, 'is_pinned', False),
+                "target_audience": getattr(ann, 'target_audience', 'all'),
             }
             for ann in announcements
         ]
