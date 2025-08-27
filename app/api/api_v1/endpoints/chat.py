@@ -529,7 +529,9 @@ async def send_message(
                     "data_sources": (
                         list(church_context.keys()) if church_context else []
                     ),
-                    "church_data_context": church_context if church_context else None,
+                    # Remove detailed church_data_context from user-facing response
+                    # Only include summary data for debugging if needed
+                    "church_data_context": None,
                     "timestamp": ai_message.created_at,
                 },
                 "model": response.get("model", church.gpt_model or "gpt-4o-mini"),
