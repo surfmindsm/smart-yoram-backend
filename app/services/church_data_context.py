@@ -869,10 +869,20 @@ def format_context_for_prompt(context_data: Dict) -> str:
             # Gender distribution
             if stats.get("gender_distribution"):
                 gender_stats = stats["gender_distribution"]
-                male_count = gender_stats.get("M", 0) + gender_stats.get("male", 0)
-                female_count = gender_stats.get("F", 0) + gender_stats.get("female", 0)
+                # 모든 가능한 성별 값들을 체크
+                male_keys = ["M", "m", "male", "남성", "남", "Male", "MALE"]
+                female_keys = ["F", "f", "female", "여성", "여", "Female", "FEMALE"]
+                
+                male_count = sum(gender_stats.get(key, 0) for key in male_keys)
+                female_count = sum(gender_stats.get(key, 0) for key in female_keys)
+                
+                # 실제 데이터베이스의 모든 gender 값들도 표시 (디버깅용)
+                all_genders = {k: v for k, v in gender_stats.items() if v > 0}
+                
                 if male_count > 0 or female_count > 0:
                     context_parts.append(f"- 성별 분포: 남성 {male_count}명, 여성 {female_count}명")
+                    if len(all_genders) > 0:
+                        context_parts.append(f"  (데이터베이스 원본값: {all_genders})")
             
             # Marital status
             if stats.get("marital_status_distribution"):
