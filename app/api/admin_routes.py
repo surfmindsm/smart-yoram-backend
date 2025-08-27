@@ -201,7 +201,7 @@ async def update_secretary_agents_urgent():
         logger.info("Starting urgent secretary agent data sources update...")
         
         # Create new engine and session
-        engine = create_engine(settings.SQLALCHEMY_DATABASE_URI)
+        engine = create_engine(str(settings.DATABASE_URL))
         SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
         
         with SessionLocal() as db:
