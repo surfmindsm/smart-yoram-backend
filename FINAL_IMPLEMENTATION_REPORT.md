@@ -7,7 +7,7 @@
 ## 🚀 **구현 완료 목록**
 
 ### ✅ 1. 교회 생성 시 비서 에이전트 자동 생성
-**파일**: `app/api/api_v1/endpoints/churches.py`
+**파일**: `app/api/api_v1/endpoints/churches.py` 
 - 새 교회 생성 시 기본 에이전트 + 비서 에이전트 자동 생성
 - 실패 시에도 교회 생성은 계속 진행 (안전장치)
 
