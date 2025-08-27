@@ -3,7 +3,10 @@ Test OpenAI service that returns mock responses
 """
 
 import random
+import logging
 from typing import List, Dict
+
+logger = logging.getLogger(__name__)
 
 
 class TestOpenAIService:
@@ -45,7 +48,7 @@ class TestOpenAIService:
             content = "오늘은 정말 좋은 날씨네요! 하나님이 주신 아름다운 하루입니다."
         elif "기도" in user_message:
             content = "함께 기도하겠습니다. 주님께서 우리의 기도를 들으시고 응답해 주실 것입니다."
-        elif "헌금" in user_message and ("목표" in user_message or "계획" in user_message):
+        elif "헌금" in user_message and ("목표" in user_message or "계획" in user_message or "세울" in user_message or "설정" in user_message):
             content = """현재 교회 헌금 현황을 바탕으로 올해 목표를 제안드리겠습니다.
 
 📊 **현재 현황 분석:**
@@ -79,11 +82,32 @@ class TestOpenAIService:
 - 최믿음: 1,991,008원 (십일조)
 
 교인 171명 기준 참여율이 매우 낮은 상황입니다. 헌금 참여 독려 방안을 검토해보시기 바랍니다."""
+        elif "헌금" in user_message:
+            content = """교회 헌금 관련 문의해주셔서 감사합니다.
+
+📊 **올해 헌금 현황:**
+- 총 헌금액: 14,213,230원 (8월까지)
+- 교인 171명 기준 월평균 개인 헌금: 83,118원
+- 주요 헌금 형태: 십일조 (100%)
+
+💡 더 구체적인 정보가 필요하시면 다음과 같이 문의해 주세요:
+- "올해 헌금 목표를 어떻게 세울까?"
+- "지난달 헌금은 얼마나 됐나?"
+- "헌금 참여율 현황이 어떻게 되나?"
+
+어떤 부분이 궁금하신가요?"""
         else:
             content = random.choice(responses)
 
+        # Ensure content is not empty
+        if not content or content.strip() == "":
+            content = "죄송합니다. 요청을 처리하는 중에 문제가 발생했습니다. 다시 시도해 주세요."
+        
         # Calculate mock token usage
         tokens_used = len(user_message.split()) + len(content.split()) * 3
+
+        # Log the generated response for debugging
+        logger.info(f"Test OpenAI Service - User: '{user_message[:50]}...' -> Response: '{content[:100]}...'")
 
         return {
             "content": content,
