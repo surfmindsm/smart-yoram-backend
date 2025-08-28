@@ -67,16 +67,16 @@ def get_church_context_data(
 
 
 def get_recent_announcements(
-    db: Session, church_id: int, limit: int = 50
+    db: Session, church_id: int, limit: int = 100
 ) -> List[Dict]:
     """
-    Get recent announcements for the church.
+    Get ALL announcements for the church (no time limit).
     """
     try:
         announcements = (
             db.query(Announcement)
             .filter(Announcement.church_id == church_id)
-            # Remove is_active filter to show ALL announcements
+            # Show ALL announcements regardless of status
             .order_by(desc(Announcement.created_at))
             .limit(limit)
             .all()
@@ -86,13 +86,15 @@ def get_recent_announcements(
             {
                 "id": ann.id,
                 "title": ann.title,
-                "content": (
-                    ann.content[:200] + "..." if len(ann.content) > 200 else ann.content
-                ),
+                "content": ann.content,  # Show full content, not truncated
                 "category": ann.category,
+                "subcategory": ann.subcategory,  # Added missing column
+                "author_name": ann.author_name,  # Added missing column
+                "is_active": ann.is_active,  # Added missing column
+                "is_pinned": ann.is_pinned,
+                "target_audience": ann.target_audience,
                 "created_at": ann.created_at.isoformat() if ann.created_at else None,
-                "is_pinned": getattr(ann, 'is_pinned', False),
-                "target_audience": getattr(ann, 'target_audience', 'all'),
+                "updated_at": ann.updated_at.isoformat() if ann.updated_at else None,  # Added
             }
             for ann in announcements
         ]
@@ -102,18 +104,16 @@ def get_recent_announcements(
 
 
 def get_recent_prayer_requests(
-    db: Session, church_id: int, limit: int = 50
+    db: Session, church_id: int, limit: int = 100
 ) -> List[Dict]:
     """
-    Get recent prayer requests for the church.
+    Get ALL prayer requests for the church (no time limit).
     """
     try:
         prayer_requests = (
             db.query(PrayerRequest)
-            .filter(
-                PrayerRequest.church_id == church_id
-                # Remove status and visibility filters to show ALL prayer requests
-            )
+            .filter(PrayerRequest.church_id == church_id)
+            # Show ALL prayer requests regardless of status/expiry
             .order_by(desc(PrayerRequest.created_at))
             .limit(limit)
             .all()
@@ -123,13 +123,19 @@ def get_recent_prayer_requests(
             {
                 "id": req.id,
                 "requester_name": req.requester_name if not req.is_anonymous else "익명",
+                "requester_phone": req.requester_phone,  # Added missing column
                 "prayer_type": req.prayer_type,
-                "prayer_content": (
-                    req.prayer_content[:150] + "..." if len(req.prayer_content) > 150 else req.prayer_content
-                ),
+                "prayer_content": req.prayer_content,  # Show full content, not truncated
+                "is_anonymous": req.is_anonymous,  # Added missing column
                 "is_urgent": req.is_urgent,
-                "created_at": req.created_at.isoformat() if req.created_at else None,
+                "is_public": req.is_public,  # Added missing column
+                "status": req.status,  # Added missing column
+                "admin_notes": req.admin_notes,  # Added missing column
+                "answered_testimony": req.answered_testimony,  # Added missing column
                 "prayer_count": req.prayer_count,
+                "created_at": req.created_at.isoformat() if req.created_at else None,
+                "updated_at": req.updated_at.isoformat() if req.updated_at else None,  # Added
+                "closed_at": req.closed_at.isoformat() if req.closed_at else None,  # Added
                 "expires_at": req.expires_at.isoformat() if req.expires_at else None,
             }
             for req in prayer_requests
@@ -140,18 +146,16 @@ def get_recent_prayer_requests(
 
 
 def get_recent_pastoral_care_requests(
-    db: Session, church_id: int, limit: int = 50
+    db: Session, church_id: int, limit: int = 100
 ) -> List[Dict]:
     """
-    Get recent pastoral care requests for the church.
+    Get ALL pastoral care requests for the church (no time limit).
     """
     try:
         pastoral_requests = (
             db.query(PastoralCareRequest)
-            .filter(
-                PastoralCareRequest.church_id == church_id
-                # Remove status filter to show ALL pastoral care requests
-            )
+            .filter(PastoralCareRequest.church_id == church_id)
+            # Show ALL pastoral care requests regardless of status
             .order_by(desc(PastoralCareRequest.created_at))
             .limit(limit)
             .all()
@@ -161,12 +165,13 @@ def get_recent_pastoral_care_requests(
             {
                 "id": req.id,
                 "requester_name": req.requester_name,
-                "requester_phone": req.requester_phone,  # 연락처 추가
+                "requester_phone": req.requester_phone,
                 "request_type": req.request_type,
-                "request_content": req.request_content,  # 내용 자르지 않고 전체 표시
+                "request_content": req.request_content,
                 "priority": req.priority,
                 "is_urgent": req.is_urgent,
                 "status": req.status,
+                "assigned_pastor_id": req.assigned_pastor_id,  # Added missing column
                 "preferred_date": req.preferred_date.isoformat() if req.preferred_date else None,
                 "preferred_time_start": req.preferred_time_start.isoformat() if req.preferred_time_start else None,
                 "preferred_time_end": req.preferred_time_end.isoformat() if req.preferred_time_end else None,
@@ -176,9 +181,11 @@ def get_recent_pastoral_care_requests(
                 "updated_at": req.updated_at.isoformat() if req.updated_at else None,
                 "completed_at": req.completed_at.isoformat() if req.completed_at else None,
                 "address": req.address,
-                "completion_notes": req.completion_notes,  # 완료 노트 추가
-                "admin_notes": req.admin_notes,  # 관리자 노트 추가
-                "contact_info": req.contact_info,  # 연락처 정보 추가
+                "latitude": float(req.latitude) if req.latitude else None,  # Added missing column
+                "longitude": float(req.longitude) if req.longitude else None,  # Added missing column
+                "completion_notes": req.completion_notes,
+                "admin_notes": req.admin_notes,
+                "contact_info": req.contact_info,
             }
             for req in pastoral_requests
         ]
@@ -299,12 +306,10 @@ def get_all_offerings(
         recent_offerings = (
             db.query(Offering)
             .join(Member, isouter=True)
-            .filter(
-                Offering.church_id == church_id
-                # Show all offerings, no date restriction
-            )
+            .filter(Offering.church_id == church_id)
+            # Show all offerings, no date restriction
             .order_by(desc(Offering.offered_on))
-            .limit(10)
+            .limit(50)  # Increased limit
             .all()
         )
         
@@ -341,11 +346,15 @@ def get_all_offerings(
             },
             "recent_offerings": [
                 {
+                    "id": offering.id,  # Added missing column
                     "member_name": offering.member.name if offering.member else "익명",
+                    "member_id": offering.member_id,  # Added missing column
                     "fund_type": offering.fund_type,
                     "amount": float(offering.amount),
                     "date": offering.offered_on.isoformat(),
-                    "note": offering.note
+                    "note": offering.note,
+                    "created_at": offering.created_at.isoformat() if offering.created_at else None,  # Added
+                    "updated_at": offering.updated_at.isoformat() if offering.updated_at else None,  # Added
                 } for offering in recent_offerings
             ]
         }
@@ -467,7 +476,7 @@ def get_attendance_stats(db: Session, church_id: int) -> Dict:
             .all()
         )
         
-        # Get recent attendance records
+        # Get recent attendance records (no time limit)
         recent_attendance = (
             db.query(Attendance)
             .join(Member)
@@ -476,7 +485,7 @@ def get_attendance_stats(db: Session, church_id: int) -> Dict:
                 Attendance.present == True
             )
             .order_by(desc(Attendance.service_date))
-            .limit(10)
+            .limit(50)  # Increased limit
             .all()
         )
         
@@ -525,11 +534,16 @@ def get_attendance_stats(db: Session, church_id: int) -> Dict:
             ],
             "recent_attendances": [
                 {
+                    "id": att.id,  # Added missing column
+                    "member_id": att.member_id,  # Added missing column
                     "member_name": att.member.name if att.member else "Unknown",
                     "service_type": att.service_type,
                     "service_date": att.service_date.isoformat(),
+                    "present": att.present,  # Added missing column
                     "check_in_time": att.check_in_time.isoformat() if att.check_in_time else None,
-                    "check_in_method": att.check_in_method
+                    "check_in_method": att.check_in_method,
+                    "notes": getattr(att, 'notes', None),  # Added if exists
+                    "created_at": att.created_at.isoformat() if att.created_at else None,  # Added
                 } for att in recent_attendance
             ]
         }
@@ -676,16 +690,19 @@ def get_enhanced_member_statistics(db: Session, church_id: int) -> Dict:
             .scalar()
         )
 
-        # All baptisms (전체 기간)
-        recent_baptisms = (
+        # All baptisms (전체 기간) - enhanced with details
+        baptized_members = (
             db.query(Member)
             .filter(
                 Member.church_id == church_id,
                 Member.baptism_date.isnot(None),
                 Member.status == "active"
             )
-            .count()
+            .order_by(desc(Member.baptism_date))
+            .all()
         )
+        
+        recent_baptisms = len(baptized_members)
 
         # Family count
         family_count = (
@@ -707,6 +724,15 @@ def get_enhanced_member_statistics(db: Session, church_id: int) -> Dict:
             "detailed_age_distribution": {age: count for age, count in age_distribution},
             "gender_distribution": {gender: count for gender, count in gender_stats if gender},
             "marital_status_distribution": {status: count for status, count in marital_stats if status},
+            # Added baptism details
+            "baptism_details": [
+                {
+                    "member_name": member.name,
+                    "baptism_date": member.baptism_date.isoformat() if member.baptism_date else None,
+                    "baptism_church": member.baptism_church,
+                    "registration_date": member.registration_date.isoformat() if member.registration_date else None,
+                } for member in baptized_members[:20]  # Recent 20 baptisms
+            ]
         }
     except Exception as e:
         logger.error(f"Error fetching enhanced member statistics: {e}")
@@ -730,23 +756,18 @@ def get_member_statistics(db: Session, church_id: int) -> Dict:
     return get_enhanced_member_statistics(db, church_id)
 
 
-def get_worship_schedule(db: Session, church_id: int) -> List[Dict]:
+def get_worship_schedule(db: Session, church_id: int, limit: int = 100) -> List[Dict]:
     """
-    Get upcoming worship services schedule.
+    Get ALL worship services schedule (no time limit).
     """
     try:
-        # Get next 2 weeks of worship services
-        two_weeks_later = datetime.now() + timedelta(weeks=2)
-
+        # Get all worship services (past and future)
         services = (
             db.query(WorshipService)
-            .filter(
-                WorshipService.church_id == church_id,
-                WorshipService.worship_date >= datetime.now(),
-                WorshipService.worship_date <= two_weeks_later,
-                WorshipService.is_active == True,
-            )
-            .order_by(WorshipService.worship_date)
+            .filter(WorshipService.church_id == church_id)
+            # Show all services regardless of date or status
+            .order_by(desc(WorshipService.worship_date))
+            .limit(limit)
             .all()
         )
 
@@ -754,17 +775,18 @@ def get_worship_schedule(db: Session, church_id: int) -> List[Dict]:
             {
                 "id": service.id,
                 "worship_type": service.worship_type,
-                "worship_date": (
-                    service.worship_date.isoformat() if service.worship_date else None
-                ),
-                "start_time": (
-                    service.start_time.isoformat() if service.start_time else None
-                ),
+                "worship_date": service.worship_date.isoformat() if service.worship_date else None,
+                "start_time": service.start_time.isoformat() if service.start_time else None,
                 "end_time": service.end_time.isoformat() if service.end_time else None,
                 "location": service.location,
                 "preacher": service.preacher,
                 "sermon_title": service.sermon_title,
                 "bible_text": service.bible_text,
+                "is_active": service.is_active,  # Added missing column
+                "worship_order": getattr(service, 'worship_order', None),  # Added if exists
+                "notes": getattr(service, 'notes', None),  # Added if exists
+                "created_at": service.created_at.isoformat() if service.created_at else None,  # Added
+                "updated_at": service.updated_at.isoformat() if service.updated_at else None,  # Added
             }
             for service in services
         ]
