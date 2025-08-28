@@ -75,7 +75,8 @@ def get_recent_announcements(
     try:
         announcements = (
             db.query(Announcement)
-            .filter(Announcement.church_id == church_id, Announcement.is_active == True)
+            .filter(Announcement.church_id == church_id)
+            # Remove is_active filter to show ALL announcements
             .order_by(desc(Announcement.created_at))
             .limit(limit)
             .all()
@@ -110,9 +111,8 @@ def get_recent_prayer_requests(
         prayer_requests = (
             db.query(PrayerRequest)
             .filter(
-                PrayerRequest.church_id == church_id,
-                PrayerRequest.status == "active",
-                PrayerRequest.is_public == True
+                PrayerRequest.church_id == church_id
+                # Remove status and visibility filters to show ALL prayer requests
             )
             .order_by(desc(PrayerRequest.created_at))
             .limit(limit)
@@ -149,8 +149,8 @@ def get_recent_pastoral_care_requests(
         pastoral_requests = (
             db.query(PastoralCareRequest)
             .filter(
-                PastoralCareRequest.church_id == church_id,
-                PastoralCareRequest.status.in_(["pending", "approved", "scheduled"])
+                PastoralCareRequest.church_id == church_id
+                # Remove status filter to show ALL pastoral care requests
             )
             .order_by(desc(PastoralCareRequest.created_at))
             .limit(limit)
