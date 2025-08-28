@@ -161,18 +161,24 @@ def get_recent_pastoral_care_requests(
             {
                 "id": req.id,
                 "requester_name": req.requester_name,
+                "requester_phone": req.requester_phone,  # 연락처 추가
                 "request_type": req.request_type,
-                "request_content": (
-                    req.request_content[:150] + "..." if len(req.request_content) > 150 else req.request_content
-                ),
+                "request_content": req.request_content,  # 내용 자르지 않고 전체 표시
                 "priority": req.priority,
                 "is_urgent": req.is_urgent,
                 "status": req.status,
                 "preferred_date": req.preferred_date.isoformat() if req.preferred_date else None,
+                "preferred_time_start": req.preferred_time_start.isoformat() if req.preferred_time_start else None,
+                "preferred_time_end": req.preferred_time_end.isoformat() if req.preferred_time_end else None,
                 "scheduled_date": req.scheduled_date.isoformat() if req.scheduled_date else None,
                 "scheduled_time": req.scheduled_time.isoformat() if req.scheduled_time else None,
                 "created_at": req.created_at.isoformat() if req.created_at else None,
+                "updated_at": req.updated_at.isoformat() if req.updated_at else None,
+                "completed_at": req.completed_at.isoformat() if req.completed_at else None,
                 "address": req.address,
+                "completion_notes": req.completion_notes,  # 완료 노트 추가
+                "admin_notes": req.admin_notes,  # 관리자 노트 추가
+                "contact_info": req.contact_info,  # 연락처 정보 추가
             }
             for req in pastoral_requests
         ]
@@ -795,14 +801,38 @@ def format_context_for_prompt(context_data: Dict) -> str:
         pastoral_requests = context_data["pastoral_care_requests"]
         if pastoral_requests:
             context_parts.append("\n[심방 요청]")
-            for req in pastoral_requests:  # Show ALL pastoral care requests
+            # Sort by created_at desc to show most recent first
+            sorted_requests = sorted(pastoral_requests, key=lambda x: x['created_at'] or '', reverse=True)
+            for req in sorted_requests:  # Show ALL pastoral care requests in chronological order
                 urgency = " (긴급)" if req['is_urgent'] else ""
-                status_text = {"pending": "대기중", "approved": "승인됨", "scheduled": "예약됨"}.get(req['status'], req['status'])
+                status_text = {
+                    "pending": "대기중", 
+                    "approved": "승인됨", 
+                    "scheduled": "예약됨",
+                    "completed": "완료됨",
+                    "cancelled": "취소됨"
+                }.get(req['status'], req['status'])
+                
+                # 연락처 정보
+                phone_info = f", 연락처: {req['requester_phone']}" if req['requester_phone'] else ""
+                
+                # 날짜 정보
                 date_info = f", 희망일: {req['preferred_date']}" if req['preferred_date'] else ""
                 scheduled_info = f", 예약일시: {req['scheduled_date']} {req['scheduled_time']}" if req['scheduled_date'] else ""
+                
+                # 주소 정보
+                address_info = f", 주소: {req['address']}" if req['address'] else ""
+                
+                # 완료/관리자 노트
+                notes_info = ""
+                if req['completion_notes']:
+                    notes_info += f", 완료노트: {req['completion_notes']}"
+                if req['admin_notes']:
+                    notes_info += f", 관리자노트: {req['admin_notes']}"
+                
                 context_parts.append(
-                    f"- {req['requester_name']}: {req['request_content']}{urgency} "
-                    f"[{req['request_type']}, {status_text}{date_info}{scheduled_info}]"
+                    f"- ID{req['id']} {req['requester_name']}: {req['request_content']}{urgency}{phone_info} "
+                    f"[{req['request_type']}, {status_text}{date_info}{scheduled_info}{address_info}{notes_info}]"
                 )
 
     if context_data.get("offerings"):
