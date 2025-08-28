@@ -49,7 +49,7 @@ def get_church_context_data(
             context_data["prayer_requests"] = get_recent_prayer_requests(db, church_id)
             
         if church_data_sources.get("pastoral_care_requests"):
-            context_data["pastoral_care_requests"] = get_recent_pastoral_care_requests(db, church_id)
+            context_data["pastoral_care_requests"] = get_recent_pastoral_care_requests(db, church_id, limit=100)
             
         if church_data_sources.get("offerings"):
             context_data["offerings"] = get_all_offerings(db, church_id)  # 전체 데이터
@@ -784,7 +784,7 @@ def format_context_for_prompt(context_data: Dict) -> str:
         prayer_requests = context_data["prayer_requests"]
         if prayer_requests:
             context_parts.append("\n[중보기도 요청]")
-            for req in prayer_requests[:5]:  # Limit to 5 most recent
+            for req in prayer_requests:  # Show ALL prayer requests
                 urgency = " (긴급)" if req['is_urgent'] else ""
                 context_parts.append(
                     f"- {req['requester_name']}: {req['prayer_content']}{urgency} "
@@ -795,7 +795,7 @@ def format_context_for_prompt(context_data: Dict) -> str:
         pastoral_requests = context_data["pastoral_care_requests"]
         if pastoral_requests:
             context_parts.append("\n[심방 요청]")
-            for req in pastoral_requests[:5]:  # Limit to 5 most recent
+            for req in pastoral_requests:  # Show ALL pastoral care requests
                 urgency = " (긴급)" if req['is_urgent'] else ""
                 status_text = {"pending": "대기중", "approved": "승인됨", "scheduled": "예약됨"}.get(req['status'], req['status'])
                 date_info = f", 희망일: {req['preferred_date']}" if req['preferred_date'] else ""
