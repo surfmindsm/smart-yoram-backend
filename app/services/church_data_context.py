@@ -300,8 +300,8 @@ def get_all_offerings(
             db.query(Offering)
             .join(Member, isouter=True)
             .filter(
-                Offering.church_id == church_id,
-                Offering.offered_on >= start_date
+                Offering.church_id == church_id
+                # Show all offerings, no date restriction
             )
             .order_by(desc(Offering.offered_on))
             .limit(10)
