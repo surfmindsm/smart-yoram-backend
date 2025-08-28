@@ -300,8 +300,8 @@ def get_all_offerings(
             db.query(Offering)
             .join(Member, isouter=True)
             .filter(
-                Offering.church_id == church_id,
-                Offering.offered_on >= start_date
+                Offering.church_id == church_id
+                # Show all offerings, no date restriction
             )
             .order_by(desc(Offering.offered_on))
             .limit(10)
@@ -837,12 +837,26 @@ def format_context_for_prompt(context_data: Dict) -> str:
 
     if context_data.get("offerings"):
         offering_data = context_data["offerings"]
-        if offering_data.get("totals", {}).get("this_year", 0) > 0:
-            totals = offering_data["totals"]
+        # Show offering info even if amount is 0
+        totals = offering_data.get("totals", {})
+        if totals or offering_data:
             context_parts.append("\n[헌금 현황]")
-            context_parts.append(f"- 올해 총 헌금: {totals['this_year']:,.0f}원")
-            context_parts.append(f"- 작년 대비: {totals['year_over_year_change']:+.1f}% ({totals['last_year']:,.0f}원)")
-            context_parts.append(f"- 이번달: {totals['this_month']:,.0f}원 (전월 대비 {totals['month_over_month_change']:+.1f}%)")
+            this_year = totals.get('this_year', 0) or totals.get('all_time', 0)
+            last_year = totals.get('last_year', 0) 
+            
+            if this_year == 0 and last_year == 0:
+                context_parts.append("- 현재 헌금 기록이 없습니다")
+                context_parts.append("- 헌금 데이터베이스 연동 또는 입력 시스템 점검 필요")
+            else:
+                context_parts.append(f"- 올해 총 헌금: {this_year:,.0f}원")
+                if last_year > 0:
+                    change = ((this_year - last_year) / last_year * 100) if last_year > 0 else 0
+                    context_parts.append(f"- 작년 대비: {change:+.1f}% ({last_year:,.0f}원)")
+                
+                this_month = totals.get('this_month', 0)
+                if this_month > 0:
+                    month_change = totals.get('month_over_month_change', 0)
+                    context_parts.append(f"- 이번달: {this_month:,.0f}원 (전월 대비 {month_change:+.1f}%)")
             
             stats = offering_data.get("statistics", {})
             if stats.get("total_members", 0) > 0:
