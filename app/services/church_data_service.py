@@ -1,9 +1,7 @@
-import asyncio
 import logging
-from typing import Dict, List, Optional, Any
+from typing import Dict, List
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
-from app.models.church import Church
 from app.models.ai_agent import ChurchDatabaseConfig
 from app.core.security import decrypt_data
 import json
@@ -96,23 +94,72 @@ class ChurchDataService:
             engine = create_engine(conn_string)
 
             with engine.connect() as conn:
-                # Example query - adjust based on actual church database schema
-                query = text(
+                # Build database-specific query for absent members
+                if config.db_type == "mysql":
+                    query_sql = """
+                        SELECT 
+                            m.member_id,
+                            m.name,
+                            m.phone,
+                            MAX(a.attendance_date) as last_attendance,
+                            TIMESTAMPDIFF(WEEK, MAX(a.attendance_date), NOW()) as weeks_absent
+                        FROM members m
+                        LEFT JOIN attendance a ON m.member_id = a.member_id
+                        WHERE a.service_type = :service_type OR a.service_type IS NULL
+                        GROUP BY m.member_id, m.name, m.phone
+                        HAVING TIMESTAMPDIFF(WEEK, MAX(a.attendance_date), NOW()) >= :weeks
+                           OR MAX(a.attendance_date) IS NULL
+                        ORDER BY weeks_absent DESC
                     """
-                    SELECT 
-                        m.member_id,
-                        m.name,
-                        m.phone,
-                        MAX(a.attendance_date) as last_attendance,
-                        DATEDIFF(WEEK, MAX(a.attendance_date), GETDATE()) as weeks_absent
-                    FROM members m
-                    LEFT JOIN attendance a ON m.member_id = a.member_id
-                    WHERE a.service_type = :service_type
-                    GROUP BY m.member_id, m.name, m.phone
-                    HAVING DATEDIFF(WEEK, MAX(a.attendance_date), GETDATE()) >= :weeks
-                    ORDER BY weeks_absent DESC
-                """
-                )
+                elif config.db_type == "postgresql":
+                    query_sql = """
+                        SELECT 
+                            m.member_id,
+                            m.name,
+                            m.phone,
+                            MAX(a.attendance_date) as last_attendance,
+                            EXTRACT(WEEK FROM (CURRENT_DATE - MAX(a.attendance_date))) as weeks_absent
+                        FROM members m
+                        LEFT JOIN attendance a ON m.member_id = a.member_id
+                        WHERE a.service_type = :service_type OR a.service_type IS NULL
+                        GROUP BY m.member_id, m.name, m.phone
+                        HAVING EXTRACT(WEEK FROM (CURRENT_DATE - MAX(a.attendance_date))) >= :weeks
+                           OR MAX(a.attendance_date) IS NULL
+                        ORDER BY weeks_absent DESC
+                    """
+                elif config.db_type == "mssql":
+                    query_sql = """
+                        SELECT 
+                            m.member_id,
+                            m.name,
+                            m.phone,
+                            MAX(a.attendance_date) as last_attendance,
+                            DATEDIFF(WEEK, MAX(a.attendance_date), GETDATE()) as weeks_absent
+                        FROM members m
+                        LEFT JOIN attendance a ON m.member_id = a.member_id
+                        WHERE a.service_type = :service_type OR a.service_type IS NULL
+                        GROUP BY m.member_id, m.name, m.phone
+                        HAVING DATEDIFF(WEEK, MAX(a.attendance_date), GETDATE()) >= :weeks
+                           OR MAX(a.attendance_date) IS NULL
+                        ORDER BY weeks_absent DESC
+                    """
+                else:
+                    # Default fallback - basic query without date calculations
+                    query_sql = """
+                        SELECT 
+                            m.member_id,
+                            m.name,
+                            m.phone,
+                            MAX(a.attendance_date) as last_attendance,
+                            0 as weeks_absent
+                        FROM members m
+                        LEFT JOIN attendance a ON m.member_id = a.member_id
+                        WHERE a.service_type = :service_type OR a.service_type IS NULL
+                        GROUP BY m.member_id, m.name, m.phone
+                        ORDER BY MAX(a.attendance_date) ASC
+                    """
+
+                query = text(query_sql)
 
                 result = conn.execute(
                     query, {"weeks": weeks, "service_type": service_type}
@@ -160,20 +207,96 @@ class ChurchDataService:
             engine = create_engine(conn_string)
 
             with engine.connect() as conn:
-                # Example query for attendance stats
-                query = text(
+                # Build database-specific query for attendance stats
+                if config.db_type == "mysql":
+                    if period == "month":
+                        date_condition = (
+                            "attendance_date >= DATE_SUB(NOW(), INTERVAL 1 MONTH)"
+                        )
+                    elif period == "week":
+                        date_condition = (
+                            "attendance_date >= DATE_SUB(NOW(), INTERVAL 1 WEEK)"
+                        )
+                    else:
+                        date_condition = (
+                            "attendance_date >= DATE_SUB(NOW(), INTERVAL 1 YEAR)"
+                        )
+
+                    query_sql = f"""
+                        SELECT 
+                            service_type,
+                            COUNT(DISTINCT member_id) as attendees,
+                            AVG(CAST(attended as DECIMAL)) * 100 as attendance_rate,
+                            attendance_date
+                        FROM attendance
+                        WHERE {date_condition}
+                        GROUP BY service_type, attendance_date
+                        ORDER BY attendance_date DESC
                     """
-                    SELECT 
-                        service_type,
-                        COUNT(DISTINCT member_id) as attendees,
-                        AVG(CAST(attended as FLOAT)) * 100 as attendance_rate,
-                        attendance_date
-                    FROM attendance
-                    WHERE attendance_date >= DATEADD(:period, -1, GETDATE())
-                    GROUP BY service_type, attendance_date
-                    ORDER BY attendance_date DESC
-                """
-                )
+                elif config.db_type == "postgresql":
+                    if period == "month":
+                        date_condition = (
+                            "attendance_date >= CURRENT_DATE - INTERVAL '1 month'"
+                        )
+                    elif period == "week":
+                        date_condition = (
+                            "attendance_date >= CURRENT_DATE - INTERVAL '1 week'"
+                        )
+                    else:
+                        date_condition = (
+                            "attendance_date >= CURRENT_DATE - INTERVAL '1 year'"
+                        )
+
+                    query_sql = f"""
+                        SELECT 
+                            service_type,
+                            COUNT(DISTINCT member_id) as attendees,
+                            AVG(CAST(attended as FLOAT)) * 100 as attendance_rate,
+                            attendance_date
+                        FROM attendance
+                        WHERE {date_condition}
+                        GROUP BY service_type, attendance_date
+                        ORDER BY attendance_date DESC
+                    """
+                elif config.db_type == "mssql":
+                    if period == "month":
+                        date_condition = (
+                            "attendance_date >= DATEADD(MONTH, -1, GETDATE())"
+                        )
+                    elif period == "week":
+                        date_condition = (
+                            "attendance_date >= DATEADD(WEEK, -1, GETDATE())"
+                        )
+                    else:
+                        date_condition = (
+                            "attendance_date >= DATEADD(YEAR, -1, GETDATE())"
+                        )
+
+                    query_sql = f"""
+                        SELECT 
+                            service_type,
+                            COUNT(DISTINCT member_id) as attendees,
+                            AVG(CAST(attended as FLOAT)) * 100 as attendance_rate,
+                            attendance_date
+                        FROM attendance
+                        WHERE {date_condition}
+                        GROUP BY service_type, attendance_date
+                        ORDER BY attendance_date DESC
+                    """
+                else:
+                    # Default fallback
+                    query_sql = """
+                        SELECT 
+                            service_type,
+                            COUNT(DISTINCT member_id) as attendees,
+                            0 as attendance_rate,
+                            attendance_date
+                        FROM attendance
+                        GROUP BY service_type, attendance_date
+                        ORDER BY attendance_date DESC
+                    """
+
+                query = text(query_sql)
 
                 result = conn.execute(query, {"period": period})
 
@@ -215,24 +338,72 @@ class ChurchDataService:
             engine = create_engine(conn_string)
 
             with engine.connect() as conn:
-                query = text(
+                # Build database-specific query
+                if config.db_type == "mysql":
+                    query_sql = """
+                        SELECT 
+                            member_id,
+                            name,
+                            phone,
+                            email,
+                            address,
+                            birth_date,
+                            join_date
+                        FROM members
+                        WHERE name LIKE :search_term
+                           OR phone LIKE :search_term
+                           OR email LIKE :search_term
+                        LIMIT 50
                     """
-                    SELECT 
-                        member_id,
-                        name,
-                        phone,
-                        email,
-                        address,
-                        birth_date,
-                        join_date
-                    FROM members
-                    WHERE name LIKE :search_term
-                       OR phone LIKE :search_term
-                       OR email LIKE :search_term
-                    LIMIT 50
-                """
-                )
+                elif config.db_type == "postgresql":
+                    query_sql = """
+                        SELECT 
+                            member_id,
+                            name,
+                            phone,
+                            email,
+                            address,
+                            birth_date,
+                            join_date
+                        FROM members
+                        WHERE name ILIKE :search_term
+                           OR phone ILIKE :search_term
+                           OR email ILIKE :search_term
+                        LIMIT 50
+                    """
+                elif config.db_type == "mssql":
+                    query_sql = """
+                        SELECT TOP 50
+                            member_id,
+                            name,
+                            phone,
+                            email,
+                            address,
+                            birth_date,
+                            join_date
+                        FROM members
+                        WHERE name LIKE :search_term
+                           OR phone LIKE :search_term
+                           OR email LIKE :search_term
+                    """
+                else:
+                    # Default fallback
+                    query_sql = """
+                        SELECT 
+                            member_id,
+                            name,
+                            phone,
+                            email,
+                            address,
+                            birth_date,
+                            join_date
+                        FROM members
+                        WHERE name LIKE :search_term
+                           OR phone LIKE :search_term
+                           OR email LIKE :search_term
+                    """
 
+                query = text(query_sql)
                 search_pattern = f"%{search_term}%" if search_term else "%"
                 result = conn.execute(query, {"search_term": search_pattern})
 
@@ -280,19 +451,92 @@ class ChurchDataService:
             engine = create_engine(conn_string)
 
             with engine.connect() as conn:
-                query = text(
+                # Build database-specific query for donation stats
+                if config.db_type == "mysql":
+                    if period == "month":
+                        date_condition = (
+                            "donation_date >= DATE_SUB(NOW(), INTERVAL 1 MONTH)"
+                        )
+                    elif period == "week":
+                        date_condition = (
+                            "donation_date >= DATE_SUB(NOW(), INTERVAL 1 WEEK)"
+                        )
+                    else:
+                        date_condition = (
+                            "donation_date >= DATE_SUB(NOW(), INTERVAL 1 YEAR)"
+                        )
+
+                    query_sql = f"""
+                        SELECT 
+                            donation_type,
+                            SUM(amount) as total_amount,
+                            COUNT(DISTINCT member_id) as donors,
+                            AVG(amount) as avg_amount
+                        FROM donations
+                        WHERE {date_condition}
+                        GROUP BY donation_type
+                        ORDER BY total_amount DESC
                     """
-                    SELECT 
-                        donation_type,
-                        SUM(amount) as total_amount,
-                        COUNT(DISTINCT member_id) as donors,
-                        AVG(amount) as avg_amount
-                    FROM donations
-                    WHERE donation_date >= DATEADD(:period, -1, GETDATE())
-                    GROUP BY donation_type
-                    ORDER BY total_amount DESC
-                """
-                )
+                elif config.db_type == "postgresql":
+                    if period == "month":
+                        date_condition = (
+                            "donation_date >= CURRENT_DATE - INTERVAL '1 month'"
+                        )
+                    elif period == "week":
+                        date_condition = (
+                            "donation_date >= CURRENT_DATE - INTERVAL '1 week'"
+                        )
+                    else:
+                        date_condition = (
+                            "donation_date >= CURRENT_DATE - INTERVAL '1 year'"
+                        )
+
+                    query_sql = f"""
+                        SELECT 
+                            donation_type,
+                            SUM(amount) as total_amount,
+                            COUNT(DISTINCT member_id) as donors,
+                            AVG(amount) as avg_amount
+                        FROM donations
+                        WHERE {date_condition}
+                        GROUP BY donation_type
+                        ORDER BY total_amount DESC
+                    """
+                elif config.db_type == "mssql":
+                    if period == "month":
+                        date_condition = (
+                            "donation_date >= DATEADD(MONTH, -1, GETDATE())"
+                        )
+                    elif period == "week":
+                        date_condition = "donation_date >= DATEADD(WEEK, -1, GETDATE())"
+                    else:
+                        date_condition = "donation_date >= DATEADD(YEAR, -1, GETDATE())"
+
+                    query_sql = f"""
+                        SELECT 
+                            donation_type,
+                            SUM(amount) as total_amount,
+                            COUNT(DISTINCT member_id) as donors,
+                            AVG(amount) as avg_amount
+                        FROM donations
+                        WHERE {date_condition}
+                        GROUP BY donation_type
+                        ORDER BY total_amount DESC
+                    """
+                else:
+                    # Default fallback
+                    query_sql = """
+                        SELECT 
+                            donation_type,
+                            SUM(amount) as total_amount,
+                            COUNT(DISTINCT member_id) as donors,
+                            AVG(amount) as avg_amount
+                        FROM donations
+                        GROUP BY donation_type
+                        ORDER BY total_amount DESC
+                    """
+
+                query = text(query_sql)
 
                 result = conn.execute(query, {"period": period})
 
@@ -339,24 +583,89 @@ class ChurchDataService:
             engine = create_engine(conn_string)
 
             with engine.connect() as conn:
-                if upcoming:
-                    query = text(
+                # Build database-specific query for events
+                if config.db_type == "mysql":
+                    if upcoming:
+                        query_sql = """
+                            SELECT 
+                                event_id,
+                                event_name,
+                                event_date,
+                                location,
+                                description
+                            FROM events
+                            WHERE event_date >= NOW()
+                            ORDER BY event_date ASC
+                            LIMIT 20
                         """
-                        SELECT 
-                            event_id,
-                            event_name,
-                            event_date,
-                            location,
-                            description
-                        FROM events
-                        WHERE event_date >= GETDATE()
-                        ORDER BY event_date ASC
-                        LIMIT 20
-                    """
-                    )
+                    else:
+                        query_sql = """
+                            SELECT 
+                                event_id,
+                                event_name,
+                                event_date,
+                                location,
+                                description
+                            FROM events
+                            WHERE event_date < NOW()
+                            ORDER BY event_date DESC
+                            LIMIT 20
+                        """
+                elif config.db_type == "postgresql":
+                    if upcoming:
+                        query_sql = """
+                            SELECT 
+                                event_id,
+                                event_name,
+                                event_date,
+                                location,
+                                description
+                            FROM events
+                            WHERE event_date >= CURRENT_DATE
+                            ORDER BY event_date ASC
+                            LIMIT 20
+                        """
+                    else:
+                        query_sql = """
+                            SELECT 
+                                event_id,
+                                event_name,
+                                event_date,
+                                location,
+                                description
+                            FROM events
+                            WHERE event_date < CURRENT_DATE
+                            ORDER BY event_date DESC
+                            LIMIT 20
+                        """
+                elif config.db_type == "mssql":
+                    if upcoming:
+                        query_sql = """
+                            SELECT TOP 20
+                                event_id,
+                                event_name,
+                                event_date,
+                                location,
+                                description
+                            FROM events
+                            WHERE event_date >= GETDATE()
+                            ORDER BY event_date ASC
+                        """
+                    else:
+                        query_sql = """
+                            SELECT TOP 20
+                                event_id,
+                                event_name,
+                                event_date,
+                                location,
+                                description
+                            FROM events
+                            WHERE event_date < GETDATE()
+                            ORDER BY event_date DESC
+                        """
                 else:
-                    query = text(
-                        """
+                    # Default fallback
+                    query_sql = """
                         SELECT 
                             event_id,
                             event_name,
@@ -364,11 +673,10 @@ class ChurchDataService:
                             location,
                             description
                         FROM events
-                        WHERE event_date < GETDATE()
                         ORDER BY event_date DESC
-                        LIMIT 20
                     """
-                    )
+
+                query = text(query_sql)
 
                 result = conn.execute(query)
 
