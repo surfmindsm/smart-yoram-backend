@@ -72,8 +72,7 @@ def get_church_context_data(
             "prioritize_mode": prioritize_church_data,
         }
 
-        # 🚀 Optimized parallel data retrieval with Redis caching for 60-80% performance improvement  
-        import concurrent.futures
+        # 🚀 Robust data retrieval with error isolation - prevents one failed query from breaking everything
         from app.services.church_data_cache import (
             get_announcements_cached,
             get_attendance_stats_cached,
@@ -84,60 +83,66 @@ def get_church_context_data(
             get_offering_stats_cached,
         )
 
-        # Define data fetching functions with thread-local database sessions
-        def fetch_data_with_session(data_type, fetch_func, db_session, church_id):
-            """Fetch data using a thread-local database session"""
-            try:
-                return data_type, fetch_func(db_session, church_id)
-            except Exception as e:
-                logger.error(f"Error fetching {data_type}: {e}")
-                return data_type, {} if data_type.endswith('_stats') else []
-
-        # Prepare tasks for parallel execution
-        fetch_tasks = []
-        
+        # Individual data fetching with error isolation
         if "announcements" in sources_to_include:
-            fetch_tasks.append(("announcements", get_announcements_cached))
-            
-        if "attendance" in sources_to_include or "attendances" in sources_to_include:
-            fetch_tasks.append(("attendance_stats", get_attendance_stats_cached))
-            
-        if "members" in sources_to_include:
-            fetch_tasks.append(("member_stats", get_member_stats_cached))
-            
-        if "worship_services" in sources_to_include or "worship" in sources_to_include:
-            fetch_tasks.append(("worship_schedule", get_worship_schedule_cached))
-            
-        if "prayer_requests" in sources_to_include:
-            fetch_tasks.append(("prayer_requests", get_prayer_requests_cached))
-            
-        if "pastoral_care_requests" in sources_to_include or "pastoral_care" in sources_to_include:
-            fetch_tasks.append(("pastoral_care_requests", get_pastoral_care_requests_cached))
-            
-        if "offerings" in sources_to_include:
-            fetch_tasks.append(("offering_stats", get_offering_stats_cached))
+            try:
+                context_data["announcements"] = get_announcements_cached(db, church_id)
+                logger.info(f"✅ Successfully fetched announcements: {len(context_data['announcements'])} items")
+            except Exception as e:
+                logger.error(f"❌ Error fetching announcements: {e}")
+                context_data["announcements"] = []
 
-        # Execute data fetching in parallel using ThreadPoolExecutor
-        if fetch_tasks:
-            with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(fetch_tasks), 4)) as executor:
-                future_to_data_type = {
-                    executor.submit(fetch_data_with_session, data_type, fetch_func, db, church_id): data_type
-                    for data_type, fetch_func in fetch_tasks
+        if "attendance" in sources_to_include or "attendances" in sources_to_include:
+            try:
+                context_data["attendance_stats"] = get_attendance_stats_cached(db, church_id)
+                logger.info("✅ Successfully fetched attendance stats")
+            except Exception as e:
+                logger.error(f"❌ Error fetching attendance stats: {e}")
+                context_data["attendance_stats"] = {}
+
+        if "members" in sources_to_include:
+            try:
+                context_data["member_stats"] = get_member_stats_cached(db, church_id)
+                logger.info("✅ Successfully fetched member stats")
+            except Exception as e:
+                logger.error(f"❌ Error fetching member stats (database may be corrupted): {e}")
+                # Provide basic fallback data
+                context_data["member_stats"] = {
+                    "total_members": "조회 불가 (데이터베이스 오류)",
+                    "error": "Members 테이블 조회 실패"
                 }
-                
-                # Collect results as they complete
-                for future in concurrent.futures.as_completed(future_to_data_type):
-                    try:
-                        data_type, result = future.result(timeout=30)  # 30 second timeout per task
-                        context_data[data_type] = result
-                    except concurrent.futures.TimeoutError:
-                        data_type = future_to_data_type[future]
-                        logger.error(f"Timeout fetching {data_type}")
-                        context_data[data_type] = {} if data_type.endswith('_stats') else []
-                    except Exception as e:
-                        data_type = future_to_data_type[future]
-                        logger.error(f"Error fetching {data_type}: {e}")
-                        context_data[data_type] = {} if data_type.endswith('_stats') else []
+
+        if "worship_services" in sources_to_include or "worship" in sources_to_include:
+            try:
+                context_data["worship_schedule"] = get_worship_schedule_cached(db, church_id)
+                logger.info("✅ Successfully fetched worship schedule")
+            except Exception as e:
+                logger.error(f"❌ Error fetching worship schedule: {e}")
+                context_data["worship_schedule"] = []
+
+        if "prayer_requests" in sources_to_include:
+            try:
+                context_data["prayer_requests"] = get_prayer_requests_cached(db, church_id)
+                logger.info(f"✅ Successfully fetched prayer requests: {len(context_data['prayer_requests'])} items")
+            except Exception as e:
+                logger.error(f"❌ Error fetching prayer requests: {e}")
+                context_data["prayer_requests"] = []
+
+        if "pastoral_care_requests" in sources_to_include or "pastoral_care" in sources_to_include:
+            try:
+                context_data["pastoral_care_requests"] = get_pastoral_care_requests_cached(db, church_id)
+                logger.info(f"✅ Successfully fetched pastoral care requests: {len(context_data['pastoral_care_requests'])} items")
+            except Exception as e:
+                logger.error(f"❌ Error fetching pastoral care requests: {e}")
+                context_data["pastoral_care_requests"] = []
+
+        if "offerings" in sources_to_include:
+            try:
+                context_data["offering_stats"] = get_offering_stats_cached(db, church_id)
+                logger.info("✅ Successfully fetched offering stats")
+            except Exception as e:
+                logger.error(f"❌ Error fetching offering stats: {e}")
+                context_data["offering_stats"] = {}
 
     except Exception as e:
         logger.error(f"Error retrieving church context data: {e}")
