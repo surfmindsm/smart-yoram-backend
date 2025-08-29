@@ -1,5 +1,5 @@
 from typing import Dict, List, Optional, Any
-from datetime import datetime, timedelta
+from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, func
 import logging
@@ -16,7 +16,13 @@ logger = logging.getLogger(__name__)
 
 
 def get_church_context_data(
-    db: Session, church_id: int, church_data_sources: Dict, user_query: str = ""
+    db: Session,
+    church_id: int,
+    church_data_sources: Dict = None,
+    user_query: str = "",
+    requested_sources: List[str] = None,
+    format: str = "detailed",
+    prioritize_church_data: bool = False,
 ) -> Dict[str, Any]:
     """
     Retrieve church data based on enabled data sources.
@@ -26,39 +32,71 @@ def get_church_context_data(
         church_id: Church ID
         church_data_sources: Dictionary of enabled data sources
         user_query: User's query to help filter relevant data
+        requested_sources: List of specific sources to include
+        format: Response format (detailed, summary, compact)
+        prioritize_church_data: Whether this is for priority church data mode
 
     Returns:
         Dictionary containing church context data
     """
     context_data = {}
 
+    # Determine which sources to include
+    sources_to_include = set()
+
+    if requested_sources:
+        sources_to_include.update(requested_sources)
+    elif church_data_sources:
+        sources_to_include.update(
+            [key for key, value in church_data_sources.items() if value is True]
+        )
+    else:
+        # Default sources for priority mode
+        if prioritize_church_data:
+            sources_to_include = {
+                "announcements",
+                "prayer_requests",
+                "pastoral_care_requests",
+                "offerings",
+                "attendances",
+                "members",
+                "worship_services",
+            }
+
     try:
-        if church_data_sources.get("announcements"):
+        # Add metadata
+        context_data["metadata"] = {
+            "generated_at": datetime.now().isoformat(),
+            "sources_included": list(sources_to_include),
+            "format": format,
+            "prioritize_mode": prioritize_church_data,
+        }
+
+        if "announcements" in sources_to_include:
             context_data["announcements"] = get_recent_announcements(db, church_id)
 
-        if church_data_sources.get("attendances"):
-            context_data["attendances"] = get_attendance_stats(db, church_id)
+        if "attendance" in sources_to_include or "attendances" in sources_to_include:
+            context_data["attendance_stats"] = get_attendance_stats(db, church_id)
 
-        if church_data_sources.get("members"):
-            context_data["members"] = get_member_statistics(db, church_id)
+        if "members" in sources_to_include:
+            context_data["member_stats"] = get_enhanced_member_statistics(db, church_id)
 
-        if church_data_sources.get("worship_services"):
-            context_data["worship_services"] = get_worship_schedule(db, church_id)
-            
-        if church_data_sources.get("prayer_requests"):
+        if "worship_services" in sources_to_include or "worship" in sources_to_include:
+            context_data["worship_schedule"] = get_worship_schedule(db, church_id)
+
+        if "prayer_requests" in sources_to_include:
             context_data["prayer_requests"] = get_recent_prayer_requests(db, church_id)
-            
-        if church_data_sources.get("pastoral_care_requests"):
-            context_data["pastoral_care_requests"] = get_recent_pastoral_care_requests(db, church_id, limit=100)
-            
-        if church_data_sources.get("offerings"):
-            context_data["offerings"] = get_all_offerings(db, church_id)  # 전체 데이터
-            
-        if church_data_sources.get("attendances"):
-            context_data["attendances"] = get_attendance_stats(db, church_id)
-            
-        if church_data_sources.get("members"):
-            context_data["members"] = get_enhanced_member_statistics(db, church_id)
+
+        if (
+            "pastoral_care_requests" in sources_to_include
+            or "pastoral_care" in sources_to_include
+        ):
+            context_data["pastoral_care_requests"] = get_recent_pastoral_care_requests(
+                db, church_id
+            )
+
+        if "offerings" in sources_to_include:
+            context_data["offering_stats"] = get_all_offerings(db, church_id)
 
     except Exception as e:
         logger.error(f"Error retrieving church context data: {e}")
@@ -94,7 +132,9 @@ def get_recent_announcements(
                 "is_pinned": ann.is_pinned,
                 "target_audience": ann.target_audience,
                 "created_at": ann.created_at.isoformat() if ann.created_at else None,
-                "updated_at": ann.updated_at.isoformat() if ann.updated_at else None,  # Added
+                "updated_at": (
+                    ann.updated_at.isoformat() if ann.updated_at else None
+                ),  # Added
             }
             for ann in announcements
         ]
@@ -122,7 +162,9 @@ def get_recent_prayer_requests(
         return [
             {
                 "id": req.id,
-                "requester_name": req.requester_name if not req.is_anonymous else "익명",
+                "requester_name": (
+                    req.requester_name if not req.is_anonymous else "익명"
+                ),
                 "requester_phone": req.requester_phone,  # Added missing column
                 "prayer_type": req.prayer_type,
                 "prayer_content": req.prayer_content,  # Show full content, not truncated
@@ -134,8 +176,12 @@ def get_recent_prayer_requests(
                 "answered_testimony": req.answered_testimony,  # Added missing column
                 "prayer_count": req.prayer_count,
                 "created_at": req.created_at.isoformat() if req.created_at else None,
-                "updated_at": req.updated_at.isoformat() if req.updated_at else None,  # Added
-                "closed_at": req.closed_at.isoformat() if req.closed_at else None,  # Added
+                "updated_at": (
+                    req.updated_at.isoformat() if req.updated_at else None
+                ),  # Added
+                "closed_at": (
+                    req.closed_at.isoformat() if req.closed_at else None
+                ),  # Added
                 "expires_at": req.expires_at.isoformat() if req.expires_at else None,
             }
             for req in prayer_requests
@@ -172,17 +218,37 @@ def get_recent_pastoral_care_requests(
                 "is_urgent": req.is_urgent,
                 "status": req.status,
                 "assigned_pastor_id": req.assigned_pastor_id,  # Added missing column
-                "preferred_date": req.preferred_date.isoformat() if req.preferred_date else None,
-                "preferred_time_start": req.preferred_time_start.isoformat() if req.preferred_time_start else None,
-                "preferred_time_end": req.preferred_time_end.isoformat() if req.preferred_time_end else None,
-                "scheduled_date": req.scheduled_date.isoformat() if req.scheduled_date else None,
-                "scheduled_time": req.scheduled_time.isoformat() if req.scheduled_time else None,
+                "preferred_date": (
+                    req.preferred_date.isoformat() if req.preferred_date else None
+                ),
+                "preferred_time_start": (
+                    req.preferred_time_start.isoformat()
+                    if req.preferred_time_start
+                    else None
+                ),
+                "preferred_time_end": (
+                    req.preferred_time_end.isoformat()
+                    if req.preferred_time_end
+                    else None
+                ),
+                "scheduled_date": (
+                    req.scheduled_date.isoformat() if req.scheduled_date else None
+                ),
+                "scheduled_time": (
+                    req.scheduled_time.isoformat() if req.scheduled_time else None
+                ),
                 "created_at": req.created_at.isoformat() if req.created_at else None,
                 "updated_at": req.updated_at.isoformat() if req.updated_at else None,
-                "completed_at": req.completed_at.isoformat() if req.completed_at else None,
+                "completed_at": (
+                    req.completed_at.isoformat() if req.completed_at else None
+                ),
                 "address": req.address,
-                "latitude": float(req.latitude) if req.latitude else None,  # Added missing column
-                "longitude": float(req.longitude) if req.longitude else None,  # Added missing column
+                "latitude": (
+                    float(req.latitude) if req.latitude else None
+                ),  # Added missing column
+                "longitude": (
+                    float(req.longitude) if req.longitude else None
+                ),  # Added missing column
                 "completion_notes": req.completion_notes,
                 "admin_notes": req.admin_notes,
                 "contact_info": req.contact_info,
@@ -194,114 +260,140 @@ def get_recent_pastoral_care_requests(
         return []
 
 
-def get_all_offerings(
-    db: Session, church_id: int
-) -> Dict:
+def get_all_offerings(db: Session, church_id: int) -> Dict:
     """
     Get comprehensive offering statistics for the church (all data).
     """
     try:
         from datetime import datetime, timedelta
-        
+
         # Calculate multiple date ranges
         end_date = datetime.now().date()
         # Remove start_date limitation - get all data
-        
+
         # This year and last year
         current_year = end_date.year
         last_year = current_year - 1
         this_year_start = datetime(current_year, 1, 1).date()
         last_year_start = datetime(last_year, 1, 1).date()
         last_year_end = datetime(last_year, 12, 31).date()
-        
+
         # Current month and last month
         current_month_start = end_date.replace(day=1)
         if current_month_start.month == 1:
-            last_month_start = current_month_start.replace(year=current_month_start.year - 1, month=12)
+            last_month_start = current_month_start.replace(
+                year=current_month_start.year - 1, month=12
+            )
         else:
-            last_month_start = current_month_start.replace(month=current_month_start.month - 1)
-        
+            last_month_start = current_month_start.replace(
+                month=current_month_start.month - 1
+            )
+
         # Get total offering for all time
-        total_all_time = db.query(func.sum(Offering.amount)).filter(
-            Offering.church_id == church_id,
-            Offering.offered_on <= end_date
-        ).scalar() or 0
-        
+        total_all_time = (
+            db.query(func.sum(Offering.amount))
+            .filter(Offering.church_id == church_id, Offering.offered_on <= end_date)
+            .scalar()
+            or 0
+        )
+
         # Get this year total
-        total_this_year = db.query(func.sum(Offering.amount)).filter(
-            Offering.church_id == church_id,
-            Offering.offered_on >= this_year_start,
-            Offering.offered_on <= end_date
-        ).scalar() or 0
-        
+        total_this_year = (
+            db.query(func.sum(Offering.amount))
+            .filter(
+                Offering.church_id == church_id,
+                Offering.offered_on >= this_year_start,
+                Offering.offered_on <= end_date,
+            )
+            .scalar()
+            or 0
+        )
+
         # Get last year total
-        total_last_year = db.query(func.sum(Offering.amount)).filter(
-            Offering.church_id == church_id,
-            Offering.offered_on >= last_year_start,
-            Offering.offered_on <= last_year_end
-        ).scalar() or 0
-        
+        total_last_year = (
+            db.query(func.sum(Offering.amount))
+            .filter(
+                Offering.church_id == church_id,
+                Offering.offered_on >= last_year_start,
+                Offering.offered_on <= last_year_end,
+            )
+            .scalar()
+            or 0
+        )
+
         # Get this month total
-        total_this_month = db.query(func.sum(Offering.amount)).filter(
-            Offering.church_id == church_id,
-            Offering.offered_on >= current_month_start,
-            Offering.offered_on <= end_date
-        ).scalar() or 0
-        
+        total_this_month = (
+            db.query(func.sum(Offering.amount))
+            .filter(
+                Offering.church_id == church_id,
+                Offering.offered_on >= current_month_start,
+                Offering.offered_on <= end_date,
+            )
+            .scalar()
+            or 0
+        )
+
         # Get last month total
         if current_month_start.month == 1:
             last_month_end = datetime(current_month_start.year - 1, 12, 31).date()
         else:
             last_month_end = current_month_start - timedelta(days=1)
-            
-        total_last_month = db.query(func.sum(Offering.amount)).filter(
-            Offering.church_id == church_id,
-            Offering.offered_on >= last_month_start,
-            Offering.offered_on <= last_month_end
-        ).scalar() or 0
-        
+
+        total_last_month = (
+            db.query(func.sum(Offering.amount))
+            .filter(
+                Offering.church_id == church_id,
+                Offering.offered_on >= last_month_start,
+                Offering.offered_on <= last_month_end,
+            )
+            .scalar()
+            or 0
+        )
+
         # Monthly breakdown for this year
         monthly_breakdown = (
             db.query(
-                func.extract('month', Offering.offered_on).label('month'),
-                func.sum(Offering.amount).label('total')
+                func.extract("month", Offering.offered_on).label("month"),
+                func.sum(Offering.amount).label("total"),
             )
             .filter(
                 Offering.church_id == church_id,
                 Offering.offered_on >= this_year_start,
-                Offering.offered_on <= end_date
+                Offering.offered_on <= end_date,
             )
-            .group_by(func.extract('month', Offering.offered_on))
-            .order_by('month')
+            .group_by(func.extract("month", Offering.offered_on))
+            .order_by("month")
             .all()
         )
-        
+
         # Fund type breakdown for this year
         fund_stats_year = (
             db.query(
                 Offering.fund_type,
-                func.sum(Offering.amount).label('total'),
-                func.count(Offering.id).label('count')
+                func.sum(Offering.amount).label("total"),
+                func.count(Offering.id).label("count"),
             )
             .filter(
                 Offering.church_id == church_id,
                 Offering.offered_on >= this_year_start,
-                Offering.offered_on <= end_date
+                Offering.offered_on <= end_date,
             )
             .group_by(Offering.fund_type)
-            .order_by(desc('total'))
+            .order_by(desc("total"))
             .all()
         )
-        
+
         # Average offering per member (if member data available)
         total_members = (
             db.query(Member)
             .filter(Member.church_id == church_id, Member.status == "active")
             .count()
         )
-        
-        avg_offering_per_member = (total_this_month / total_members) if total_members > 0 else 0
-        
+
+        avg_offering_per_member = (
+            (total_this_month / total_members) if total_members > 0 else 0
+        )
+
         # Get recent individual offerings (more details)
         recent_offerings = (
             db.query(Offering)
@@ -312,7 +404,7 @@ def get_all_offerings(
             .limit(50)  # Increased limit
             .all()
         )
-        
+
         return {
             "period_days": "전체 기간",
             "totals": {
@@ -321,28 +413,60 @@ def get_all_offerings(
                 "last_year": float(total_last_year),
                 "this_month": float(total_this_month),
                 "last_month": float(total_last_month),
-                "year_over_year_change": float((total_this_year - total_last_year) / total_last_year * 100) if total_last_year > 0 else 0,
-                "month_over_month_change": float((total_this_month - total_last_month) / total_last_month * 100) if total_last_month > 0 else 0,
+                "year_over_year_change": (
+                    float((total_this_year - total_last_year) / total_last_year * 100)
+                    if total_last_year > 0
+                    else 0
+                ),
+                "month_over_month_change": (
+                    float(
+                        (total_this_month - total_last_month) / total_last_month * 100
+                    )
+                    if total_last_month > 0
+                    else 0
+                ),
             },
             "monthly_breakdown": [
                 {
                     "month": int(month.month),
-                    "month_name": ["", "1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"][int(month.month)],
-                    "total": float(month.total)
-                } for month in monthly_breakdown
+                    "month_name": [
+                        "",
+                        "1월",
+                        "2월",
+                        "3월",
+                        "4월",
+                        "5월",
+                        "6월",
+                        "7월",
+                        "8월",
+                        "9월",
+                        "10월",
+                        "11월",
+                        "12월",
+                    ][int(month.month)],
+                    "total": float(month.total),
+                }
+                for month in monthly_breakdown
             ],
             "fund_breakdown": [
                 {
                     "fund_type": fund.fund_type,
                     "total": float(fund.total),
                     "count": fund.count,
-                    "percentage": float(fund.total / total_this_year * 100) if total_this_year > 0 else 0
-                } for fund in fund_stats_year
+                    "percentage": (
+                        float(fund.total / total_this_year * 100)
+                        if total_this_year > 0
+                        else 0
+                    ),
+                }
+                for fund in fund_stats_year
             ],
             "statistics": {
                 "total_members": total_members,
                 "avg_offering_per_member_this_month": round(avg_offering_per_member, 0),
-                "total_offerings_count_this_year": sum(fund.count for fund in fund_stats_year),
+                "total_offerings_count_this_year": sum(
+                    fund.count for fund in fund_stats_year
+                ),
             },
             "recent_offerings": [
                 {
@@ -353,10 +477,15 @@ def get_all_offerings(
                     "amount": float(offering.amount),
                     "date": offering.offered_on.isoformat(),
                     "note": offering.note,
-                    "created_at": offering.created_at.isoformat() if offering.created_at else None,  # Added
-                    "updated_at": offering.updated_at.isoformat() if offering.updated_at else None,  # Added
-                } for offering in recent_offerings
-            ]
+                    "created_at": (
+                        offering.created_at.isoformat() if offering.created_at else None
+                    ),  # Added
+                    "updated_at": (
+                        offering.updated_at.isoformat() if offering.updated_at else None
+                    ),  # Added
+                }
+                for offering in recent_offerings
+            ],
         }
     except Exception as e:
         logger.error(f"Error fetching offering statistics: {e}")
@@ -364,7 +493,7 @@ def get_all_offerings(
             "period_days": "전체 기간",
             "total_amount": 0,
             "fund_breakdown": [],
-            "recent_offerings": []
+            "recent_offerings": [],
         }
 
 
@@ -374,19 +503,19 @@ def get_attendance_stats(db: Session, church_id: int) -> Dict:
     """
     try:
         from datetime import datetime, timedelta
-        
+
         # Get date ranges
         today = datetime.now().date()
         last_week_start = today - timedelta(days=today.weekday() + 7)  # Last Monday
         last_week_end = last_week_start + timedelta(days=6)  # Last Sunday
-        
+
         # Get total member count
         total_members = (
             db.query(Member)
             .filter(Member.church_id == church_id, Member.status == "active")
             .count()
         )
-        
+
         # Get last week attendance
         last_week_attendance = (
             db.query(func.count(Attendance.id.distinct()))
@@ -394,143 +523,173 @@ def get_attendance_stats(db: Session, church_id: int) -> Dict:
                 Attendance.church_id == church_id,
                 Attendance.service_date >= last_week_start,
                 Attendance.service_date <= last_week_end,
-                Attendance.present == True
+                Attendance.present == True,
             )
-            .scalar() or 0
+            .scalar()
+            or 0
         )
-        
+
         # Get attendance by service type for last 4 weeks
         four_weeks_ago = today - timedelta(weeks=4)
         service_stats = (
             db.query(
                 Attendance.service_type,
-                func.count(Attendance.id).label('total_attendance'),
-                func.count(func.distinct(Attendance.service_date)).label('service_count')
+                func.count(Attendance.id).label("total_attendance"),
+                func.count(func.distinct(Attendance.service_date)).label(
+                    "service_count"
+                ),
             )
             .filter(
                 Attendance.church_id == church_id,
                 Attendance.service_date >= four_weeks_ago,
-                Attendance.present == True
+                Attendance.present == True,
             )
             .group_by(Attendance.service_type)
             .all()
         )
-        
+
         # Monthly attendance trends (전체 기간)
         monthly_attendance = (
             db.query(
-                func.extract('year', Attendance.service_date).label('year'),
-                func.extract('month', Attendance.service_date).label('month'),
-                func.count(Attendance.id).label('attendance_count'),
-                func.count(func.distinct(Attendance.member_id)).label('unique_attendees')
+                func.extract("year", Attendance.service_date).label("year"),
+                func.extract("month", Attendance.service_date).label("month"),
+                func.count(Attendance.id).label("attendance_count"),
+                func.count(func.distinct(Attendance.member_id)).label(
+                    "unique_attendees"
+                ),
             )
-            .filter(
-                Attendance.church_id == church_id,
-                Attendance.present == True
-            )
+            .filter(Attendance.church_id == church_id, Attendance.present == True)
             .group_by(
-                func.extract('year', Attendance.service_date),
-                func.extract('month', Attendance.service_date)
+                func.extract("year", Attendance.service_date),
+                func.extract("month", Attendance.service_date),
             )
-            .order_by('year', 'month')
+            .order_by("year", "month")
             .all()
         )
-        
+
         # Attendance by member (top attendees this year)
         year_start = today.replace(month=1, day=1)
         top_attendees = (
-            db.query(
-                Member.name,
-                func.count(Attendance.id).label('attendance_count')
-            )
+            db.query(Member.name, func.count(Attendance.id).label("attendance_count"))
             .join(Attendance)
             .filter(
                 Attendance.church_id == church_id,
                 Attendance.service_date >= year_start,
-                Attendance.present == True
+                Attendance.present == True,
             )
             .group_by(Member.id, Member.name)
-            .order_by(desc('attendance_count'))
+            .order_by(desc("attendance_count"))
             .limit(10)
             .all()
         )
-        
+
         # Weekly attendance pattern (last 8 weeks)
         eight_weeks_ago = today - timedelta(weeks=8)
         weekly_attendance = (
             db.query(
-                func.extract('week', Attendance.service_date).label('week'),
-                func.extract('year', Attendance.service_date).label('year'),
-                func.count(Attendance.id).label('attendance_count')
+                func.extract("week", Attendance.service_date).label("week"),
+                func.extract("year", Attendance.service_date).label("year"),
+                func.count(Attendance.id).label("attendance_count"),
             )
             .filter(
                 Attendance.church_id == church_id,
                 Attendance.service_date >= eight_weeks_ago,
-                Attendance.present == True
+                Attendance.present == True,
             )
             .group_by(
-                func.extract('year', Attendance.service_date),
-                func.extract('week', Attendance.service_date)
+                func.extract("year", Attendance.service_date),
+                func.extract("week", Attendance.service_date),
             )
-            .order_by('year', 'week')
+            .order_by("year", "week")
             .all()
         )
-        
+
         # Get recent attendance records (no time limit)
         recent_attendance = (
             db.query(Attendance)
             .join(Member)
-            .filter(
-                Attendance.church_id == church_id,
-                Attendance.present == True
-            )
+            .filter(Attendance.church_id == church_id, Attendance.present == True)
             .order_by(desc(Attendance.service_date))
             .limit(50)  # Increased limit
             .all()
         )
-        
+
         # Calculate average weekly attendance
         average_weekly = 0
         if service_stats:
-            total_weekly_attendance = sum(stat.total_attendance for stat in service_stats if stat.service_count >= 2)
-            service_weeks = max(stat.service_count for stat in service_stats) if service_stats else 0
+            total_weekly_attendance = sum(
+                stat.total_attendance
+                for stat in service_stats
+                if stat.service_count >= 2
+            )
+            service_weeks = (
+                max(stat.service_count for stat in service_stats)
+                if service_stats
+                else 0
+            )
             if service_weeks > 0:
                 average_weekly = total_weekly_attendance // service_weeks
-        
+
         return {
             "total_members": total_members,
             "average_weekly_attendance": average_weekly,
             "last_week_attendance": last_week_attendance,
-            "attendance_rate": round((last_week_attendance / total_members * 100), 1) if total_members > 0 else 0,
+            "attendance_rate": (
+                round((last_week_attendance / total_members * 100), 1)
+                if total_members > 0
+                else 0
+            ),
             "service_breakdown": [
                 {
                     "service_type": stat.service_type,
-                    "avg_attendance": stat.total_attendance // stat.service_count if stat.service_count > 0 else 0,
+                    "avg_attendance": (
+                        stat.total_attendance // stat.service_count
+                        if stat.service_count > 0
+                        else 0
+                    ),
                     "service_count": stat.service_count,
-                    "total_attendance": stat.total_attendance
-                } for stat in service_stats
+                    "total_attendance": stat.total_attendance,
+                }
+                for stat in service_stats
             ],
             "monthly_trends": [
                 {
                     "year": int(month.year),
                     "month": int(month.month),
-                    "month_name": ["", "1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"][int(month.month)],
+                    "month_name": [
+                        "",
+                        "1월",
+                        "2월",
+                        "3월",
+                        "4월",
+                        "5월",
+                        "6월",
+                        "7월",
+                        "8월",
+                        "9월",
+                        "10월",
+                        "11월",
+                        "12월",
+                    ][int(month.month)],
                     "total_attendance": month.attendance_count,
-                    "unique_attendees": month.unique_attendees
-                } for month in monthly_attendance
+                    "unique_attendees": month.unique_attendees,
+                }
+                for month in monthly_attendance
             ],
             "weekly_trends": [
                 {
                     "year": int(week.year),
                     "week": int(week.week),
-                    "attendance_count": week.attendance_count
-                } for week in weekly_attendance
+                    "attendance_count": week.attendance_count,
+                }
+                for week in weekly_attendance
             ],
             "top_attendees": [
                 {
                     "member_name": attendee.name,
-                    "attendance_count": attendee.attendance_count
-                } for attendee in top_attendees
+                    "attendance_count": attendee.attendance_count,
+                }
+                for attendee in top_attendees
             ],
             "recent_attendances": [
                 {
@@ -540,12 +699,17 @@ def get_attendance_stats(db: Session, church_id: int) -> Dict:
                     "service_type": att.service_type,
                     "service_date": att.service_date.isoformat(),
                     "present": att.present,  # Added missing column
-                    "check_in_time": att.check_in_time.isoformat() if att.check_in_time else None,
+                    "check_in_time": (
+                        att.check_in_time.isoformat() if att.check_in_time else None
+                    ),
                     "check_in_method": att.check_in_method,
-                    "notes": getattr(att, 'notes', None),  # Added if exists
-                    "created_at": att.created_at.isoformat() if att.created_at else None,  # Added
-                } for att in recent_attendance
-            ]
+                    "notes": getattr(att, "notes", None),  # Added if exists
+                    "created_at": (
+                        att.created_at.isoformat() if att.created_at else None
+                    ),  # Added
+                }
+                for att in recent_attendance
+            ],
         }
     except Exception as e:
         logger.error(f"Error fetching attendance stats: {e}")
@@ -565,7 +729,7 @@ def get_enhanced_member_statistics(db: Session, church_id: int) -> Dict:
     """
     try:
         from datetime import datetime, timedelta
-        
+
         # Total members (using Member table)
         total_members = (
             db.query(Member)
@@ -582,15 +746,17 @@ def get_enhanced_member_statistics(db: Session, church_id: int) -> Dict:
         )
 
         # New members this month
-        start_of_month = datetime.now().replace(
-            day=1, hour=0, minute=0, second=0, microsecond=0
-        ).date()
+        start_of_month = (
+            datetime.now()
+            .replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            .date()
+        )
         new_members_this_month = (
             db.query(Member)
             .filter(
                 Member.church_id == church_id,
                 Member.registration_date >= start_of_month,
-                Member.status == "active"
+                Member.status == "active",
             )
             .count()
         )
@@ -601,7 +767,7 @@ def get_enhanced_member_statistics(db: Session, church_id: int) -> Dict:
             .filter(
                 Member.church_id == church_id,
                 Member.status == "active",
-                Member.department.isnot(None)
+                Member.department.isnot(None),
             )
             .group_by(Member.department)
             .all()
@@ -613,7 +779,7 @@ def get_enhanced_member_statistics(db: Session, church_id: int) -> Dict:
             .filter(
                 Member.church_id == church_id,
                 Member.status == "active",
-                Member.district.isnot(None)
+                Member.district.isnot(None),
             )
             .group_by(Member.district)
             .all()
@@ -625,9 +791,9 @@ def get_enhanced_member_statistics(db: Session, church_id: int) -> Dict:
             "youth": (13, 18),
             "young_adult": (19, 35),
             "adult": (36, 60),
-            "senior": (61, 150)
+            "senior": (61, 150),
         }
-        
+
         age_stats = {}
         for range_name, (min_age, max_age) in age_ranges.items():
             count = (
@@ -636,7 +802,7 @@ def get_enhanced_member_statistics(db: Session, church_id: int) -> Dict:
                     Member.church_id == church_id,
                     Member.status == "active",
                     Member.age >= min_age,
-                    Member.age <= max_age
+                    Member.age <= max_age,
                 )
                 .count()
             )
@@ -648,44 +814,44 @@ def get_enhanced_member_statistics(db: Session, church_id: int) -> Dict:
             .filter(
                 Member.church_id == church_id,
                 Member.status == "active",
-                Member.gender.isnot(None)
+                Member.gender.isnot(None),
             )
             .group_by(Member.gender)
             .all()
         )
-        
+
         # Marital status statistics
         marital_stats = (
             db.query(Member.marital_status, func.count(Member.id).label("count"))
             .filter(
                 Member.church_id == church_id,
                 Member.status == "active",
-                Member.marital_status.isnot(None)
+                Member.marital_status.isnot(None),
             )
             .group_by(Member.marital_status)
             .all()
         )
-        
+
         # Detailed age statistics (actual ages, not just ranges)
         age_distribution = (
             db.query(Member.age, func.count(Member.id).label("count"))
             .filter(
                 Member.church_id == church_id,
                 Member.status == "active",
-                Member.age.isnot(None)
+                Member.age.isnot(None),
             )
             .group_by(Member.age)
             .order_by(Member.age)
             .all()
         )
-        
+
         # Average age calculation
         avg_age = (
             db.query(func.avg(Member.age))
             .filter(
                 Member.church_id == church_id,
                 Member.status == "active",
-                Member.age.isnot(None)
+                Member.age.isnot(None),
             )
             .scalar()
         )
@@ -696,20 +862,16 @@ def get_enhanced_member_statistics(db: Session, church_id: int) -> Dict:
             .filter(
                 Member.church_id == church_id,
                 Member.baptism_date.isnot(None),
-                Member.status == "active"
+                Member.status == "active",
             )
             .order_by(desc(Member.baptism_date))
             .all()
         )
-        
+
         recent_baptisms = len(baptized_members)
 
         # Family count
-        family_count = (
-            db.query(Family)
-            .filter(Family.church_id == church_id)
-            .count()
-        )
+        family_count = db.query(Family).filter(Family.church_id == church_id).count()
 
         return {
             "total_members": total_members,
@@ -718,21 +880,38 @@ def get_enhanced_member_statistics(db: Session, church_id: int) -> Dict:
             "family_count": family_count,
             "average_age": round(avg_age, 1) if avg_age else 0,
             "members_by_position": {pos: count for pos, count in position_stats if pos},
-            "members_by_department": {dept: count for dept, count in department_stats if dept},
-            "members_by_district": {district: count for district, count in district_stats if district},
+            "members_by_department": {
+                dept: count for dept, count in department_stats if dept
+            },
+            "members_by_district": {
+                district: count for district, count in district_stats if district
+            },
             "age_demographics": age_stats,
-            "detailed_age_distribution": {age: count for age, count in age_distribution},
-            "gender_distribution": {gender: count for gender, count in gender_stats if gender},
-            "marital_status_distribution": {status: count for status, count in marital_stats if status},
+            "detailed_age_distribution": {
+                age: count for age, count in age_distribution
+            },
+            "gender_distribution": {
+                gender: count for gender, count in gender_stats if gender
+            },
+            "marital_status_distribution": {
+                status: count for status, count in marital_stats if status
+            },
             # Added baptism details
             "baptism_details": [
                 {
                     "member_name": member.name,
-                    "baptism_date": member.baptism_date.isoformat() if member.baptism_date else None,
+                    "baptism_date": (
+                        member.baptism_date.isoformat() if member.baptism_date else None
+                    ),
                     "baptism_church": member.baptism_church,
-                    "registration_date": member.registration_date.isoformat() if member.registration_date else None,
-                } for member in baptized_members[:20]  # Recent 20 baptisms
-            ]
+                    "registration_date": (
+                        member.registration_date.isoformat()
+                        if member.registration_date
+                        else None
+                    ),
+                }
+                for member in baptized_members[:20]  # Recent 20 baptisms
+            ],
         }
     except Exception as e:
         logger.error(f"Error fetching enhanced member statistics: {e}")
@@ -775,18 +954,28 @@ def get_worship_schedule(db: Session, church_id: int, limit: int = 100) -> List[
             {
                 "id": service.id,
                 "worship_type": service.worship_type,
-                "worship_date": service.worship_date.isoformat() if service.worship_date else None,
-                "start_time": service.start_time.isoformat() if service.start_time else None,
+                "worship_date": (
+                    service.worship_date.isoformat() if service.worship_date else None
+                ),
+                "start_time": (
+                    service.start_time.isoformat() if service.start_time else None
+                ),
                 "end_time": service.end_time.isoformat() if service.end_time else None,
                 "location": service.location,
                 "preacher": service.preacher,
                 "sermon_title": service.sermon_title,
                 "bible_text": service.bible_text,
                 "is_active": service.is_active,  # Added missing column
-                "worship_order": getattr(service, 'worship_order', None),  # Added if exists
-                "notes": getattr(service, 'notes', None),  # Added if exists
-                "created_at": service.created_at.isoformat() if service.created_at else None,  # Added
-                "updated_at": service.updated_at.isoformat() if service.updated_at else None,  # Added
+                "worship_order": getattr(
+                    service, "worship_order", None
+                ),  # Added if exists
+                "notes": getattr(service, "notes", None),  # Added if exists
+                "created_at": (
+                    service.created_at.isoformat() if service.created_at else None
+                ),  # Added
+                "updated_at": (
+                    service.updated_at.isoformat() if service.updated_at else None
+                ),  # Added
             }
             for service in services
         ]
@@ -813,7 +1002,7 @@ def format_context_for_prompt(context_data: Dict) -> str:
         if prayer_requests:
             context_parts.append("\n[중보기도 요청]")
             for req in prayer_requests:  # Show ALL prayer requests
-                urgency = " (긴급)" if req['is_urgent'] else ""
+                urgency = " (긴급)" if req["is_urgent"] else ""
                 context_parts.append(
                     f"- {req['requester_name']}: {req['prayer_content']}{urgency} "
                     f"[{req['prayer_type']}, 기도수: {req['prayer_count']}]"
@@ -824,34 +1013,52 @@ def format_context_for_prompt(context_data: Dict) -> str:
         if pastoral_requests:
             context_parts.append("\n[심방 요청]")
             # Sort by created_at desc to show most recent first
-            sorted_requests = sorted(pastoral_requests, key=lambda x: x['created_at'] or '', reverse=True)
-            for req in sorted_requests:  # Show ALL pastoral care requests in chronological order
-                urgency = " (긴급)" if req['is_urgent'] else ""
+            sorted_requests = sorted(
+                pastoral_requests, key=lambda x: x["created_at"] or "", reverse=True
+            )
+            for (
+                req
+            ) in (
+                sorted_requests
+            ):  # Show ALL pastoral care requests in chronological order
+                urgency = " (긴급)" if req["is_urgent"] else ""
                 status_text = {
-                    "pending": "대기중", 
-                    "approved": "승인됨", 
+                    "pending": "대기중",
+                    "approved": "승인됨",
                     "scheduled": "예약됨",
                     "completed": "완료됨",
-                    "cancelled": "취소됨"
-                }.get(req['status'], req['status'])
-                
+                    "cancelled": "취소됨",
+                }.get(req["status"], req["status"])
+
                 # 연락처 정보
-                phone_info = f", 연락처: {req['requester_phone']}" if req['requester_phone'] else ""
-                
+                phone_info = (
+                    f", 연락처: {req['requester_phone']}"
+                    if req["requester_phone"]
+                    else ""
+                )
+
                 # 날짜 정보
-                date_info = f", 희망일: {req['preferred_date']}" if req['preferred_date'] else ""
-                scheduled_info = f", 예약일시: {req['scheduled_date']} {req['scheduled_time']}" if req['scheduled_date'] else ""
-                
+                date_info = (
+                    f", 희망일: {req['preferred_date']}"
+                    if req["preferred_date"]
+                    else ""
+                )
+                scheduled_info = (
+                    f", 예약일시: {req['scheduled_date']} {req['scheduled_time']}"
+                    if req["scheduled_date"]
+                    else ""
+                )
+
                 # 주소 정보
-                address_info = f", 주소: {req['address']}" if req['address'] else ""
-                
+                address_info = f", 주소: {req['address']}" if req["address"] else ""
+
                 # 완료/관리자 노트
                 notes_info = ""
-                if req['completion_notes']:
+                if req["completion_notes"]:
                     notes_info += f", 완료노트: {req['completion_notes']}"
-                if req['admin_notes']:
+                if req["admin_notes"]:
                     notes_info += f", 관리자노트: {req['admin_notes']}"
-                
+
                 context_parts.append(
                     f"- ID{req['id']} {req['requester_name']}: {req['request_content']}{urgency}{phone_info} "
                     f"[{req['request_type']}, {status_text}{date_info}{scheduled_info}{address_info}{notes_info}]"
@@ -863,92 +1070,136 @@ def format_context_for_prompt(context_data: Dict) -> str:
         totals = offering_data.get("totals", {})
         if totals or offering_data:
             context_parts.append("\n[헌금 현황]")
-            this_year = totals.get('this_year', 0) or totals.get('all_time', 0)
-            last_year = totals.get('last_year', 0) 
-            
+            this_year = totals.get("this_year", 0) or totals.get("all_time", 0)
+            last_year = totals.get("last_year", 0)
+
             if this_year == 0 and last_year == 0:
                 context_parts.append("- 현재 헌금 기록이 없습니다")
-                context_parts.append("- 헌금 데이터베이스 연동 또는 입력 시스템 점검 필요")
+                context_parts.append(
+                    "- 헌금 데이터베이스 연동 또는 입력 시스템 점검 필요"
+                )
             else:
                 context_parts.append(f"- 올해 총 헌금: {this_year:,.0f}원")
                 if last_year > 0:
-                    change = ((this_year - last_year) / last_year * 100) if last_year > 0 else 0
-                    context_parts.append(f"- 작년 대비: {change:+.1f}% ({last_year:,.0f}원)")
-                
-                this_month = totals.get('this_month', 0)
+                    change = (
+                        ((this_year - last_year) / last_year * 100)
+                        if last_year > 0
+                        else 0
+                    )
+                    context_parts.append(
+                        f"- 작년 대비: {change:+.1f}% ({last_year:,.0f}원)"
+                    )
+
+                this_month = totals.get("this_month", 0)
                 if this_month > 0:
-                    month_change = totals.get('month_over_month_change', 0)
-                    context_parts.append(f"- 이번달: {this_month:,.0f}원 (전월 대비 {month_change:+.1f}%)")
-            
+                    month_change = totals.get("month_over_month_change", 0)
+                    context_parts.append(
+                        f"- 이번달: {this_month:,.0f}원 (전월 대비 {month_change:+.1f}%)"
+                    )
+
             stats = offering_data.get("statistics", {})
             if stats.get("total_members", 0) > 0:
-                context_parts.append(f"- 교인 1인당 월평균: {stats['avg_offering_per_member_this_month']:,.0f}원")
-            
+                context_parts.append(
+                    f"- 교인 1인당 월평균: {stats['avg_offering_per_member_this_month']:,.0f}원"
+                )
+
             if offering_data.get("fund_breakdown"):
                 context_parts.append("- 헌금 종류별:")
                 for fund in offering_data["fund_breakdown"][:3]:  # Top 3
-                    context_parts.append(f"  • {fund['fund_type']}: {fund['total']:,.0f}원 ({fund['percentage']:.1f}%)")
-            
+                    context_parts.append(
+                        f"  • {fund['fund_type']}: {fund['total']:,.0f}원 ({fund['percentage']:.1f}%)"
+                    )
+
             if offering_data.get("monthly_breakdown"):
                 context_parts.append("- 월별 추이 (최근):")
                 for month in offering_data["monthly_breakdown"][-3:]:  # Last 3 months
-                    context_parts.append(f"  • {month['month_name']}: {month['total']:,.0f}원")
+                    context_parts.append(
+                        f"  • {month['month_name']}: {month['total']:,.0f}원"
+                    )
 
     if context_data.get("attendances"):
         stats = context_data["attendances"]
         if stats["total_members"] > 0:
             context_parts.append("\n[출석 현황]")
             context_parts.append(f"- 등록 교인: {stats['total_members']}명")
-            context_parts.append(f"- 지난주 출석: {stats['last_week_attendance']}명 ({stats['attendance_rate']}%)")
-            context_parts.append(f"- 평균 주간 출석: {stats['average_weekly_attendance']}명")
-            
+            context_parts.append(
+                f"- 지난주 출석: {stats['last_week_attendance']}명 ({stats['attendance_rate']}%)"
+            )
+            context_parts.append(
+                f"- 평균 주간 출석: {stats['average_weekly_attendance']}명"
+            )
+
             if stats.get("service_breakdown"):
                 context_parts.append("- 예배별 출석:")
-                service_names = {"sunday_morning": "주일 오전", "sunday_evening": "주일 오후", "wednesday": "수요예배", "friday": "금요예배"}
+                service_names = {
+                    "sunday_morning": "주일 오전",
+                    "sunday_evening": "주일 오후",
+                    "wednesday": "수요예배",
+                    "friday": "금요예배",
+                }
                 for service in stats["service_breakdown"]:
-                    service_name = service_names.get(service["service_type"], service["service_type"])
-                    context_parts.append(f"  • {service_name}: 평균 {service['avg_attendance']}명 (총 {service['total_attendance']}회)")
-            
+                    service_name = service_names.get(
+                        service["service_type"], service["service_type"]
+                    )
+                    context_parts.append(
+                        f"  • {service_name}: 평균 {service['avg_attendance']}명 (총 {service['total_attendance']}회)"
+                    )
+
             if stats.get("monthly_trends"):
                 context_parts.append("- 월별 출석 추이 (최근):")
                 for trend in stats["monthly_trends"][-3:]:  # Last 3 months
-                    context_parts.append(f"  • {trend['month_name']}: {trend['total_attendance']}회 (고유 출석자 {trend['unique_attendees']}명)")
-            
+                    context_parts.append(
+                        f"  • {trend['month_name']}: {trend['total_attendance']}회 (고유 출석자 {trend['unique_attendees']}명)"
+                    )
+
             if stats.get("top_attendees"):
                 context_parts.append("- 올해 최다 출석자:")
                 for attendee in stats["top_attendees"][:3]:  # Top 3
-                    context_parts.append(f"  • {attendee['member_name']}: {attendee['attendance_count']}회")
+                    context_parts.append(
+                        f"  • {attendee['member_name']}: {attendee['attendance_count']}회"
+                    )
 
     if context_data.get("members"):
         stats = context_data["members"]
         if stats["total_members"] > 0:
             context_parts.append("\n[교인 현황]")
-            context_parts.append(f"- 전체 등록 교인: {stats['total_members']}명 (평균연령: {stats.get('average_age', 0)}세)")
-            context_parts.append(f"- 이번달 새신자: {stats['new_members_this_month']}명")
+            context_parts.append(
+                f"- 전체 등록 교인: {stats['total_members']}명 (평균연령: {stats.get('average_age', 0)}세)"
+            )
+            context_parts.append(
+                f"- 이번달 새신자: {stats['new_members_this_month']}명"
+            )
             context_parts.append(f"- 최근 6개월 세례자: {stats['recent_baptisms']}명")
             context_parts.append(f"- 등록 가정수: {stats['family_count']}가정")
-            
+
             # Gender distribution
             if stats.get("gender_distribution"):
                 gender_stats = stats["gender_distribution"]
                 # 모든 가능한 성별 값들을 체크
                 male_keys = ["M", "m", "male", "남성", "남", "Male", "MALE"]
                 female_keys = ["F", "f", "female", "여성", "여", "Female", "FEMALE"]
-                
+
                 male_count = sum(gender_stats.get(key, 0) for key in male_keys)
                 female_count = sum(gender_stats.get(key, 0) for key in female_keys)
-                
+
                 # 실제 데이터베이스의 모든 gender 값들도 표시 (디버깅용)
                 all_genders = {k: v for k, v in gender_stats.items() if v > 0}
-                
+
                 if male_count > 0 or female_count > 0:
-                    context_parts.append(f"- 성별 분포: 남성 {male_count}명, 여성 {female_count}명")
+                    context_parts.append(
+                        f"- 성별 분포: 남성 {male_count}명, 여성 {female_count}명"
+                    )
                     if len(all_genders) > 0:
                         context_parts.append(f"  (데이터베이스 원본값: {all_genders})")
-            
+
             # Marital status
             if stats.get("marital_status_distribution"):
-                marital_names = {"single": "미혼", "married": "기혼", "divorced": "이혼", "widowed": "사별"}
+                marital_names = {
+                    "single": "미혼",
+                    "married": "기혼",
+                    "divorced": "이혼",
+                    "widowed": "사별",
+                }
                 marital_stats = []
                 for status, count in stats["marital_status_distribution"].items():
                     if count > 0:
@@ -956,22 +1207,37 @@ def format_context_for_prompt(context_data: Dict) -> str:
                         marital_stats.append(f"{status_name} {count}명")
                 if marital_stats:
                     context_parts.append(f"- 혼인상태: {', '.join(marital_stats)}")
-            
+
             if stats.get("members_by_position"):
                 context_parts.append("- 직분별 분포:")
-                position_names = {"pastor": "목사", "elder": "장로", "deacon": "집사", "member": "성도", "youth": "청년", "child": "아동"}
+                position_names = {
+                    "pastor": "목사",
+                    "elder": "장로",
+                    "deacon": "집사",
+                    "member": "성도",
+                    "youth": "청년",
+                    "child": "아동",
+                }
                 for pos, count in stats["members_by_position"].items():
                     pos_name = position_names.get(pos, pos)
                     context_parts.append(f"  • {pos_name}: {count}명")
-                    
+
             if stats.get("members_by_department"):
                 context_parts.append("- 부서별 분포:")
-                for dept, count in list(stats["members_by_department"].items())[:5]:  # Top 5 departments
+                for dept, count in list(stats["members_by_department"].items())[
+                    :5
+                ]:  # Top 5 departments
                     context_parts.append(f"  • {dept}: {count}명")
-                    
+
             if stats.get("age_demographics"):
                 context_parts.append("- 연령대별 분포:")
-                age_names = {"children": "아동(0-12세)", "youth": "청소년(13-18세)", "young_adult": "청년(19-35세)", "adult": "장년(36-60세)", "senior": "노년(61세+)"}
+                age_names = {
+                    "children": "아동(0-12세)",
+                    "youth": "청소년(13-18세)",
+                    "young_adult": "청년(19-35세)",
+                    "adult": "장년(36-60세)",
+                    "senior": "노년(61세+)",
+                }
                 for age_range, count in stats["age_demographics"].items():
                     if count > 0:
                         age_name = age_names.get(age_range, age_range)

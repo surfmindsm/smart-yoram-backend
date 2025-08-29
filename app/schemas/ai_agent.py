@@ -139,7 +139,15 @@ class ChatRequest(BaseModel):
     chat_history_id: Optional[Union[int, str]] = None
     agent_id: Union[int, str]
     content: str
+    role: Optional[str] = "user"
+    messages: Optional[List[Dict]] = []
     create_history_if_needed: Optional[bool] = True  # Auto-create history if null
+
+    # 🆕 비서 에이전트 균형 파라미터들
+    church_data_context: Optional[str] = None  # 조회된 교회 데이터 (JSON 문자열)
+    secretary_mode: Optional[bool] = False  # 비서 모드 활성화
+    prioritize_church_data: Optional[bool] = False  # 교회 데이터 우선 처리
+    fallback_to_general: Optional[bool] = True  # 교회 데이터 부족 시 일반 GPT 응답 허용
 
 
 class ChatResponse(BaseModel):
@@ -147,6 +155,14 @@ class ChatResponse(BaseModel):
     ai_response: ChatMessage
     data_sources: Optional[List[str]] = []
     church_data_context: Optional[Dict] = None
+
+    # 🆕 비서 모드 응답 메타데이터
+    is_secretary_agent: Optional[bool] = False
+    query_type: Optional[str] = (
+        "general_query"  # church_data_query, general_query, hybrid_response
+    )
+    church_data_used: Optional[bool] = False
+    fallback_used: Optional[bool] = False
 
 
 class ChurchDatabaseConfigBase(BaseModel):
