@@ -106,11 +106,32 @@ def get_church_context_data(
                 logger.info("✅ Successfully fetched member stats")
             except Exception as e:
                 logger.error(f"❌ Error fetching member stats (database may be corrupted): {e}")
-                # Provide basic fallback data
-                context_data["member_stats"] = {
-                    "total_members": "조회 불가 (데이터베이스 오류)",
-                    "error": "Members 테이블 조회 실패"
-                }
+                # Try alternative method: count from other tables
+                try:
+                    # Alternative: count unique members from offerings or attendance
+                    from sqlalchemy import func, distinct
+                    from app.models.financial import Offering
+                    
+                    member_count_from_offerings = (
+                        db.query(func.count(distinct(Offering.member_id)))
+                        .filter(Offering.church_id == church_id, Offering.member_id.isnot(None))
+                        .scalar() or 0
+                    )
+                    
+                    logger.info(f"💡 Alternative count from offerings: {member_count_from_offerings} members")
+                    
+                    context_data["member_stats"] = {
+                        "total_members": member_count_from_offerings,
+                        "source": "헌금 기록 기준 교인수 (Members 테이블 오류로 인한 대체 방법)",
+                        "note": "정확한 교인수는 Members 테이블 복구 후 확인 가능",
+                        "alternative_method": True
+                    }
+                except Exception as fallback_error:
+                    logger.error(f"❌ Alternative method also failed: {fallback_error}")
+                    context_data["member_stats"] = {
+                        "total_members": "조회 불가 (데이터베이스 오류)",
+                        "error": "Members 테이블 및 대체 방법 모두 실패"
+                    }
 
         if "worship_services" in sources_to_include or "worship" in sources_to_include:
             try:
