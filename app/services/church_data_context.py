@@ -1180,12 +1180,29 @@ def format_context_for_prompt(context_data: Dict) -> str:
                 # 실제 데이터베이스의 모든 gender 값들도 표시 (디버깅용)
                 all_genders = {k: v for k, v in gender_stats.items() if v > 0}
 
+                total_with_gender = male_count + female_count
+                total_members = stats.get("total_members", 0)
+                
                 if male_count > 0 or female_count > 0:
                     context_parts.append(
                         f"- 성별 분포: 남성 {male_count}명, 여성 {female_count}명"
                     )
+                    
+                    # 성별 데이터가 부족한 경우 경고 메시지 추가
+                    if total_with_gender < total_members:
+                        missing_count = total_members - total_with_gender
+                        context_parts.append(
+                            f"  ※ 성별 정보가 누락된 교인: {missing_count}명 (전체 {total_members}명 중)"
+                        )
+                    
                     if len(all_genders) > 0:
                         context_parts.append(f"  (데이터베이스 원본값: {all_genders})")
+                else:
+                    # 성별 데이터가 전혀 없는 경우
+                    if total_members > 0:
+                        context_parts.append(
+                            f"- 성별 분포: 성별 정보가 기록되지 않음 (전체 {total_members}명)"
+                        )
 
             # Marital status
             if stats.get("marital_status_distribution"):
@@ -1208,21 +1225,59 @@ def format_context_for_prompt(context_data: Dict) -> str:
                 position_names = {
                     "pastor": "목사",
                     "elder": "장로",
-                    "deacon": "집사",
+                    "deacon": "집사", 
                     "member": "성도",
                     "youth": "청년",
                     "child": "아동",
                 }
+                
+                total_with_position = sum(stats["members_by_position"].values())
+                total_members = stats.get("total_members", 0)
+                
                 for pos, count in stats["members_by_position"].items():
                     pos_name = position_names.get(pos, pos)
                     context_parts.append(f"  • {pos_name}: {count}명")
+                
+                # 직분 정보가 누락된 교인이 있는지 체크
+                if total_with_position < total_members:
+                    missing_count = total_members - total_with_position
+                    context_parts.append(
+                        f"  ※ 직분 정보가 누락된 교인: {missing_count}명"
+                    )
 
             if stats.get("members_by_department"):
                 context_parts.append("- 부서별 분포:")
-                for dept, count in list(stats["members_by_department"].items())[
-                    :5
-                ]:  # Top 5 departments
+                dept_items = list(stats["members_by_department"].items())[:5]  # Top 5 departments
+                
+                total_with_department = sum(stats["members_by_department"].values())
+                total_members = stats.get("total_members", 0)
+                
+                for dept, count in dept_items:
                     context_parts.append(f"  • {dept}: {count}명")
+                
+                # 부서 정보가 누락된 교인이 있는지 체크
+                if total_with_department < total_members:
+                    missing_count = total_members - total_with_department
+                    context_parts.append(
+                        f"  ※ 부서 정보가 누락된 교인: {missing_count}명"
+                    )
+
+            if stats.get("members_by_district"):
+                context_parts.append("- 구역별 분포:")
+                district_items = list(stats["members_by_district"].items())[:5]  # Top 5 districts
+                
+                total_with_district = sum(stats["members_by_district"].values())
+                total_members = stats.get("total_members", 0)
+                
+                for district, count in district_items:
+                    context_parts.append(f"  • {district}: {count}명")
+                
+                # 구역 정보가 누락된 교인이 있는지 체크
+                if total_with_district < total_members:
+                    missing_count = total_members - total_with_district
+                    context_parts.append(
+                        f"  ※ 구역 정보가 누락된 교인: {missing_count}명"
+                    )
 
             if stats.get("age_demographics"):
                 context_parts.append("- 연령대별 분포:")
