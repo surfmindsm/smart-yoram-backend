@@ -940,12 +940,12 @@ def get_worship_schedule(db: Session, church_id: int, limit: int = 100) -> List[
     Get ALL worship services schedule (no time limit).
     """
     try:
-        # Get all worship services (past and future)
+        # Get all worship services
         services = (
             db.query(WorshipService)
             .filter(WorshipService.church_id == church_id)
-            # Show all services regardless of date or status
-            .order_by(desc(WorshipService.worship_date))
+            .filter(WorshipService.is_active == True)
+            .order_by(WorshipService.day_of_week, WorshipService.start_time)
             .limit(limit)
             .all()
         )
@@ -953,29 +953,24 @@ def get_worship_schedule(db: Session, church_id: int, limit: int = 100) -> List[
         return [
             {
                 "id": service.id,
-                "worship_type": service.worship_type,
-                "worship_date": (
-                    service.worship_date.isoformat() if service.worship_date else None
-                ),
+                "name": service.name,
+                "service_type": service.service_type,
+                "day_of_week": service.day_of_week,
+                "day_name": ["월", "화", "수", "목", "금", "토", "일"][service.day_of_week] if service.day_of_week is not None else "미정",
                 "start_time": (
                     service.start_time.isoformat() if service.start_time else None
                 ),
                 "end_time": service.end_time.isoformat() if service.end_time else None,
                 "location": service.location,
-                "preacher": service.preacher,
-                "sermon_title": service.sermon_title,
-                "bible_text": service.bible_text,
-                "is_active": service.is_active,  # Added missing column
-                "worship_order": getattr(
-                    service, "worship_order", None
-                ),  # Added if exists
-                "notes": getattr(service, "notes", None),  # Added if exists
+                "target_group": service.target_group,
+                "is_online": service.is_online,
+                "is_active": service.is_active,
                 "created_at": (
                     service.created_at.isoformat() if service.created_at else None
-                ),  # Added
+                ),
                 "updated_at": (
                     service.updated_at.isoformat() if service.updated_at else None
-                ),  # Added
+                ),
             }
             for service in services
         ]
@@ -1064,8 +1059,8 @@ def format_context_for_prompt(context_data: Dict) -> str:
                     f"[{req['request_type']}, {status_text}{date_info}{scheduled_info}{address_info}{notes_info}]"
                 )
 
-    if context_data.get("offerings"):
-        offering_data = context_data["offerings"]
+    if context_data.get("offering_stats"):
+        offering_data = context_data["offering_stats"]
         # Show offering info even if amount is 0
         totals = offering_data.get("totals", {})
         if totals or offering_data:
@@ -1117,8 +1112,8 @@ def format_context_for_prompt(context_data: Dict) -> str:
                         f"  • {month['month_name']}: {month['total']:,.0f}원"
                     )
 
-    if context_data.get("attendances"):
-        stats = context_data["attendances"]
+    if context_data.get("attendance_stats"):
+        stats = context_data["attendance_stats"]
         if stats["total_members"] > 0:
             context_parts.append("\n[출석 현황]")
             context_parts.append(f"- 등록 교인: {stats['total_members']}명")
@@ -1159,8 +1154,8 @@ def format_context_for_prompt(context_data: Dict) -> str:
                         f"  • {attendee['member_name']}: {attendee['attendance_count']}회"
                     )
 
-    if context_data.get("members"):
-        stats = context_data["members"]
+    if context_data.get("member_stats"):
+        stats = context_data["member_stats"]
         if stats["total_members"] > 0:
             context_parts.append("\n[교인 현황]")
             context_parts.append(
@@ -1243,19 +1238,20 @@ def format_context_for_prompt(context_data: Dict) -> str:
                         age_name = age_names.get(age_range, age_range)
                         context_parts.append(f"  • {age_name}: {count}명")
 
-    if context_data.get("worship_services"):
-        services = context_data["worship_services"]
+    if context_data.get("worship_schedule"):
+        services = context_data["worship_schedule"]
         if services:
             context_parts.append("\n[예배 일정]")
-            for service in services[:3]:  # Limit to next 3 services
-                date_str = (
-                    service["worship_date"].split("T")[0]
-                    if service["worship_date"]
-                    else "미정"
-                )
+            for service in services:
+                time_str = (
+                    service["start_time"][:5] if service["start_time"] else "미정"
+                )  # Extract HH:MM from time
+                day_name = service.get("day_name", "미정")
+                location_str = f" ({service['location']})" if service['location'] else ""
+                online_str = " [온라인]" if service.get('is_online') else ""
                 context_parts.append(
-                    f"- {date_str} {service['worship_type']}: "
-                    f"{service['sermon_title'] or '미정'} ({service['preacher'] or '미정'})"
+                    f"- {day_name} {time_str} {service['name']}: "
+                    f"{service['service_type'] or '예배'}{location_str}{online_str}"
                 )
 
     return "\n".join(context_parts) if context_parts else ""
