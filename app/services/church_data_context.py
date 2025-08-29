@@ -1170,9 +1170,9 @@ def format_context_for_prompt(context_data: Dict) -> str:
             # Gender distribution
             if stats.get("gender_distribution"):
                 gender_stats = stats["gender_distribution"]
-                # 모든 가능한 성별 값들을 체크
-                male_keys = ["M", "m", "male", "남성", "남", "Male", "MALE"]
-                female_keys = ["F", "f", "female", "여성", "여", "Female", "FEMALE"]
+                # 모든 가능한 성별 값들을 체크 (한글, 영문, 대소문자 모두 포함)
+                male_keys = ["M", "m", "male", "남성", "남", "Male", "MALE", "MAN", "man"]
+                female_keys = ["F", "f", "female", "여성", "여", "Female", "FEMALE", "WOMAN", "woman", "W", "w"]
 
                 male_count = sum(gender_stats.get(key, 0) for key in male_keys)
                 female_count = sum(gender_stats.get(key, 0) for key in female_keys)
