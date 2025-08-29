@@ -1064,8 +1064,8 @@ def format_context_for_prompt(context_data: Dict) -> str:
                     f"[{req['request_type']}, {status_text}{date_info}{scheduled_info}{address_info}{notes_info}]"
                 )
 
-    if context_data.get("offerings"):
-        offering_data = context_data["offerings"]
+    if context_data.get("offering_stats"):
+        offering_data = context_data["offering_stats"]
         # Show offering info even if amount is 0
         totals = offering_data.get("totals", {})
         if totals or offering_data:
