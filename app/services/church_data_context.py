@@ -965,6 +965,7 @@ def get_worship_schedule(db: Session, church_id: int, limit: int = 100) -> List[
                 "target_group": service.target_group,
                 "is_online": service.is_online,
                 "is_active": service.is_active,
+                "order_index": service.order_index,  # Added missing column
                 "created_at": (
                     service.created_at.isoformat() if service.created_at else None
                 ),
