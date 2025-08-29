@@ -501,9 +501,14 @@ async def send_message(
 
     try:
         # 🆕 비서 모드 또는 비서 에이전트인 경우 처리
+        logger.info(f"🔍 Debug - Agent ID: {agent.id}, Category: {agent.category}, Enable Church Data: {agent.enable_church_data}")
+        logger.info(f"🔍 Debug - Request Secretary Mode: {chat_request.secretary_mode}, Prioritize Church Data: {getattr(chat_request, 'prioritize_church_data', 'N/A')}")
+        
         is_secretary_mode = chat_request.secretary_mode or (
             agent.category == "secretary" and agent.enable_church_data
         )
+        
+        logger.info(f"🔍 Debug - Is Secretary Mode: {is_secretary_mode}")
 
         if is_secretary_mode:
             logger.info(f"Processing secretary mode message for agent {agent.id}")
