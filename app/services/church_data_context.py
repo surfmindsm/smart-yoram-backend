@@ -83,87 +83,27 @@ def get_church_context_data(
             get_offering_stats_cached,
         )
 
-        # Individual data fetching with error isolation
+        # Simple direct data fetching - back to original working state
         if "announcements" in sources_to_include:
-            try:
-                context_data["announcements"] = get_announcements_cached(db, church_id)
-                logger.info(f"✅ Successfully fetched announcements: {len(context_data['announcements'])} items")
-            except Exception as e:
-                logger.error(f"❌ Error fetching announcements: {e}")
-                context_data["announcements"] = []
+            context_data["announcements"] = get_announcements_cached(db, church_id)
 
         if "attendance" in sources_to_include or "attendances" in sources_to_include:
-            try:
-                context_data["attendance_stats"] = get_attendance_stats_cached(db, church_id)
-                logger.info("✅ Successfully fetched attendance stats")
-            except Exception as e:
-                logger.error(f"❌ Error fetching attendance stats: {e}")
-                context_data["attendance_stats"] = {}
+            context_data["attendance_stats"] = get_attendance_stats_cached(db, church_id)
 
         if "members" in sources_to_include:
-            try:
-                context_data["member_stats"] = get_member_stats_cached(db, church_id)
-                logger.info("✅ Successfully fetched member stats")
-            except Exception as e:
-                logger.error(f"❌ Error fetching member stats (database may be corrupted): {e}")
-                # Try alternative method: count from other tables
-                try:
-                    # Alternative: count unique members from offerings or attendance
-                    from sqlalchemy import func, distinct
-                    from app.models.financial import Offering
-                    
-                    member_count_from_offerings = (
-                        db.query(func.count(distinct(Offering.member_id)))
-                        .filter(Offering.church_id == church_id, Offering.member_id.isnot(None))
-                        .scalar() or 0
-                    )
-                    
-                    logger.info(f"💡 Alternative count from offerings: {member_count_from_offerings} members")
-                    
-                    context_data["member_stats"] = {
-                        "total_members": member_count_from_offerings,
-                        "source": "헌금 기록 기준 교인수 (Members 테이블 오류로 인한 대체 방법)",
-                        "note": "정확한 교인수는 Members 테이블 복구 후 확인 가능",
-                        "alternative_method": True
-                    }
-                except Exception as fallback_error:
-                    logger.error(f"❌ Alternative method also failed: {fallback_error}")
-                    context_data["member_stats"] = {
-                        "total_members": "조회 불가 (데이터베이스 오류)",
-                        "error": "Members 테이블 및 대체 방법 모두 실패"
-                    }
+            context_data["member_stats"] = get_member_stats_cached(db, church_id)
 
         if "worship_services" in sources_to_include or "worship" in sources_to_include:
-            try:
-                context_data["worship_schedule"] = get_worship_schedule_cached(db, church_id)
-                logger.info("✅ Successfully fetched worship schedule")
-            except Exception as e:
-                logger.error(f"❌ Error fetching worship schedule: {e}")
-                context_data["worship_schedule"] = []
+            context_data["worship_schedule"] = get_worship_schedule_cached(db, church_id)
 
         if "prayer_requests" in sources_to_include:
-            try:
-                context_data["prayer_requests"] = get_prayer_requests_cached(db, church_id)
-                logger.info(f"✅ Successfully fetched prayer requests: {len(context_data['prayer_requests'])} items")
-            except Exception as e:
-                logger.error(f"❌ Error fetching prayer requests: {e}")
-                context_data["prayer_requests"] = []
+            context_data["prayer_requests"] = get_prayer_requests_cached(db, church_id)
 
         if "pastoral_care_requests" in sources_to_include or "pastoral_care" in sources_to_include:
-            try:
-                context_data["pastoral_care_requests"] = get_pastoral_care_requests_cached(db, church_id)
-                logger.info(f"✅ Successfully fetched pastoral care requests: {len(context_data['pastoral_care_requests'])} items")
-            except Exception as e:
-                logger.error(f"❌ Error fetching pastoral care requests: {e}")
-                context_data["pastoral_care_requests"] = []
+            context_data["pastoral_care_requests"] = get_pastoral_care_requests_cached(db, church_id)
 
         if "offerings" in sources_to_include:
-            try:
-                context_data["offering_stats"] = get_offering_stats_cached(db, church_id)
-                logger.info("✅ Successfully fetched offering stats")
-            except Exception as e:
-                logger.error(f"❌ Error fetching offering stats: {e}")
-                context_data["offering_stats"] = {}
+            context_data["offering_stats"] = get_offering_stats_cached(db, church_id)
 
     except Exception as e:
         logger.error(f"Error retrieving church context data: {e}")
