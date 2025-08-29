@@ -83,66 +83,27 @@ def get_church_context_data(
             get_offering_stats_cached,
         )
 
-        # Individual data fetching with error isolation
+        # Simple direct data fetching - back to original working state
         if "announcements" in sources_to_include:
-            try:
-                context_data["announcements"] = get_announcements_cached(db, church_id)
-                logger.info(f"✅ Successfully fetched announcements: {len(context_data['announcements'])} items")
-            except Exception as e:
-                logger.error(f"❌ Error fetching announcements: {e}")
-                context_data["announcements"] = []
+            context_data["announcements"] = get_announcements_cached(db, church_id)
 
         if "attendance" in sources_to_include or "attendances" in sources_to_include:
-            try:
-                context_data["attendance_stats"] = get_attendance_stats_cached(db, church_id)
-                logger.info("✅ Successfully fetched attendance stats")
-            except Exception as e:
-                logger.error(f"❌ Error fetching attendance stats: {e}")
-                context_data["attendance_stats"] = {}
+            context_data["attendance_stats"] = get_attendance_stats_cached(db, church_id)
 
         if "members" in sources_to_include:
-            try:
-                context_data["member_stats"] = get_member_stats_cached(db, church_id)
-                logger.info("✅ Successfully fetched member stats")
-            except Exception as e:
-                logger.error(f"❌ Error fetching member stats (database may be corrupted): {e}")
-                # Provide basic fallback data
-                context_data["member_stats"] = {
-                    "total_members": "조회 불가 (데이터베이스 오류)",
-                    "error": "Members 테이블 조회 실패"
-                }
+            context_data["member_stats"] = get_member_stats_cached(db, church_id)
 
         if "worship_services" in sources_to_include or "worship" in sources_to_include:
-            try:
-                context_data["worship_schedule"] = get_worship_schedule_cached(db, church_id)
-                logger.info("✅ Successfully fetched worship schedule")
-            except Exception as e:
-                logger.error(f"❌ Error fetching worship schedule: {e}")
-                context_data["worship_schedule"] = []
+            context_data["worship_schedule"] = get_worship_schedule_cached(db, church_id)
 
         if "prayer_requests" in sources_to_include:
-            try:
-                context_data["prayer_requests"] = get_prayer_requests_cached(db, church_id)
-                logger.info(f"✅ Successfully fetched prayer requests: {len(context_data['prayer_requests'])} items")
-            except Exception as e:
-                logger.error(f"❌ Error fetching prayer requests: {e}")
-                context_data["prayer_requests"] = []
+            context_data["prayer_requests"] = get_prayer_requests_cached(db, church_id)
 
         if "pastoral_care_requests" in sources_to_include or "pastoral_care" in sources_to_include:
-            try:
-                context_data["pastoral_care_requests"] = get_pastoral_care_requests_cached(db, church_id)
-                logger.info(f"✅ Successfully fetched pastoral care requests: {len(context_data['pastoral_care_requests'])} items")
-            except Exception as e:
-                logger.error(f"❌ Error fetching pastoral care requests: {e}")
-                context_data["pastoral_care_requests"] = []
+            context_data["pastoral_care_requests"] = get_pastoral_care_requests_cached(db, church_id)
 
         if "offerings" in sources_to_include:
-            try:
-                context_data["offering_stats"] = get_offering_stats_cached(db, church_id)
-                logger.info("✅ Successfully fetched offering stats")
-            except Exception as e:
-                logger.error(f"❌ Error fetching offering stats: {e}")
-                context_data["offering_stats"] = {}
+            context_data["offering_stats"] = get_offering_stats_cached(db, church_id)
 
     except Exception as e:
         logger.error(f"Error retrieving church context data: {e}")
