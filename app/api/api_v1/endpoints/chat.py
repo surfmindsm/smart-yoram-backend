@@ -519,11 +519,15 @@ async def send_message(
             logger.info(f"🔍 Debug - prioritize_church_data: {getattr(chat_request, 'prioritize_church_data', None)}")
             logger.info(f"🔍 Debug - agent.church_data_sources: {agent.church_data_sources}")
             
+            # 비서 에이전트는 항상 최신 데이터 조회, 일반 에이전트는 기존 로직 유지
+            is_secretary_mode = getattr(chat_request, 'secretary_mode', False)
+            logger.info(f"🔍 Debug - is_secretary_mode: {is_secretary_mode}")
             should_get_church_data = (
-                not church_data_context
+                (not church_data_context or is_secretary_mode)  # 비서 모드에서는 하드코딩된 컨텍스트 무시
                 and chat_request.prioritize_church_data
                 and agent.church_data_sources
             )
+            logger.info(f"🔍 Debug - should_get_church_data: {should_get_church_data}")
             
             if should_get_church_data:
                 logger.info(f"📊 Retrieving church data for agent {agent.id}")
