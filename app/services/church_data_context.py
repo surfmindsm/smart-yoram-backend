@@ -91,7 +91,16 @@ def get_church_context_data(
             context_data["attendance_stats"] = get_attendance_stats_cached(db, church_id)
 
         if "members" in sources_to_include:
-            context_data["member_stats"] = get_member_stats_cached(db, church_id)
+            logger.info(f"🔍 Fetching member_stats for church_id: {church_id}")
+            try:
+                context_data["member_stats"] = get_member_stats_cached(db, church_id)
+                logger.info(f"✅ Successfully got member_stats: {context_data['member_stats'].get('total_members', 'N/A')} members")
+            except Exception as e:
+                logger.error(f"❌ CRITICAL ERROR in member_stats: {e}")
+                logger.error(f"Exception type: {type(e)}")
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
+                raise  # Re-raise to see the full error
 
         if "worship_services" in sources_to_include or "worship" in sources_to_include:
             context_data["worship_schedule"] = get_worship_schedule_cached(db, church_id)
