@@ -141,7 +141,7 @@ def get_recent_announcements(
     except Exception as e:
         logger.error(f"Error fetching announcements: {e}")
         return []
-
+ 
 
 def get_recent_prayer_requests(
     db: Session, church_id: int, limit: int = 100
