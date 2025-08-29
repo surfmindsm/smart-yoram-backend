@@ -504,10 +504,9 @@ async def send_message(
         logger.info(f"🔍 Debug - Agent ID: {agent.id}, Category: {agent.category}, Enable Church Data: {agent.enable_church_data}")
         logger.info(f"🔍 Debug - Request Secretary Mode: {chat_request.secretary_mode}, Prioritize Church Data: {getattr(chat_request, 'prioritize_church_data', 'N/A')}")
         
-        # 🔧 TEMPORARY: Force secretary mode for agent ID 13 (debugging)
         is_secretary_mode = chat_request.secretary_mode or (
             agent.category == "secretary" and agent.enable_church_data
-        ) or (agent.id == 13)  # Force secretary mode for agent 13
+        )
         
         logger.info(f"🔍 Debug - Is Secretary Mode: {is_secretary_mode}")
 
@@ -520,15 +519,14 @@ async def send_message(
             logger.info(f"🔍 Debug - prioritize_church_data: {getattr(chat_request, 'prioritize_church_data', None)}")
             logger.info(f"🔍 Debug - agent.church_data_sources: {agent.church_data_sources}")
             
-            # 🔧 TEMPORARY: Force church data retrieval for agent ID 13
             should_get_church_data = (
                 not church_data_context
                 and chat_request.prioritize_church_data
                 and agent.church_data_sources
-            ) or (agent.id == 13)  # Force for agent 13
+            )
             
             if should_get_church_data:
-                logger.info(f"🔧 Forcing church data retrieval for agent {agent.id}")
+                logger.info(f"📊 Retrieving church data for agent {agent.id}")
                 # 교회 데이터 조회
                 church_context = get_church_context_data(
                     db=db,
