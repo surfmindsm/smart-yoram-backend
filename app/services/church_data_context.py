@@ -1102,10 +1102,20 @@ def format_context_for_prompt(context_data: Dict) -> str:
                 if req["admin_notes"]:
                     notes_info += f", 관리자노트: {req['admin_notes']}"
 
+                # 더 명확한 포맷으로 개선
                 context_parts.append(
-                    f"- ID{req['id']} {req['requester_name']}: {req['request_content']}{urgency}{phone_info} "
-                    f"[{req['request_type']}, {status_text}{date_info}{scheduled_info}{address_info}{notes_info}]"
+                    f"- ID{req['id']} {req['requester_name']}: {req['request_content']}{urgency}"
                 )
+                context_parts.append(
+                    f"  유형: {req['request_type']}, 상태: {status_text}{phone_info}"
+                )
+                if date_info or scheduled_info:
+                    context_parts.append(f"  일정: {date_info.lstrip(', ')}{scheduled_info}")
+                if address_info:
+                    context_parts.append(f"  {address_info.lstrip(', ')}")
+                if notes_info:
+                    context_parts.append(f"  {notes_info.lstrip(', ')}")
+                context_parts.append("")  # 빈 줄로 구분
 
     if context_data.get("offering_stats"):
         offering_data = context_data["offering_stats"]
