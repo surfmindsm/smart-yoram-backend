@@ -926,14 +926,27 @@ def delete_chat_history(
     """
     history = (
         db.query(ChatHistory)
-        .filter(ChatHistory.id == history_id, ChatHistory.user_id == current_user.id)
+        .filter(
+            ChatHistory.id == history_id, 
+            ChatHistory.user_id == current_user.id,
+            ChatHistory.church_id == current_user.church_id  # 추가 보안 검증
+        )
         .first()
     )
 
     if not history:
+        logger.warning(f"Chat history {history_id} not found for user {current_user.id} in church {current_user.church_id}")
         raise HTTPException(status_code=404, detail="Chat history not found")
 
-    db.delete(history)
-    db.commit()
-
-    return {"success": True, "message": "Chat history deleted successfully"}
+    # 삭제 전 로깅
+    logger.info(f"Deleting chat history {history_id} (title: {history.title}) for user {current_user.id}")
+    
+    try:
+        db.delete(history)
+        db.commit()
+        logger.info(f"Successfully deleted chat history {history_id}")
+        return {"success": True, "message": "Chat history deleted successfully"}
+    except Exception as e:
+        logger.error(f"Failed to delete chat history {history_id}: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to delete chat history")
