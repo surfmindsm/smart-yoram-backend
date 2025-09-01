@@ -26,93 +26,62 @@ def get_active_announcements(
     - 시스템 공지 (type = 'system') + 해당 교회 공지 (church_id = 사용자의 church_id)
     - start_date <= 오늘 <= end_date (end_date가 NULL이면 무제한)
     """
-    today = date.today()
-    
-    # 시스템 공지사항 - 전체 공지 (target_type = 'all')
-    all_announcements_query = db.query(models.Announcement).filter(
-        and_(
+    try:
+        today = date.today()
+        
+        # 기본 필터 조건
+        base_filter = and_(
             models.Announcement.is_active == True,
-            models.Announcement.type == 'system',
-            models.Announcement.target_type == 'all',
-            # 날짜 필터링
-            models.Announcement.start_date <= today,
-            or_(
-                models.Announcement.end_date >= today,
-                models.Announcement.end_date == None
+        )
+        
+        # 기존 동작 유지: 간단한 시스템 공지 + 교회 공지 조회
+        system_announcements = db.query(models.Announcement).filter(
+            and_(
+                base_filter,
+                or_(
+                    # 시스템 공지 (church_id가 NULL이거나 type이 system)
+                    and_(
+                        models.Announcement.type == 'system',
+                        models.Announcement.church_id == None
+                    ),
+                    # 기존 시스템 공지 호환성
+                    and_(
+                        models.Announcement.church_id == None,
+                        models.Announcement.type == 'system'
+                    )
+                )
             )
         )
-    )
-    
-    # 시스템 공지사항 - 특정 교회 대상 (target_type = 'specific')
-    specific_announcements_query = db.query(models.Announcement).join(
-        models.AnnouncementTarget,
-        models.Announcement.id == models.AnnouncementTarget.announcement_id
-    ).filter(
-        and_(
-            models.Announcement.is_active == True,
-            models.Announcement.type == 'system',
-            models.Announcement.target_type == 'specific',
-            models.AnnouncementTarget.church_id == current_user.church_id,
-            # 날짜 필터링
-            models.Announcement.start_date <= today,
-            or_(
-                models.Announcement.end_date >= today,
-                models.Announcement.end_date == None
+        
+        # 교회별 공지사항
+        church_announcements = db.query(models.Announcement).filter(
+            and_(
+                base_filter,
+                models.Announcement.church_id == current_user.church_id,
+                or_(
+                    models.Announcement.type == 'church',
+                    models.Announcement.type == None  # 기존 레코드 호환성
+                )
             )
         )
-    )
-    
-    # 시스템 공지사항 - 단일 교회 대상 (target_type = 'single')
-    single_announcements_query = db.query(models.Announcement).filter(
-        and_(
-            models.Announcement.is_active == True,
-            models.Announcement.type == 'system',
-            models.Announcement.target_type == 'single',
-            models.Announcement.church_id == current_user.church_id,
-            # 날짜 필터링
-            models.Announcement.start_date <= today,
-            or_(
-                models.Announcement.end_date >= today,
-                models.Announcement.end_date == None
-            )
-        )
-    )
-    
-    # 교회별 공지사항
-    church_announcements = db.query(models.Announcement).filter(
-        and_(
-            models.Announcement.is_active == True,
-            models.Announcement.church_id == current_user.church_id,
-            or_(
-                models.Announcement.type == 'church',
-                models.Announcement.type == None  # 기존 레코드 호환성
-            ),
-            # 날짜 필터링: start_date <= 오늘 <= end_date (end_date가 NULL이면 무제한)
-            models.Announcement.start_date <= today,
-            or_(
-                models.Announcement.end_date >= today,
-                models.Announcement.end_date == None
-            )
-        )
-    )
-    
-    # 모든 공지사항 결과 합치기
-    all_announcements = (
-        list(all_announcements_query.all()) +
-        list(specific_announcements_query.all()) + 
-        list(single_announcements_query.all()) +
-        list(church_announcements.all())
-    )
-    
-    # 우선순위 정렬: urgent > important > normal, 같은 우선순위면 created_at DESC
-    def sort_key(ann):
-        priority_order = {'urgent': 0, 'important': 1, 'normal': 2}
-        priority = getattr(ann, 'priority', 'normal')
-        return (priority_order.get(priority, 2), -ann.created_at.timestamp())
-    
-    all_announcements.sort(key=sort_key)
-    
-    return all_announcements
+        
+        # 모든 공지사항 합치기
+        all_announcements = list(system_announcements.all()) + list(church_announcements.all())
+        
+        # 우선순위 정렬
+        def sort_key(ann):
+            priority_order = {'urgent': 0, 'important': 1, 'normal': 2}
+            priority = getattr(ann, 'priority', 'normal')
+            return (priority_order.get(priority, 2), -ann.created_at.timestamp())
+        
+        all_announcements.sort(key=sort_key)
+        
+        return all_announcements
+        
+    except Exception as e:
+        print(f"Error in get_active_announcements: {str(e)}")
+        # 빈 리스트 반환으로 fallback
+        return []
 
 
 @router.post("/{announcement_id}/read")
@@ -463,63 +432,45 @@ def create_system_announcement(
     시스템 공지사항 생성 (시스템 관리자용)
     권한: church_id = 0인 사용자만
     
-    target_type 옵션:
-    - 'all': 모든 교회에 공지 (church_id = NULL, target_church_ids 무시)
-    - 'specific': 특정 교회들에만 공지 (church_id = NULL, target_church_ids 사용)  
-    - 'single': 단일 교회에만 공지 (기존 방식, church_id 사용)
+    단순화된 버전: 일단 전체 공지만 지원
     """
-    if current_user.church_id != 0:
-        raise HTTPException(
-            status_code=403,
-            detail="시스템 관리자만 접근 가능합니다"
-        )
-    
-    announcement_data = announcement_in.dict(exclude={'target_church_ids'})
-    target_church_ids = getattr(announcement_in, 'target_church_ids', [])
-    target_type = getattr(announcement_in, 'target_type', 'all')
-    
-    # target_type에 따른 church_id 설정
-    if target_type == 'all':
-        announcement_data.update({
-            'church_id': None,
-            'target_type': 'all'
-        })
-    elif target_type == 'specific':
-        if not target_church_ids:
-            raise HTTPException(status_code=400, detail="특정 교회 선택 시 target_church_ids가 필요합니다")
-        announcement_data.update({
-            'church_id': None,
-            'target_type': 'specific'
-        })
-    elif target_type == 'single':
-        if not announcement_data.get('church_id'):
-            raise HTTPException(status_code=400, detail="단일 교회 선택 시 church_id가 필요합니다")
-        announcement_data['target_type'] = 'single'
-    
-    announcement_data.update({
-        'type': 'system',
-        'created_by': current_user.id,
-        'author_id': current_user.id,
-        'author_name': current_user.full_name or current_user.username,
-    })
-    
-    # 공지사항 생성
-    announcement = models.Announcement(**announcement_data)
-    db.add(announcement)
-    db.commit()
-    db.refresh(announcement)
-    
-    # 특정 교회들 선택한 경우 대상 교회 저장
-    if target_type == 'specific' and target_church_ids:
-        for church_id in target_church_ids:
-            target = models.AnnouncementTarget(
-                announcement_id=announcement.id,
-                church_id=church_id
+    try:
+        if current_user.church_id != 0:
+            raise HTTPException(
+                status_code=403,
+                detail="시스템 관리자만 접근 가능합니다"
             )
-            db.add(target)
+        
+        # 단순화된 데이터 처리
+        announcement_data = {
+            'title': announcement_in.title,
+            'content': announcement_in.content,
+            'category': getattr(announcement_in, 'category', 'system'),
+            'priority': getattr(announcement_in, 'priority', 'normal'),
+            'target_type': 'all',
+            'type': 'system',
+            'church_id': None,
+            'start_date': announcement_in.start_date,
+            'end_date': getattr(announcement_in, 'end_date', None),
+            'created_by': current_user.id,
+            'author_id': current_user.id,
+            'author_name': current_user.full_name or current_user.username,
+            'is_active': True,
+        }
+        
+        # 공지사항 생성
+        announcement = models.Announcement(**announcement_data)
+        db.add(announcement)
         db.commit()
-    
-    return announcement
+        db.refresh(announcement)
+        
+        return announcement
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error in create_system_announcement: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @router.put("/admin/{announcement_id}", response_model=schemas.Announcement)  

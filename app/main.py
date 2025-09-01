@@ -47,14 +47,17 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
-        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3000", 
+        "http://localhost:3001",
         "https://smart-yoram.vercel.app",
         "https://smart-yoram-frontend.vercel.app",
         "https://smart-yoram-admin.vercel.app",
         "https://api.surfmind-team.com",
+        # 개발 중 임시로 모든 origin 허용
+        "*"
     ],
     allow_credentials=True,  # Enable credentials for authentication
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
     allow_headers=["*"],
     expose_headers=["*"],
 )
