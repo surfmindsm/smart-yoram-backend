@@ -6,7 +6,7 @@ from pydantic import BaseModel
 class AnnouncementBase(BaseModel):
     title: str
     content: str
-    category: str  # worship, member_news, event
+    category: Optional[str] = "system"  # worship, member_news, event, system
     subcategory: Optional[str] = None
     priority: Optional[str] = "normal"  # urgent, important, normal
     target_type: Optional[str] = "all"  # all, specific, single

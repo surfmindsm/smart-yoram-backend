@@ -20,9 +20,16 @@ def upgrade():
     
     # Add target_type column to announcements
     try:
-        op.add_column('announcements', sa.Column('target_type', sa.String(50), nullable=False, server_default='single'))
+        op.add_column('announcements', sa.Column('target_type', sa.String(50), nullable=False, server_default='all'))
     except Exception as e:
         print(f"Column addition failed (may already exist): {e}")
+    
+    # Update existing system announcements to use 'all' target_type
+    try:
+        op.execute("UPDATE announcements SET target_type = 'all' WHERE type = 'system' AND church_id IS NULL")
+        op.execute("UPDATE announcements SET target_type = 'single' WHERE type = 'church' AND church_id IS NOT NULL")
+    except Exception as e:
+        print(f"Data update failed: {e}")
     
     # Create announcement_targets table for multi-target support
     try:

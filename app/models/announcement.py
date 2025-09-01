@@ -20,7 +20,7 @@ class Announcement(Base):
     priority = Column(String(50), nullable=False, default='normal')  # 'urgent', 'important', 'normal'
     
     # 대상 설정: 'all' (전체), 'specific' (특정 교회들), 'single' (단일 교회)
-    target_type = Column(String(50), nullable=False, default='single')
+    target_type = Column(String(50), nullable=False, default='all')
     
     # 명세서 요구사항: 기간 설정
     start_date = Column(Date, nullable=False)
@@ -36,7 +36,7 @@ class Announcement(Base):
     is_pinned = Column(Boolean, default=False)  # Pin important announcements
 
     # Category fields (기존 기능 유지)
-    category = Column(String, nullable=False)  # worship, member_news, event
+    category = Column(String, nullable=False, default='system')  # worship, member_news, event, system
     subcategory = Column(String)  # Optional subcategory
 
     # Target audience (기존 기능 유지)
