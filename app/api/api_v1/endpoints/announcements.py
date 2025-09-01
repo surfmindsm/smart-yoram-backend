@@ -167,17 +167,23 @@ def get_all_announcements_admin(
     모든 공지사항 조회 (시스템 관리자용)
     권한: church_id = 0인 사용자만
     """
-    if current_user.church_id != 0:
-        raise HTTPException(
-            status_code=403, 
-            detail="시스템 관리자만 접근 가능합니다"
-        )
-    
-    announcements = db.query(models.Announcement).order_by(
-        desc(models.Announcement.created_at)
-    ).all()
-    
-    return announcements
+    try:
+        if current_user.church_id != 0:
+            raise HTTPException(
+                status_code=403, 
+                detail="시스템 관리자만 접근 가능합니다"
+            )
+        
+        announcements = db.query(models.Announcement).order_by(
+            desc(models.Announcement.created_at)
+        ).all()
+        
+        return announcements
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error in get_all_announcements_admin: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @router.get("/categories", response_model=Dict[str, Any])
@@ -200,29 +206,35 @@ def get_churches_for_announcement(
     공지사항 대상 교회 목록 조회 (시스템 관리자용)
     권한: church_id = 0인 사용자만
     """
-    if current_user.church_id != 0:
-        raise HTTPException(
-            status_code=403,
-            detail="시스템 관리자만 접근 가능합니다"
-        )
-    
-    churches = db.query(models.Church).filter(
-        and_(
-            models.Church.is_active == True,
-            models.Church.id != 0  # 시스템 교회 제외
-        )
-    ).order_by(models.Church.name).all()
-    
-    return [
-        {
-            "id": church.id,
-            "name": church.name,
-            "pastor_name": church.pastor_name,
-            "address": church.address,
-            "member_count": getattr(church, 'member_count', 0)
-        }
-        for church in churches
-    ]
+    try:
+        if current_user.church_id != 0:
+            raise HTTPException(
+                status_code=403,
+                detail="시스템 관리자만 접근 가능합니다"
+            )
+        
+        churches = db.query(models.Church).filter(
+            and_(
+                models.Church.is_active == True,
+                models.Church.id != 0  # 시스템 교회 제외
+            )
+        ).order_by(models.Church.name).all()
+        
+        return [
+            {
+                "id": church.id,
+                "name": church.name or f"교회 {church.id}",
+                "pastor_name": getattr(church, 'pastor_name', '') or "",
+                "address": getattr(church, 'address', '') or "",
+                "member_count": 0  # 단순화
+            }
+            for church in churches
+        ]
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error in get_churches_for_announcement: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @router.get("/", response_model=List[schemas.Announcement])
