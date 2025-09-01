@@ -28,18 +28,48 @@ def get_active_announcements(
     """
     today = date.today()
     
-    # 시스템 공지사항 (모든 교회에 표시)
-    system_announcements = db.query(models.Announcement).filter(
+    # 시스템 공지사항 - 전체 공지 (target_type = 'all')
+    all_announcements_query = db.query(models.Announcement).filter(
         and_(
             models.Announcement.is_active == True,
+            models.Announcement.type == 'system',
+            models.Announcement.target_type == 'all',
+            # 날짜 필터링
+            models.Announcement.start_date <= today,
             or_(
-                models.Announcement.type == 'system',
-                and_(
-                    models.Announcement.church_id == None,
-                    models.Announcement.type == 'system'
-                )
-            ),
-            # 날짜 필터링: start_date <= 오늘 <= end_date (end_date가 NULL이면 무제한)
+                models.Announcement.end_date >= today,
+                models.Announcement.end_date == None
+            )
+        )
+    )
+    
+    # 시스템 공지사항 - 특정 교회 대상 (target_type = 'specific')
+    specific_announcements_query = db.query(models.Announcement).join(
+        models.AnnouncementTarget,
+        models.Announcement.id == models.AnnouncementTarget.announcement_id
+    ).filter(
+        and_(
+            models.Announcement.is_active == True,
+            models.Announcement.type == 'system',
+            models.Announcement.target_type == 'specific',
+            models.AnnouncementTarget.church_id == current_user.church_id,
+            # 날짜 필터링
+            models.Announcement.start_date <= today,
+            or_(
+                models.Announcement.end_date >= today,
+                models.Announcement.end_date == None
+            )
+        )
+    )
+    
+    # 시스템 공지사항 - 단일 교회 대상 (target_type = 'single')
+    single_announcements_query = db.query(models.Announcement).filter(
+        and_(
+            models.Announcement.is_active == True,
+            models.Announcement.type == 'system',
+            models.Announcement.target_type == 'single',
+            models.Announcement.church_id == current_user.church_id,
+            # 날짜 필터링
             models.Announcement.start_date <= today,
             or_(
                 models.Announcement.end_date >= today,
@@ -66,8 +96,13 @@ def get_active_announcements(
         )
     )
     
-    # 두 쿼리 결과 합치기
-    all_announcements = list(system_announcements.all()) + list(church_announcements.all())
+    # 모든 공지사항 결과 합치기
+    all_announcements = (
+        list(all_announcements_query.all()) +
+        list(specific_announcements_query.all()) + 
+        list(single_announcements_query.all()) +
+        list(church_announcements.all())
+    )
     
     # 우선순위 정렬: urgent > important > normal, 같은 우선순위면 created_at DESC
     def sort_key(ann):
@@ -153,6 +188,41 @@ def get_announcement_categories(
     Get available announcement categories and subcategories.
     """
     return get_categories()
+
+
+@router.get("/churches", response_model=List[Dict[str, Any]])
+def get_churches_for_announcement(
+    *,
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    공지사항 대상 교회 목록 조회 (시스템 관리자용)
+    권한: church_id = 0인 사용자만
+    """
+    if current_user.church_id != 0:
+        raise HTTPException(
+            status_code=403,
+            detail="시스템 관리자만 접근 가능합니다"
+        )
+    
+    churches = db.query(models.Church).filter(
+        and_(
+            models.Church.is_active == True,
+            models.Church.id != 0  # 시스템 교회 제외
+        )
+    ).order_by(models.Church.name).all()
+    
+    return [
+        {
+            "id": church.id,
+            "name": church.name,
+            "pastor_name": church.pastor_name,
+            "address": church.address,
+            "member_count": getattr(church, 'member_count', 0)
+        }
+        for church in churches
+    ]
 
 
 @router.get("/", response_model=List[schemas.Announcement])
@@ -380,6 +450,11 @@ def create_system_announcement(
     """
     시스템 공지사항 생성 (시스템 관리자용)
     권한: church_id = 0인 사용자만
+    
+    target_type 옵션:
+    - 'all': 모든 교회에 공지 (church_id = NULL, target_church_ids 무시)
+    - 'specific': 특정 교회들에만 공지 (church_id = NULL, target_church_ids 사용)  
+    - 'single': 단일 교회에만 공지 (기존 방식, church_id 사용)
     """
     if current_user.church_id != 0:
         raise HTTPException(
@@ -387,20 +462,51 @@ def create_system_announcement(
             detail="시스템 관리자만 접근 가능합니다"
         )
     
-    # 시스템 공지사항은 type='system', church_id=None으로 설정
-    announcement_data = announcement_in.dict()
+    announcement_data = announcement_in.dict(exclude={'target_church_ids'})
+    target_church_ids = getattr(announcement_in, 'target_church_ids', [])
+    target_type = getattr(announcement_in, 'target_type', 'all')
+    
+    # target_type에 따른 church_id 설정
+    if target_type == 'all':
+        announcement_data.update({
+            'church_id': None,
+            'target_type': 'all'
+        })
+    elif target_type == 'specific':
+        if not target_church_ids:
+            raise HTTPException(status_code=400, detail="특정 교회 선택 시 target_church_ids가 필요합니다")
+        announcement_data.update({
+            'church_id': None,
+            'target_type': 'specific'
+        })
+    elif target_type == 'single':
+        if not announcement_data.get('church_id'):
+            raise HTTPException(status_code=400, detail="단일 교회 선택 시 church_id가 필요합니다")
+        announcement_data['target_type'] = 'single'
+    
     announcement_data.update({
         'type': 'system',
-        'church_id': None,
         'created_by': current_user.id,
         'author_id': current_user.id,
         'author_name': current_user.full_name or current_user.username,
     })
     
+    # 공지사항 생성
     announcement = models.Announcement(**announcement_data)
     db.add(announcement)
     db.commit()
     db.refresh(announcement)
+    
+    # 특정 교회들 선택한 경우 대상 교회 저장
+    if target_type == 'specific' and target_church_ids:
+        for church_id in target_church_ids:
+            target = models.AnnouncementTarget(
+                announcement_id=announcement.id,
+                church_id=church_id
+            )
+            db.add(target)
+        db.commit()
+    
     return announcement
 
 
@@ -436,12 +542,46 @@ def update_system_announcement(
             detail="시스템 공지사항만 수정 가능합니다"
         )
     
-    update_data = announcement_in.dict(exclude_unset=True)
+    update_data = announcement_in.dict(exclude_unset=True, exclude={'target_church_ids'})
+    target_church_ids = getattr(announcement_in, 'target_church_ids', [])
+    
+    # target_type 변경 처리
+    if 'target_type' in update_data:
+        target_type = update_data['target_type']
+        
+        if target_type == 'all':
+            update_data['church_id'] = None
+        elif target_type == 'specific':
+            update_data['church_id'] = None
+            if not target_church_ids:
+                raise HTTPException(status_code=400, detail="특정 교회 선택 시 target_church_ids가 필요합니다")
+        elif target_type == 'single':
+            if not update_data.get('church_id'):
+                raise HTTPException(status_code=400, detail="단일 교회 선택 시 church_id가 필요합니다")
+    
+    # 기본 필드 업데이트
     for field, value in update_data.items():
         setattr(announcement, field, value)
     
     db.add(announcement)
     db.commit()
+    
+    # target_type이 'specific'으로 변경된 경우 대상 교회 업데이트
+    if 'target_type' in update_data and update_data['target_type'] == 'specific':
+        # 기존 대상 교회 삭제
+        db.query(models.AnnouncementTarget).filter(
+            models.AnnouncementTarget.announcement_id == announcement_id
+        ).delete()
+        
+        # 새 대상 교회 추가
+        for church_id in target_church_ids:
+            target = models.AnnouncementTarget(
+                announcement_id=announcement_id,
+                church_id=church_id
+            )
+            db.add(target)
+        db.commit()
+    
     db.refresh(announcement)
     return announcement
 
