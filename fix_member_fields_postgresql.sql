@@ -153,48 +153,49 @@ CREATE INDEX IF NOT EXISTS ix_members_job_category ON members(job_category);
 CREATE INDEX IF NOT EXISTS ix_members_inviter3 ON members(inviter3_member_id);
 
 -- 3. 교번 업데이트 (PostgreSQL 호환 방식)
--- 기존 교번과 충돌하지 않도록 안전하게 처리
+-- 기존 교번과 충돌하지 않도록 임시 값으로 먼저 설정 후 최종 할당
 DO $$
 DECLARE
     max_code_num INTEGER;
     church_record RECORD;
     member_record RECORD;
     current_code_num INTEGER;
+    temp_code TEXT;
 BEGIN
-    -- 각 교회별로 처리
-    FOR church_record IN 
-        SELECT DISTINCT church_id 
+    -- 먼저 전체 테이블에서 최대 교번 찾기 (모든 교회 통틀어)
+    SELECT COALESCE(MAX(CASE WHEN code ~ '^[0-9]+$' THEN CAST(code AS INTEGER) ELSE 0 END), 0) INTO max_code_num
+    FROM members 
+    WHERE code IS NOT NULL 
+    AND code != ''
+    AND code ~ '^[0-9]+$';
+    
+    RAISE NOTICE '전체 최대 교번: %', max_code_num;
+    
+    -- 시작 번호 설정 (전체 최대값 이후부터)
+    current_code_num := max_code_num;
+    
+    -- Step 1: 임시 교번 할당 (중복 방지용)
+    FOR member_record IN
+        SELECT id, church_id
         FROM members 
         WHERE code IS NULL OR code = '' OR code = '0'
+        ORDER BY church_id, id
     LOOP
-        -- 해당 교회의 기존 최대 교번 찾기
-        SELECT COALESCE(MAX(CASE WHEN code ~ '^[0-9]+$' THEN CAST(code AS INTEGER) ELSE 0 END), 0) INTO max_code_num
-        FROM members 
-        WHERE church_id = church_record.church_id 
-        AND code IS NOT NULL 
-        AND code != '';
+        current_code_num := current_code_num + 1;
+        temp_code := 'TEMP_' || current_code_num::text;
         
-        RAISE NOTICE '교회 ID %: 기존 최대 교번 %', church_record.church_id, max_code_num;
-        
-        -- 시작 번호 설정
-        current_code_num := max_code_num;
-        
-        -- 해당 교회의 교번이 없는 교인들에게 순차적으로 할당
-        FOR member_record IN
-            SELECT id 
-            FROM members 
-            WHERE church_id = church_record.church_id 
-            AND (code IS NULL OR code = '' OR code = '0')
-            ORDER BY id
-        LOOP
-            current_code_num := current_code_num + 1;
-            
-            UPDATE members 
-            SET code = lpad(current_code_num::text, 7, '0')
-            WHERE id = member_record.id;
-        END LOOP;
+        UPDATE members 
+        SET code = temp_code
+        WHERE id = member_record.id;
         
     END LOOP;
+    
+    RAISE NOTICE '임시 교번 할당 완료, 이제 최종 교번으로 변경';
+    
+    -- Step 2: 임시 교번을 최종 교번으로 변경
+    UPDATE members 
+    SET code = lpad(REPLACE(code, 'TEMP_', '')::text, 7, '0')
+    WHERE code LIKE 'TEMP_%';
     
     RAISE NOTICE '교번 업데이트 완료';
 END $$;
