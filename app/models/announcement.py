@@ -19,6 +19,9 @@ class Announcement(Base):
     type = Column(String(50), nullable=False, default='church')  # 'system' or 'church'
     priority = Column(String(50), nullable=False, default='normal')  # 'urgent', 'important', 'normal'
     
+    # 대상 설정: 'all' (전체), 'specific' (특정 교회들), 'single' (단일 교회)
+    target_type = Column(String(50), nullable=False, default='single')
+    
     # 명세서 요구사항: 기간 설정
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=True)  # NULL이면 무제한
@@ -47,8 +50,13 @@ class Announcement(Base):
     __table_args__ = (
         CheckConstraint("type IN ('system', 'church')", name='check_type'),
         CheckConstraint("priority IN ('urgent', 'important', 'normal')", name='check_priority'),
-        CheckConstraint("(type = 'system' AND church_id IS NULL) OR (type = 'church' AND church_id IS NOT NULL)", 
-                       name='check_system_church_consistency'),
+        CheckConstraint("target_type IN ('all', 'specific', 'single')", name='check_target_type'),
+        CheckConstraint(
+            "(target_type = 'single' AND church_id IS NOT NULL) OR "
+            "(target_type = 'all' AND church_id IS NULL) OR "
+            "(target_type = 'specific' AND church_id IS NULL)", 
+            name='check_target_consistency'
+        ),
     )
 
     # Relationships
@@ -74,3 +82,23 @@ class AnnouncementRead(Base):
     # Relationships  
     announcement = relationship("Announcement", backref="reads")
     user = relationship("User", backref="announcement_reads")
+
+
+class AnnouncementTarget(Base):
+    """다중 테넌트 공지사항 대상 관리 테이블"""
+    __tablename__ = "announcement_targets"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    announcement_id = Column(Integer, ForeignKey("announcements.id", ondelete="CASCADE"), nullable=False)
+    church_id = Column(Integer, ForeignKey("churches.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # 제약 조건: 같은 공지사항-교회 조합은 한 번만
+    __table_args__ = (
+        CheckConstraint('announcement_id IS NOT NULL AND church_id IS NOT NULL',
+                       name='check_announcement_target_not_null'),
+    )
+    
+    # Relationships
+    announcement = relationship("Announcement", backref="targets")
+    church = relationship("Church", backref="announcement_targets")
