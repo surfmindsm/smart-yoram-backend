@@ -34,30 +34,18 @@ def get_active_announcements(
             models.Announcement.is_active == True,
         )
         
-        # 간단한 조회: 기존 테이블 구조 사용
-        # 시스템 공지 (church_id가 NULL인 것들)
-        system_announcements = db.query(models.Announcement).filter(
+        # 해당 교회의 공지사항만 조회 (시스템 공지는 제외)
+        announcements = db.query(models.Announcement).filter(
             and_(
-                base_filter,
-                models.Announcement.church_id == None
-            )
-        )
-        
-        # 교회별 공지사항
-        church_announcements = db.query(models.Announcement).filter(
-            and_(
-                base_filter,
+                models.Announcement.is_active == True,
                 models.Announcement.church_id == current_user.church_id
             )
-        )
+        ).order_by(
+            desc(models.Announcement.is_pinned),
+            desc(models.Announcement.created_at)
+        ).all()
         
-        # 모든 공지사항 합치기
-        all_announcements = list(system_announcements.all()) + list(church_announcements.all())
-        
-        # 기본 정렬: 생성일시 역순 
-        all_announcements.sort(key=lambda ann: -ann.created_at.timestamp())
-        
-        return all_announcements
+        return announcements
         
     except Exception as e:
         print(f"Error in get_active_announcements: {str(e)}")
@@ -83,46 +71,28 @@ def mark_announcement_as_read(
     if not announcement:
         raise HTTPException(status_code=404, detail="Announcement not found")
     
-    # 이미 읽었는지 확인 (AnnouncementRead 모델이 있다면)
-    try:
-        existing_read = db.query(models.AnnouncementRead).filter(
-            and_(
-                models.AnnouncementRead.announcement_id == announcement_id,
-                models.AnnouncementRead.user_id == current_user.id
-            )
-        ).first()
-        
-        if not existing_read:
-            # 읽음 기록 추가
-            read_record = models.AnnouncementRead(
-                announcement_id=announcement_id,
-                user_id=current_user.id
-            )
-            db.add(read_record)
-            db.commit()
-    except:
-        # AnnouncementRead 모델이 없는 경우 패스
+    # 교회별 공지사항은 읽음 처리 기능 제거 (간소화)
+    # 필요시 나중에 추가 구현
         pass
     
     return {"success": True, "message": "읽음 처리 완료"}
 
 
-@router.get("/admin")
-def get_all_announcements_admin(
+@router.get("/church-admin")
+def get_church_announcements_admin(
     *,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    모든 공지사항 조회 (시스템 관리자용) - 단순 버전
-    권한: church_id = 0인 사용자만
+    교회별 공지사항 조회 (교회 관리자용) - 단순 버전
+    해당 교회의 공지사항만 조회
     """
     try:
-        if current_user.church_id != 0:
-            return {"error": "권한 없음", "announcements": []}
-        
-        # 매우 단순한 쿼리
-        announcements = db.query(models.Announcement).limit(10).all()
+        # 해당 교회의 공지사항만 조회
+        announcements = db.query(models.Announcement).filter(
+            models.Announcement.church_id == current_user.church_id
+        ).limit(10).all()
         
         # 직접 딕셔너리로 변환
         result = []
@@ -155,46 +125,6 @@ def get_announcement_categories(
     """
     return get_categories()
 
-
-@router.get("/churches", response_model=List[Dict[str, Any]])
-def get_churches_for_announcement(
-    *,
-    db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(deps.get_current_active_user),
-) -> Any:
-    """
-    공지사항 대상 교회 목록 조회 (시스템 관리자용)
-    권한: church_id = 0인 사용자만
-    """
-    try:
-        if current_user.church_id != 0:
-            raise HTTPException(
-                status_code=403,
-                detail="시스템 관리자만 접근 가능합니다"
-            )
-        
-        churches = db.query(models.Church).filter(
-            and_(
-                models.Church.is_active == True,
-                models.Church.id != 0  # 시스템 교회 제외
-            )
-        ).order_by(models.Church.name).all()
-        
-        return [
-            {
-                "id": church.id,
-                "name": church.name or f"교회 {church.id}",
-                "pastor_name": getattr(church, 'pastor_name', '') or "",
-                "address": getattr(church, 'address', '') or "",
-                "member_count": 0  # 단순화
-            }
-            for church in churches
-        ]
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"Error in get_churches_for_announcement: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @router.get("/", response_model=List[schemas.Announcement])
