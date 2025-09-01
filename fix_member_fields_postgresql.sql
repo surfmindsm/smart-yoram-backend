@@ -153,14 +153,21 @@ CREATE INDEX IF NOT EXISTS ix_members_job_category ON members(job_category);
 CREATE INDEX IF NOT EXISTS ix_members_inviter3 ON members(inviter3_member_id);
 
 -- 3. 교번 업데이트 (PostgreSQL 호환 방식)
--- printf 대신 lpad와 row_number() 사용
+-- 윈도우 함수를 서브쿼리에서 사용
 UPDATE members 
-SET code = lpad(
-    row_number() OVER (PARTITION BY church_id ORDER BY id)::text, 
-    7, 
-    '0'
-)
-WHERE code IS NULL OR code = '';
+SET code = subq.new_code
+FROM (
+    SELECT 
+        id,
+        lpad(
+            row_number() OVER (PARTITION BY church_id ORDER BY id)::text,
+            7,
+            '0'
+        ) as new_code
+    FROM members
+    WHERE code IS NULL OR code = ''
+) subq
+WHERE members.id = subq.id;
 
 -- 4. 완료 메시지
 DO $$
