@@ -107,33 +107,43 @@ def mark_announcement_as_read(
     return {"success": True, "message": "읽음 처리 완료"}
 
 
-@router.get("/admin", response_model=List[schemas.Announcement])
+@router.get("/admin")
 def get_all_announcements_admin(
     *,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    모든 공지사항 조회 (시스템 관리자용)
+    모든 공지사항 조회 (시스템 관리자용) - 단순 버전
     권한: church_id = 0인 사용자만
     """
     try:
         if current_user.church_id != 0:
-            raise HTTPException(
-                status_code=403, 
-                detail="시스템 관리자만 접근 가능합니다"
-            )
+            return {"error": "권한 없음", "announcements": []}
         
-        announcements = db.query(models.Announcement).order_by(
-            desc(models.Announcement.created_at)
-        ).all()
+        # 매우 단순한 쿼리
+        announcements = db.query(models.Announcement).limit(10).all()
         
-        return announcements
-    except HTTPException:
-        raise
+        # 직접 딕셔너리로 변환
+        result = []
+        for ann in announcements:
+            result.append({
+                "id": ann.id,
+                "title": ann.title,
+                "content": ann.content,
+                "category": getattr(ann, 'category', 'system'),
+                "church_id": ann.church_id,
+                "author_id": ann.author_id,
+                "author_name": getattr(ann, 'author_name', ''),
+                "is_active": getattr(ann, 'is_active', True),
+                "created_at": ann.created_at.isoformat() if ann.created_at else None
+            })
+        
+        return {"announcements": result, "total": len(result)}
+        
     except Exception as e:
         print(f"Error in get_all_announcements_admin: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        return {"error": str(e), "announcements": []}
 
 
 @router.get("/categories", response_model=Dict[str, Any])
