@@ -27,41 +27,60 @@ def read_members(
     member_status: Optional[str] = Query(None, description="Filter by member status"),
     current_user: models.User = Depends(deps.get_current_active_user),
 ) -> Any:
-    if current_user.church_id:
-        query = db.query(models.Member).filter(
-            models.Member.church_id == current_user.church_id
-        )
-    elif current_user.is_superuser:
-        query = db.query(models.Member)
-    else:
-        raise HTTPException(status_code=403, detail="Not enough permissions")
-
-    # Apply search filter
-    if search:
-        if is_korean_initial_search(search):
-            # Korean initial consonant search
-            all_members = query.all()
-            filtered_members = [
-                member
-                for member in all_members
-                if match_initial_consonants(member.name, search.replace(" ", ""))
-            ]
-            return filtered_members[skip : skip + limit]
-        else:
-            # Regular search
-            query = query.filter(
-                or_(
-                    models.Member.name.contains(search),
-                    models.Member.phone.contains(search),
-                )
+    try:
+        if current_user.church_id:
+            query = db.query(models.Member).filter(
+                models.Member.church_id == current_user.church_id
             )
+        elif current_user.is_superuser:
+            query = db.query(models.Member)
+        else:
+            raise HTTPException(status_code=403, detail="Not enough permissions")
 
-    # Apply status filter
-    if member_status:
-        query = query.filter(models.Member.member_status == member_status)
+        # Apply search filter
+        if search:
+            if is_korean_initial_search(search):
+                # Korean initial consonant search
+                try:
+                    all_members = query.all()
+                    filtered_members = [
+                        member
+                        for member in all_members
+                        if match_initial_consonants(member.name, search.replace(" ", ""))
+                    ]
+                    return filtered_members[skip : skip + limit]
+                except Exception as search_error:
+                    print(f"Korean search error: {search_error}")
+                    raise HTTPException(status_code=500, detail=f"Korean search failed: {str(search_error)}")
+            else:
+                # Regular search
+                query = query.filter(
+                    or_(
+                        models.Member.name.contains(search),
+                        models.Member.phone.contains(search),
+                    )
+                )
 
-    members = query.offset(skip).limit(limit).all()
-    return members
+        # Apply status filter
+        if member_status:
+            query = query.filter(models.Member.member_status == member_status)
+
+        try:
+            members = query.offset(skip).limit(limit).all()
+            return members
+        except Exception as query_error:
+            print(f"Member query error: {query_error}")
+            import traceback
+            traceback.print_exc()
+            raise HTTPException(status_code=500, detail=f"Member query failed: {str(query_error)}")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Members API error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Members API failed: {str(e)}")
 
 
 @router.post("/", response_model=schemas.Member)
