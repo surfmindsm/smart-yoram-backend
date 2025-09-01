@@ -27,11 +27,18 @@ def login_access_token(
 ) -> Any:
     try:
         print(f"Auth login attempt - username: {form_data.username}")
+        # Try to find user by username first
         user = (
             db.query(models.User).filter(models.User.username == form_data.username).first()
         )
+        # If not found by username, try email
         if not user:
-            print(f"User not found: {form_data.username}")
+            user = (
+                db.query(models.User).filter(models.User.email == form_data.username).first()
+            )
+        
+        if not user:
+            print(f"User not found by username or email: {form_data.username}")
             raise HTTPException(status_code=400, detail="Incorrect username or password")
         
         if not security.verify_password(form_data.password, user.hashed_password):
