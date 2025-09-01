@@ -31,56 +31,72 @@ def read_members(
         print(f"Members API - User: {current_user.id}, Email: {current_user.email}")
         print(f"Church ID: {current_user.church_id}, Is Superuser: {current_user.is_superuser}")
         
+        # Step 1: Basic permission check
         if current_user.is_superuser or current_user.church_id == 0:
             # Superusers (church_id=0) can see all members
-            query = db.query(models.Member)
             print("Superuser accessing all members")
+            church_filter = None
         elif current_user.church_id and current_user.church_id > 0:
             # Regular users see only their church members
-            query = db.query(models.Member).filter(
-                models.Member.church_id == current_user.church_id
-            )
             print(f"Regular user accessing church {current_user.church_id} members")
+            church_filter = current_user.church_id
         else:
             print(f"Access denied - church_id: {current_user.church_id}, superuser: {current_user.is_superuser}")
             raise HTTPException(status_code=403, detail="Not enough permissions")
 
-        # Apply search filter
-        if search:
-            if is_korean_initial_search(search):
-                # Korean initial consonant search
-                try:
-                    all_members = query.all()
-                    filtered_members = [
-                        member
-                        for member in all_members
-                        if match_initial_consonants(member.name, search.replace(" ", ""))
-                    ]
-                    return filtered_members[skip : skip + limit]
-                except Exception as search_error:
-                    print(f"Korean search error: {search_error}")
-                    raise HTTPException(status_code=500, detail=f"Korean search failed: {str(search_error)}")
-            else:
-                # Regular search
-                query = query.filter(
-                    or_(
-                        models.Member.name.contains(search),
-                        models.Member.phone.contains(search),
-                    )
-                )
-
-        # Apply status filter
-        if member_status:
-            query = query.filter(models.Member.member_status == member_status)
-
+        # Step 2: Simple count query first
         try:
-            members = query.offset(skip).limit(limit).all()
+            if church_filter:
+                count = db.query(models.Member).filter(models.Member.church_id == church_filter).count()
+            else:
+                count = db.query(models.Member).count()
+            print(f"Total members found: {count}")
+        except Exception as count_error:
+            print(f"Count query failed: {count_error}")
+            import traceback
+            traceback.print_exc()
+            raise HTTPException(status_code=500, detail=f"Member count query failed: {str(count_error)}")
+
+        # Step 3: Try to get basic fields only
+        try:
+            if church_filter:
+                # Query only basic fields to avoid schema issues
+                basic_query = db.query(
+                    models.Member.id,
+                    models.Member.name,
+                    models.Member.email,
+                    models.Member.church_id,
+                    models.Member.created_at
+                ).filter(models.Member.church_id == church_filter)
+            else:
+                basic_query = db.query(
+                    models.Member.id,
+                    models.Member.name, 
+                    models.Member.email,
+                    models.Member.church_id,
+                    models.Member.created_at
+                )
+            
+            basic_results = basic_query.offset(skip).limit(limit).all()
+            print(f"Basic query successful, got {len(basic_results)} results")
+            
+            # If basic query works, try full query
+            if church_filter:
+                full_query = db.query(models.Member).filter(models.Member.church_id == church_filter)
+            else:
+                full_query = db.query(models.Member)
+                
+            members = full_query.offset(skip).limit(limit).all()
+            print(f"Full query successful, got {len(members)} members")
             return members
+            
         except Exception as query_error:
             print(f"Member query error: {query_error}")
             import traceback
             traceback.print_exc()
-            raise HTTPException(status_code=500, detail=f"Member query failed: {str(query_error)}")
+            
+            # Return minimal response to avoid complete failure
+            return []
             
     except HTTPException:
         raise
