@@ -20,38 +20,51 @@ def login_member(
     OAuth2 compatible token login for members.
     Members can log in with email or phone number as username.
     """
-    # Try to find user by email first
-    user = db.query(models.User).filter(models.User.email == form_data.username).first()
+    try:
+        # Try to find user by email first
+        user = db.query(models.User).filter(models.User.email == form_data.username).first()
 
-    # If not found by email, try phone number
-    if not user:
-        user = (
-            db.query(models.User)
-            .filter(models.User.phone == form_data.username)
-            .first()
-        )
+        # If not found by email, try phone number
+        if not user:
+            user = (
+                db.query(models.User)
+                .filter(models.User.phone == form_data.username)
+                .first()
+            )
 
-    if not user:
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
+        if not user:
+            raise HTTPException(status_code=400, detail="Incorrect username or password")
 
-    if not security.verify_password(form_data.password, user.hashed_password):
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
+        if not security.verify_password(form_data.password, user.hashed_password):
+            raise HTTPException(status_code=400, detail="Incorrect username or password")
 
-    if not user.is_active:
-        raise HTTPException(status_code=400, detail="Inactive user")
+        if not user.is_active:
+            raise HTTPException(status_code=400, detail="Inactive user")
 
-    # Check if user has member profile
-    member = db.query(models.Member).filter(models.Member.user_id == user.id).first()
-    if not member:
-        raise HTTPException(status_code=403, detail="User is not a member")
+        # Check if user has member profile
+        try:
+            member = db.query(models.Member).filter(models.Member.user_id == user.id).first()
+        except Exception as member_error:
+            print(f"Member query error: {member_error}")
+            raise HTTPException(status_code=500, detail=f"Member profile query failed: {str(member_error)}")
+        
+        if not member:
+            raise HTTPException(status_code=403, detail="User is not a member")
 
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    return {
-        "access_token": security.create_access_token(
-            user.id, expires_delta=access_token_expires
-        ),
-        "token_type": "bearer",
-    }
+        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        return {
+            "access_token": security.create_access_token(
+                user.id, expires_delta=access_token_expires
+            ),
+            "token_type": "bearer",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Login error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Login failed: {str(e)}")
 
 
 @router.post("/login/access-token", response_model=schemas.TokenWithUser)
@@ -64,36 +77,49 @@ def login_member_access_token(
     Login endpoint for members with user information.
     Returns token and user details.
     """
-    # Try to find user by email first
-    user = db.query(models.User).filter(models.User.email == username).first()
+    try:
+        # Try to find user by email first
+        user = db.query(models.User).filter(models.User.email == username).first()
 
-    # If not found by email, try phone number
-    if not user:
-        user = db.query(models.User).filter(models.User.phone == username).first()
+        # If not found by email, try phone number
+        if not user:
+            user = db.query(models.User).filter(models.User.phone == username).first()
 
-    if not user:
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
+        if not user:
+            raise HTTPException(status_code=400, detail="Incorrect username or password")
 
-    if not security.verify_password(password, user.hashed_password):
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
+        if not security.verify_password(password, user.hashed_password):
+            raise HTTPException(status_code=400, detail="Incorrect username or password")
 
-    if not user.is_active:
-        raise HTTPException(status_code=400, detail="Inactive user")
+        if not user.is_active:
+            raise HTTPException(status_code=400, detail="Inactive user")
 
-    # Check if user has member profile
-    member = db.query(models.Member).filter(models.Member.user_id == user.id).first()
-    if not member:
-        raise HTTPException(status_code=403, detail="User is not a member")
+        # Check if user has member profile
+        try:
+            member = db.query(models.Member).filter(models.Member.user_id == user.id).first()
+        except Exception as member_error:
+            print(f"Member query error in access-token: {member_error}")
+            raise HTTPException(status_code=500, detail=f"Member profile query failed: {str(member_error)}")
+        
+        if not member:
+            raise HTTPException(status_code=403, detail="User is not a member")
 
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    return {
-        "access_token": security.create_access_token(
-            user.id, expires_delta=access_token_expires
-        ),
-        "token_type": "bearer",
-        "user": user,
-        "member": member,
-    }
+        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        return {
+            "access_token": security.create_access_token(
+                user.id, expires_delta=access_token_expires
+            ),
+            "token_type": "bearer",
+            "user": user,
+            "member": member,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Login access-token error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Login failed: {str(e)}")
 
 
 @router.post("/password-reset-request")
