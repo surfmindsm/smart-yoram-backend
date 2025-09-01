@@ -34,22 +34,12 @@ def get_active_announcements(
             models.Announcement.is_active == True,
         )
         
-        # 기존 동작 유지: 간단한 시스템 공지 + 교회 공지 조회
+        # 간단한 조회: 기존 테이블 구조 사용
+        # 시스템 공지 (church_id가 NULL인 것들)
         system_announcements = db.query(models.Announcement).filter(
             and_(
                 base_filter,
-                or_(
-                    # 시스템 공지 (church_id가 NULL이거나 type이 system)
-                    and_(
-                        models.Announcement.type == 'system',
-                        models.Announcement.church_id == None
-                    ),
-                    # 기존 시스템 공지 호환성
-                    and_(
-                        models.Announcement.church_id == None,
-                        models.Announcement.type == 'system'
-                    )
-                )
+                models.Announcement.church_id == None
             )
         )
         
@@ -57,24 +47,15 @@ def get_active_announcements(
         church_announcements = db.query(models.Announcement).filter(
             and_(
                 base_filter,
-                models.Announcement.church_id == current_user.church_id,
-                or_(
-                    models.Announcement.type == 'church',
-                    models.Announcement.type == None  # 기존 레코드 호환성
-                )
+                models.Announcement.church_id == current_user.church_id
             )
         )
         
         # 모든 공지사항 합치기
         all_announcements = list(system_announcements.all()) + list(church_announcements.all())
         
-        # 우선순위 정렬
-        def sort_key(ann):
-            priority_order = {'urgent': 0, 'important': 1, 'normal': 2}
-            priority = getattr(ann, 'priority', 'normal')
-            return (priority_order.get(priority, 2), -ann.created_at.timestamp())
-        
-        all_announcements.sort(key=sort_key)
+        # 기본 정렬: 생성일시 역순 
+        all_announcements.sort(key=lambda ann: -ann.created_at.timestamp())
         
         return all_announcements
         
@@ -441,18 +422,12 @@ def create_system_announcement(
                 detail="시스템 관리자만 접근 가능합니다"
             )
         
-        # 단순화된 데이터 처리
+        # 기존 테이블 구조에 맞는 데이터 처리
         announcement_data = {
             'title': announcement_in.title,
             'content': announcement_in.content,
             'category': getattr(announcement_in, 'category', 'system'),
-            'priority': getattr(announcement_in, 'priority', 'normal'),
-            'target_type': 'all',
-            'type': 'system',
-            'church_id': None,
-            'start_date': announcement_in.start_date,
-            'end_date': getattr(announcement_in, 'end_date', None),
-            'created_by': current_user.id,
+            'church_id': None,  # 시스템 공지는 NULL
             'author_id': current_user.id,
             'author_name': current_user.full_name or current_user.username,
             'is_active': True,
