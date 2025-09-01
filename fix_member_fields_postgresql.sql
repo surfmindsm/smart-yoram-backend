@@ -158,6 +158,8 @@ DO $$
 DECLARE
     max_code_num INTEGER;
     church_record RECORD;
+    member_record RECORD;
+    current_code_num INTEGER;
 BEGIN
     -- 각 교회별로 처리
     FOR church_record IN 
@@ -166,20 +168,31 @@ BEGIN
         WHERE code IS NULL OR code = '' OR code = '0'
     LOOP
         -- 해당 교회의 기존 최대 교번 찾기
-        SELECT COALESCE(MAX(CAST(code AS INTEGER)), 0) INTO max_code_num
+        SELECT COALESCE(MAX(CASE WHEN code ~ '^[0-9]+$' THEN CAST(code AS INTEGER) ELSE 0 END), 0) INTO max_code_num
         FROM members 
         WHERE church_id = church_record.church_id 
         AND code IS NOT NULL 
-        AND code != '' 
-        AND code ~ '^[0-9]+$';  -- 숫자로만 구성된 교번만
+        AND code != '';
         
         RAISE NOTICE '교회 ID %: 기존 최대 교번 %', church_record.church_id, max_code_num;
         
+        -- 시작 번호 설정
+        current_code_num := max_code_num;
+        
         -- 해당 교회의 교번이 없는 교인들에게 순차적으로 할당
-        UPDATE members 
-        SET code = lpad((max_code_num + row_number() OVER (ORDER BY id))::text, 7, '0')
-        WHERE church_id = church_record.church_id 
-        AND (code IS NULL OR code = '' OR code = '0');
+        FOR member_record IN
+            SELECT id 
+            FROM members 
+            WHERE church_id = church_record.church_id 
+            AND (code IS NULL OR code = '' OR code = '0')
+            ORDER BY id
+        LOOP
+            current_code_num := current_code_num + 1;
+            
+            UPDATE members 
+            SET code = lpad(current_code_num::text, 7, '0')
+            WHERE id = member_record.id;
+        END LOOP;
         
     END LOOP;
     
