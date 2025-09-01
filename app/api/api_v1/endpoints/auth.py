@@ -25,15 +25,29 @@ router = APIRouter()
 def login_access_token(
     db: Session = Depends(deps.get_db), form_data: OAuth2PasswordRequestForm = Depends()
 ) -> Any:
-    user = (
-        db.query(models.User).filter(models.User.username == form_data.username).first()
-    )
-    if not user or not security.verify_password(
-        form_data.password, user.hashed_password
-    ):
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
-    elif not user.is_active:
-        raise HTTPException(status_code=400, detail="Inactive user")
+    try:
+        print(f"Auth login attempt - username: {form_data.username}")
+        user = (
+            db.query(models.User).filter(models.User.username == form_data.username).first()
+        )
+        if not user:
+            print(f"User not found: {form_data.username}")
+            raise HTTPException(status_code=400, detail="Incorrect username or password")
+        
+        if not security.verify_password(form_data.password, user.hashed_password):
+            print(f"Password verification failed for user: {form_data.username}")
+            raise HTTPException(status_code=400, detail="Incorrect username or password")
+            
+        if not user.is_active:
+            print(f"Inactive user: {form_data.username}")
+            raise HTTPException(status_code=400, detail="Inactive user")
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Auth login error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Login failed: {str(e)}")
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     return {
         "access_token": security.create_access_token(

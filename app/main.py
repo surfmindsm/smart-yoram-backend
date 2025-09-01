@@ -53,8 +53,6 @@ app.add_middleware(
         "https://smart-yoram-frontend.vercel.app",
         "https://smart-yoram-admin.vercel.app",
         "https://api.surfmind-team.com",
-        # 개발 중 임시로 모든 origin 허용
-        "*"
     ],
     allow_credentials=True,  # Enable credentials for authentication
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
