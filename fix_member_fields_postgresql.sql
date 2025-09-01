@@ -153,21 +153,38 @@ CREATE INDEX IF NOT EXISTS ix_members_job_category ON members(job_category);
 CREATE INDEX IF NOT EXISTS ix_members_inviter3 ON members(inviter3_member_id);
 
 -- 3. 교번 업데이트 (PostgreSQL 호환 방식)
--- 윈도우 함수를 서브쿼리에서 사용
-UPDATE members 
-SET code = subq.new_code
-FROM (
-    SELECT 
-        id,
-        lpad(
-            row_number() OVER (PARTITION BY church_id ORDER BY id)::text,
-            7,
-            '0'
-        ) as new_code
-    FROM members
-    WHERE code IS NULL OR code = ''
-) subq
-WHERE members.id = subq.id;
+-- 기존 교번과 충돌하지 않도록 안전하게 처리
+DO $$
+DECLARE
+    max_code_num INTEGER;
+    church_record RECORD;
+BEGIN
+    -- 각 교회별로 처리
+    FOR church_record IN 
+        SELECT DISTINCT church_id 
+        FROM members 
+        WHERE code IS NULL OR code = '' OR code = '0'
+    LOOP
+        -- 해당 교회의 기존 최대 교번 찾기
+        SELECT COALESCE(MAX(CAST(code AS INTEGER)), 0) INTO max_code_num
+        FROM members 
+        WHERE church_id = church_record.church_id 
+        AND code IS NOT NULL 
+        AND code != '' 
+        AND code ~ '^[0-9]+$';  -- 숫자로만 구성된 교번만
+        
+        RAISE NOTICE '교회 ID %: 기존 최대 교번 %', church_record.church_id, max_code_num;
+        
+        -- 해당 교회의 교번이 없는 교인들에게 순차적으로 할당
+        UPDATE members 
+        SET code = lpad((max_code_num + row_number() OVER (ORDER BY id))::text, 7, '0')
+        WHERE church_id = church_record.church_id 
+        AND (code IS NULL OR code = '' OR code = '0');
+        
+    END LOOP;
+    
+    RAISE NOTICE '교번 업데이트 완료';
+END $$;
 
 -- 4. 완료 메시지
 DO $$
