@@ -64,54 +64,55 @@ class Member(Base):
         Integer, ForeignKey("members.id"), nullable=True
     )  # 인도자2
 
-    # Enhanced Church Information (레퍼런스 요구사항)
-    member_type = Column(String)  # 교인구분: FULL_MEMBER, CONFIRMED_MEMBER, etc
-    confirmation_date = Column(Date)  # 입교일
-    sub_district = Column(String)  # 부구역
-    age_group = Column(String)  # 나이그룹: ADULT, YOUTH, CHILD, SENIOR
+    # Enhanced Church Information (레퍼런스 요구사항) - TEMPORARILY DISABLED
+    # These fields will be added back after database migration
+    # member_type = Column(String)  # 교인구분: FULL_MEMBER, CONFIRMED_MEMBER, etc
+    # confirmation_date = Column(Date)  # 입교일
+    # sub_district = Column(String)  # 부구역
+    # age_group = Column(String)  # 나이그룹: ADULT, YOUTH, CHILD, SENIOR
     
-    # Regional Information
-    region_1 = Column(String)  # 안도구 1
-    region_2 = Column(String)  # 안도구 2  
-    region_3 = Column(String)  # 안도구 3
+    # Regional Information - TEMPORARILY DISABLED
+    # region_1 = Column(String)  # 안도구 1
+    # region_2 = Column(String)  # 안도구 2  
+    # region_3 = Column(String)  # 안도구 3
     
-    # Third Inviter
-    inviter3_member_id = Column(Integer, ForeignKey("members.id"), nullable=True)
+    # Third Inviter - TEMPORARILY DISABLED
+    # inviter3_member_id = Column(Integer, ForeignKey("members.id"), nullable=True)
     
-    # Contact Details
-    postal_code = Column(String)  # 우편번호
-    last_contact_date = Column(Date)  # 통화일
+    # Contact Details - TEMPORARILY DISABLED
+    # postal_code = Column(String)  # 우편번호
+    # last_contact_date = Column(Date)  # 통화일
     
-    # Spiritual Information
-    spiritual_grade = Column(String)  # 신급: GRADE_A, GRADE_B, etc
+    # Spiritual Information - TEMPORARILY DISABLED
+    # spiritual_grade = Column(String)  # 신급: GRADE_A, GRADE_B, etc
     
-    # Enhanced Job Information
-    job_category = Column(String)  # 직업분류: OFFICE_WORKER, TEACHER, etc
-    job_detail = Column(String)  # 구체적 업무
-    job_position = Column(String)  # 직책/직위
+    # Enhanced Job Information - TEMPORARILY DISABLED
+    # job_category = Column(String)  # 직업분류: OFFICE_WORKER, TEACHER, etc
+    # job_detail = Column(String)  # 구체적 업무
+    # job_position = Column(String)  # 직책/직위
     
-    # Ministry Information
-    ministry_start_date = Column(Date)  # 장업일
-    neighboring_church = Column(String)  # 이웃교회
-    position_decision = Column(String)  # 직관결정
-    daily_activity = Column(Text)  # 매일 활동
+    # Ministry Information - TEMPORARILY DISABLED
+    # ministry_start_date = Column(Date)  # 장업일
+    # neighboring_church = Column(String)  # 이웃교회
+    # position_decision = Column(String)  # 직관결정
+    # daily_activity = Column(Text)  # 매일 활동
     
-    # Custom Fields (자유1~자유12)
-    custom_field_1 = Column(String)
-    custom_field_2 = Column(String)
-    custom_field_3 = Column(String)
-    custom_field_4 = Column(String)
-    custom_field_5 = Column(String)
-    custom_field_6 = Column(String)
-    custom_field_7 = Column(String)
-    custom_field_8 = Column(String)
-    custom_field_9 = Column(String)
-    custom_field_10 = Column(String)
-    custom_field_11 = Column(String)
-    custom_field_12 = Column(String)
+    # Custom Fields (자유1~자유12) - TEMPORARILY DISABLED
+    # custom_field_1 = Column(String)
+    # custom_field_2 = Column(String)
+    # custom_field_3 = Column(String)
+    # custom_field_4 = Column(String)
+    # custom_field_5 = Column(String)
+    # custom_field_6 = Column(String)
+    # custom_field_7 = Column(String)
+    # custom_field_8 = Column(String)
+    # custom_field_9 = Column(String)
+    # custom_field_10 = Column(String)
+    # custom_field_11 = Column(String)
+    # custom_field_12 = Column(String)
     
-    # Special Notes
-    special_notes = Column(Text)  # 개인 특별 사항
+    # Special Notes - TEMPORARILY DISABLED
+    # special_notes = Column(Text)  # 개인 특별 사항
 
     # Status and Notes
     status = Column(String, default="active")  # active, inactive, transferred
