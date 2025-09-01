@@ -31,18 +31,18 @@ def read_members(
         print(f"Members API - User: {current_user.id}, Email: {current_user.email}")
         print(f"Church ID: {current_user.church_id}, Is Superuser: {current_user.is_superuser}")
         
-        if current_user.is_superuser:
-            # Superusers can see all members
+        if current_user.is_superuser or current_user.church_id == 0:
+            # Superusers (church_id=0) can see all members
             query = db.query(models.Member)
             print("Superuser accessing all members")
-        elif current_user.church_id is not None and current_user.church_id > 0:
+        elif current_user.church_id and current_user.church_id > 0:
             # Regular users see only their church members
             query = db.query(models.Member).filter(
                 models.Member.church_id == current_user.church_id
             )
             print(f"Regular user accessing church {current_user.church_id} members")
         else:
-            print(f"Access denied - no church_id and not superuser")
+            print(f"Access denied - church_id: {current_user.church_id}, superuser: {current_user.is_superuser}")
             raise HTTPException(status_code=403, detail="Not enough permissions")
 
         # Apply search filter
