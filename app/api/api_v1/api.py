@@ -5,6 +5,8 @@ from app.api.api_v1.endpoints import (
     auth_member,
     users,
     members,
+    member_codes,
+    member_numbers,
     churches,
     attendances,
     bulletins,
@@ -50,6 +52,8 @@ api_router.include_router(members.router, prefix="/members", tags=["members"])
 api_router.include_router(
     member_photos.router, prefix="/members", tags=["member_photos"]
 )
+api_router.include_router(member_codes.router, prefix="/codes", tags=["member_codes"])
+api_router.include_router(member_numbers.router, prefix="/members", tags=["member_numbers"])
 api_router.include_router(churches.router, prefix="/churches", tags=["churches"])
 api_router.include_router(
     attendances.router, prefix="/attendances", tags=["attendances"]
