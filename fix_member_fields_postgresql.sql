@@ -153,21 +153,52 @@ CREATE INDEX IF NOT EXISTS ix_members_job_category ON members(job_category);
 CREATE INDEX IF NOT EXISTS ix_members_inviter3 ON members(inviter3_member_id);
 
 -- 3. 교번 업데이트 (PostgreSQL 호환 방식)
--- 윈도우 함수를 서브쿼리에서 사용
-UPDATE members 
-SET code = subq.new_code
-FROM (
-    SELECT 
-        id,
-        lpad(
-            row_number() OVER (PARTITION BY church_id ORDER BY id)::text,
-            7,
-            '0'
-        ) as new_code
-    FROM members
-    WHERE code IS NULL OR code = ''
-) subq
-WHERE members.id = subq.id;
+-- 기존 교번과 충돌하지 않도록 임시 값으로 먼저 설정 후 최종 할당
+DO $$
+DECLARE
+    max_code_num INTEGER;
+    church_record RECORD;
+    member_record RECORD;
+    current_code_num INTEGER;
+    temp_code TEXT;
+BEGIN
+    -- 먼저 전체 테이블에서 최대 교번 찾기 (모든 교회 통틀어)
+    SELECT COALESCE(MAX(CASE WHEN code ~ '^[0-9]+$' THEN CAST(code AS INTEGER) ELSE 0 END), 0) INTO max_code_num
+    FROM members 
+    WHERE code IS NOT NULL 
+    AND code != ''
+    AND code ~ '^[0-9]+$';
+    
+    RAISE NOTICE '전체 최대 교번: %', max_code_num;
+    
+    -- 시작 번호 설정 (전체 최대값 이후부터)
+    current_code_num := max_code_num;
+    
+    -- Step 1: 임시 교번 할당 (중복 방지용)
+    FOR member_record IN
+        SELECT id, church_id
+        FROM members 
+        WHERE code IS NULL OR code = '' OR code = '0'
+        ORDER BY church_id, id
+    LOOP
+        current_code_num := current_code_num + 1;
+        temp_code := 'TEMP_' || current_code_num::text;
+        
+        UPDATE members 
+        SET code = temp_code
+        WHERE id = member_record.id;
+        
+    END LOOP;
+    
+    RAISE NOTICE '임시 교번 할당 완료, 이제 최종 교번으로 변경';
+    
+    -- Step 2: 임시 교번을 최종 교번으로 변경
+    UPDATE members 
+    SET code = lpad(REPLACE(code, 'TEMP_', '')::text, 7, '0')
+    WHERE code LIKE 'TEMP_%';
+    
+    RAISE NOTICE '교번 업데이트 완료';
+END $$;
 
 -- 4. 완료 메시지
 DO $$
