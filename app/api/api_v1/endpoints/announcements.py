@@ -1,7 +1,8 @@
 from typing import Any, List, Optional, Dict
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
+from sqlalchemy import desc, and_, or_, func
+from datetime import date
 
 from app import models, schemas
 from app.api import deps
@@ -12,6 +13,136 @@ from app.core.announcement_categories import (
 )
 
 router = APIRouter()
+
+
+@router.get("/active", response_model=List[schemas.Announcement])
+def get_active_announcements(
+    *,
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    활성 공지사항 조회 (교회 관리자용)
+    - 시스템 공지 (type = 'system') + 해당 교회 공지 (church_id = 사용자의 church_id)
+    - start_date <= 오늘 <= end_date (end_date가 NULL이면 무제한)
+    """
+    today = date.today()
+    
+    # 시스템 공지사항 (모든 교회에 표시)
+    system_announcements = db.query(models.Announcement).filter(
+        and_(
+            models.Announcement.is_active == True,
+            or_(
+                models.Announcement.type == 'system',
+                and_(
+                    models.Announcement.church_id == None,
+                    models.Announcement.type == 'system'
+                )
+            ),
+            # 날짜 필터링: start_date <= 오늘 <= end_date (end_date가 NULL이면 무제한)
+            models.Announcement.start_date <= today,
+            or_(
+                models.Announcement.end_date >= today,
+                models.Announcement.end_date == None
+            )
+        )
+    )
+    
+    # 교회별 공지사항
+    church_announcements = db.query(models.Announcement).filter(
+        and_(
+            models.Announcement.is_active == True,
+            models.Announcement.church_id == current_user.church_id,
+            or_(
+                models.Announcement.type == 'church',
+                models.Announcement.type == None  # 기존 레코드 호환성
+            ),
+            # 날짜 필터링: start_date <= 오늘 <= end_date (end_date가 NULL이면 무제한)
+            models.Announcement.start_date <= today,
+            or_(
+                models.Announcement.end_date >= today,
+                models.Announcement.end_date == None
+            )
+        )
+    )
+    
+    # 두 쿼리 결과 합치기
+    all_announcements = list(system_announcements.all()) + list(church_announcements.all())
+    
+    # 우선순위 정렬: urgent > important > normal, 같은 우선순위면 created_at DESC
+    def sort_key(ann):
+        priority_order = {'urgent': 0, 'important': 1, 'normal': 2}
+        priority = getattr(ann, 'priority', 'normal')
+        return (priority_order.get(priority, 2), -ann.created_at.timestamp())
+    
+    all_announcements.sort(key=sort_key)
+    
+    return all_announcements
+
+
+@router.post("/{announcement_id}/read")
+def mark_announcement_as_read(
+    *,
+    db: Session = Depends(deps.get_db),
+    announcement_id: int,
+    current_user: models.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    공지사항 읽음 처리
+    """
+    # 공지사항 존재 확인
+    announcement = db.query(models.Announcement).filter(
+        models.Announcement.id == announcement_id
+    ).first()
+    
+    if not announcement:
+        raise HTTPException(status_code=404, detail="Announcement not found")
+    
+    # 이미 읽었는지 확인 (AnnouncementRead 모델이 있다면)
+    try:
+        existing_read = db.query(models.AnnouncementRead).filter(
+            and_(
+                models.AnnouncementRead.announcement_id == announcement_id,
+                models.AnnouncementRead.user_id == current_user.id
+            )
+        ).first()
+        
+        if not existing_read:
+            # 읽음 기록 추가
+            read_record = models.AnnouncementRead(
+                announcement_id=announcement_id,
+                user_id=current_user.id
+            )
+            db.add(read_record)
+            db.commit()
+    except:
+        # AnnouncementRead 모델이 없는 경우 패스
+        pass
+    
+    return {"success": True, "message": "읽음 처리 완료"}
+
+
+@router.get("/admin", response_model=List[schemas.Announcement])
+def get_all_announcements_admin(
+    *,
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    모든 공지사항 조회 (시스템 관리자용)
+    권한: church_id = 0인 사용자만
+    """
+    if current_user.church_id != 0:
+        raise HTTPException(
+            status_code=403, 
+            detail="시스템 관리자만 접근 가능합니다"
+        )
+    
+    announcements = db.query(models.Announcement).order_by(
+        desc(models.Announcement.created_at)
+    ).all()
+    
+    return announcements
 
 
 @router.get("/categories", response_model=Dict[str, Any])
@@ -236,3 +367,116 @@ def toggle_pin_announcement(
     db.commit()
     db.refresh(announcement)
     return announcement
+
+
+# 시스템 관리자용 CRUD 엔드포인트 (church_id = 0인 사용자만)
+@router.post("/admin", response_model=schemas.Announcement)
+def create_system_announcement(
+    *,
+    db: Session = Depends(deps.get_db),
+    announcement_in: schemas.AnnouncementCreate,
+    current_user: models.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    시스템 공지사항 생성 (시스템 관리자용)
+    권한: church_id = 0인 사용자만
+    """
+    if current_user.church_id != 0:
+        raise HTTPException(
+            status_code=403,
+            detail="시스템 관리자만 접근 가능합니다"
+        )
+    
+    # 시스템 공지사항은 type='system', church_id=None으로 설정
+    announcement_data = announcement_in.dict()
+    announcement_data.update({
+        'type': 'system',
+        'church_id': None,
+        'created_by': current_user.id,
+        'author_id': current_user.id,
+        'author_name': current_user.full_name or current_user.username,
+    })
+    
+    announcement = models.Announcement(**announcement_data)
+    db.add(announcement)
+    db.commit()
+    db.refresh(announcement)
+    return announcement
+
+
+@router.put("/admin/{announcement_id}", response_model=schemas.Announcement)  
+def update_system_announcement(
+    *,
+    db: Session = Depends(deps.get_db),
+    announcement_id: int,
+    announcement_in: schemas.AnnouncementUpdate,
+    current_user: models.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    시스템 공지사항 수정 (시스템 관리자용)
+    권한: church_id = 0인 사용자만
+    """
+    if current_user.church_id != 0:
+        raise HTTPException(
+            status_code=403,
+            detail="시스템 관리자만 접근 가능합니다"
+        )
+    
+    announcement = db.query(models.Announcement).filter(
+        models.Announcement.id == announcement_id
+    ).first()
+    
+    if not announcement:
+        raise HTTPException(status_code=404, detail="Announcement not found")
+    
+    # 시스템 공지사항만 수정 가능
+    if announcement.type != 'system':
+        raise HTTPException(
+            status_code=403,
+            detail="시스템 공지사항만 수정 가능합니다"
+        )
+    
+    update_data = announcement_in.dict(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(announcement, field, value)
+    
+    db.add(announcement)
+    db.commit()
+    db.refresh(announcement)
+    return announcement
+
+
+@router.delete("/admin/{announcement_id}")
+def delete_system_announcement(
+    *,
+    db: Session = Depends(deps.get_db),
+    announcement_id: int,
+    current_user: models.User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    시스템 공지사항 삭제 (시스템 관리자용)
+    권한: church_id = 0인 사용자만
+    """
+    if current_user.church_id != 0:
+        raise HTTPException(
+            status_code=403,
+            detail="시스템 관리자만 접근 가능합니다"
+        )
+    
+    announcement = db.query(models.Announcement).filter(
+        models.Announcement.id == announcement_id
+    ).first()
+    
+    if not announcement:
+        raise HTTPException(status_code=404, detail="Announcement not found")
+    
+    # 시스템 공지사항만 삭제 가능
+    if announcement.type != 'system':
+        raise HTTPException(
+            status_code=403,
+            detail="시스템 공지사항만 삭제 가능합니다"
+        )
+    
+    db.delete(announcement)
+    db.commit()
+    return {"message": "System announcement deleted successfully"}
