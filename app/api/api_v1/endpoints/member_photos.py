@@ -1,5 +1,5 @@
 from typing import Any
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
 from sqlalchemy.orm import Session
 
 from app import models, schemas
@@ -14,12 +14,39 @@ async def upload_member_photo_endpoint(
     *,
     db: Session = Depends(deps.get_db),
     member_id: int,
+    request: Request,
     current_user: models.User = Depends(deps.get_current_active_user),
     file: UploadFile = File(...),
 ) -> Any:
     """
     Upload profile photo for a member to Supabase Storage.
     """
+    # DEBUG: Log request details
+    try:
+        print(f"=== PHOTO UPLOAD DEBUG - Member ID: {member_id} ===")
+        print(f"Content-Type: {request.headers.get('content-type')}")
+        print(f"User-Agent: {request.headers.get('user-agent')}")
+        print(f"Authorization present: {'authorization' in request.headers}")
+        
+        # Get form data
+        form_data = await request.form()
+        print(f"Form data keys: {list(form_data.keys())}")
+        print(f"Form data items: {[(key, type(value).__name__) for key, value in form_data.items()]}")
+        
+        # Check if file is received
+        print(f"File parameter received: {file is not None}")
+        if file:
+            print(f"File filename: {file.filename}")
+            print(f"File content_type: {file.content_type}")
+            print(f"File size: {file.size if hasattr(file, 'size') else 'unknown'}")
+        else:
+            print("File parameter is None!")
+            
+        print("=== END DEBUG ===")
+        
+    except Exception as debug_error:
+        print(f"DEBUG ERROR: {debug_error}")
+    
     member = db.query(models.Member).filter(models.Member.id == member_id).first()
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")
