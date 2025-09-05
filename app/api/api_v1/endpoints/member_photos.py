@@ -80,17 +80,37 @@ async def upload_member_photo_endpoint(
     if not success:
         raise HTTPException(status_code=400, detail=error_msg)
 
+    print(f"📸 PHOTO UPLOAD SUCCESS - Photo URL: {photo_url}")
+
     # Delete old photo from Supabase if exists
-    if member.profile_photo_url:
-        delete_success, delete_error = delete_member_photo(member.profile_photo_url)
+    old_photo_url = member.profile_photo_url
+    if old_photo_url:
+        print(f"🗑️ DELETING OLD PHOTO: {old_photo_url}")
+        delete_success, delete_error = delete_member_photo(old_photo_url)
         if not delete_success:
             # Log error but don't fail the upload
-            print(f"Failed to delete old photo: {delete_error}")
+            print(f"❌ Failed to delete old photo: {delete_error}")
+        else:
+            print(f"✅ Old photo deleted successfully")
 
     # Update member with new photo URL
-    member.profile_photo_url = photo_url
-    db.commit()
-    db.refresh(member)
+    print(f"💾 UPDATING DATABASE - Member ID: {member_id}")
+    print(f"💾 Old profile_photo_url: {member.profile_photo_url}")
+    print(f"💾 New profile_photo_url: {photo_url}")
+    
+    try:
+        member.profile_photo_url = photo_url
+        db.commit()
+        print(f"✅ DATABASE COMMIT SUCCESS")
+        
+        db.refresh(member)
+        print(f"✅ DATABASE REFRESH SUCCESS")
+        print(f"💾 Final profile_photo_url in DB: {member.profile_photo_url}")
+        
+    except Exception as db_error:
+        print(f"❌ DATABASE UPDATE ERROR: {db_error}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database update failed: {str(db_error)}")
 
     return member
 
