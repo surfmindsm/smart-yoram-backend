@@ -51,8 +51,20 @@ async def upload_member_photo_endpoint(
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")
 
-    if member.church_id != current_user.church_id:
-        raise HTTPException(status_code=403, detail="Not enough permissions")
+    # DEBUG: 권한 체크 상세 로그
+    print(f"🚨 PERMISSION CHECK - Member ID: {member_id}")
+    print(f"🚨 Member church_id: {member.church_id}")
+    print(f"🚨 Current user church_id: {current_user.church_id}")
+    print(f"🚨 Current user: {current_user.email} (ID: {current_user.id})")
+    print(f"🚨 Is superuser: {current_user.is_superuser}")
+    print(f"🚨 User role: {current_user.role}")
+    
+    # 수정된 권한 체크 (superuser는 모든 교회 접근 가능)
+    if not current_user.is_superuser and member.church_id != current_user.church_id:
+        print(f"🚨 ACCESS DENIED - Different churches!")
+        raise HTTPException(status_code=403, detail=f"Not enough permissions. Member church: {member.church_id}, User church: {current_user.church_id}")
+    
+    print(f"🚨 ACCESS GRANTED - Permission check passed!")
 
     # Read file content
     file_content = await file.read()
