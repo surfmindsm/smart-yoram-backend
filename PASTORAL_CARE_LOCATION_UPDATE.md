@@ -422,4 +422,4 @@ WHERE tablename = 'pastoral_care_requests';
 ---
 
 > 🚀 **Happy Coding!**  
-> 이 업데이트로 목양 관리가 한층 더 효율적이고 직관적으로 개선될 것입니다.
+> 이 업데이트로 목양 관리가 한층 더 효율적이고 직관적으로 개선될 것입니다. 
