@@ -39,6 +39,7 @@ from app.api.api_v1.endpoints import (
     setup,
     sermon_materials,
     smart_assistant,
+    login_history,
 )
 
 
@@ -110,4 +111,7 @@ api_router.include_router(
 )
 api_router.include_router(
     smart_assistant.router, prefix="/smart-assistant", tags=["smart_assistant"]
+)
+api_router.include_router(
+    login_history.router, prefix="/auth/login-history", tags=["login_history"]
 )

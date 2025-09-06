@@ -1,6 +1,6 @@
-from datetime import timedelta
+from datetime import timedelta, datetime
 from typing import Any
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -9,6 +9,7 @@ from app.api import deps
 from app.core import security
 from app.core.config import settings
 from app.core.security import get_password_hash, verify_password
+from app.utils.device_parser import parse_user_agent, get_client_ip
 
 try:
     from app.utils.qr_code import generate_member_qr_code
@@ -21,9 +22,44 @@ except ImportError:
 router = APIRouter()
 
 
+def create_login_history(
+    db: Session, 
+    user_id: int, 
+    request: Request, 
+    status: str = "success"
+) -> None:
+    """Create a login history record"""
+    try:
+        ip_address = get_client_ip(request)
+        user_agent = request.headers.get("user-agent")
+        device_info = parse_user_agent(user_agent)
+        
+        login_history = models.LoginHistory(
+            user_id=user_id,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            device=device_info,
+            location="서울, 대한민국",  # TODO: Implement GeoIP lookup
+            status=status,
+            session_start=datetime.utcnow() if status == "success" else None
+        )
+        
+        db.add(login_history)
+        db.commit()
+        
+        print(f"📝 LOGIN HISTORY CREATED: User {user_id}, IP: {ip_address}, Device: {device_info}, Status: {status}")
+        
+    except Exception as e:
+        print(f"❌ Failed to create login history: {e}")
+        # Don't fail the login if history creation fails
+        db.rollback()
+
+
 @router.post("/login/access-token", response_model=schemas.TokenWithUser)
 def login_access_token(
-    db: Session = Depends(deps.get_db), form_data: OAuth2PasswordRequestForm = Depends()
+    db: Session = Depends(deps.get_db), 
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    request: Request = None
 ) -> Any:
     try:
         print(f"Auth login attempt - username: {form_data.username}")
@@ -39,15 +75,26 @@ def login_access_token(
         
         if not user:
             print(f"User not found by username or email: {form_data.username}")
+            # Create failed login history for unknown user
+            # We'll skip this since we don't have a user_id
             raise HTTPException(status_code=400, detail="Incorrect username or password")
         
         if not security.verify_password(form_data.password, user.hashed_password):
             print(f"Password verification failed for user: {form_data.username}")
+            # Create failed login history
+            if request:
+                create_login_history(db, user.id, request, status="failed")
             raise HTTPException(status_code=400, detail="Incorrect username or password")
             
         if not user.is_active:
             print(f"Inactive user: {form_data.username}")
+            if request:
+                create_login_history(db, user.id, request, status="failed")
             raise HTTPException(status_code=400, detail="Inactive user")
+        # Create successful login history
+        if request:
+            create_login_history(db, user.id, request, status="success")
+        
     except HTTPException:
         raise
     except Exception as e:
@@ -55,6 +102,7 @@ def login_access_token(
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Login failed: {str(e)}")
+    
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     return {
         "access_token": security.create_access_token(
