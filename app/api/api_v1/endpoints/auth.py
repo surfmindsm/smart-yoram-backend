@@ -10,6 +10,7 @@ from app.core import security
 from app.core.config import settings
 from app.core.security import get_password_hash, verify_password
 from app.utils.device_parser import parse_user_agent, get_client_ip
+from app.utils.activity_logger import activity_logger
 
 try:
     from app.utils.qr_code import generate_member_qr_code
@@ -84,16 +85,22 @@ def login_access_token(
             # Create failed login history
             if request:
                 create_login_history(db, user.id, request, status="failed")
+                # Also create activity log for failed login
+                activity_logger.log_login_failure(db, form_data.username, request, "invalid_credentials")
             raise HTTPException(status_code=400, detail="Incorrect username or password")
             
         if not user.is_active:
             print(f"Inactive user: {form_data.username}")
             if request:
                 create_login_history(db, user.id, request, status="failed")
+                # Also create activity log for inactive user
+                activity_logger.log_login_failure(db, form_data.username, request, "inactive_user")
             raise HTTPException(status_code=400, detail="Inactive user")
-        # Create successful login history
+        
+        # Create successful login history and activity log
         if request:
             create_login_history(db, user.id, request, status="success")
+            activity_logger.log_login_success(db, str(user.id), request)
         
     except HTTPException:
         raise

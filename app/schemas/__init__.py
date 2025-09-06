@@ -61,3 +61,15 @@ from .login_history import (
     LoginHistoryRecent,
     LoginHistoryDetail,
 )
+from .activity_log import (
+    ActivityLogCreate,
+    ActivityLogBatch,
+    ActivityLogResponse,
+    ActivityLogSummary,
+    ActivityLogQuery,
+    ActivityLogStats,
+    ActivityLogCreateResponse,
+    ActivityLogErrorResponse,
+    ActivityLogListResponse,
+    ActivityLogHelper,
+)
