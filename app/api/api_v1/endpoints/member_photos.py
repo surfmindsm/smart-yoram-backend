@@ -99,19 +99,62 @@ async def upload_member_photo_endpoint(
     print(f"💾 New profile_photo_url: {photo_url}")
     
     try:
+        # Method 1: SQLAlchemy ORM update
         member.profile_photo_url = photo_url
         db.commit()
         print(f"✅ DATABASE COMMIT SUCCESS")
         
+        # Force refresh from database
         db.refresh(member)
         print(f"✅ DATABASE REFRESH SUCCESS")
         print(f"💾 Final profile_photo_url in DB: {member.profile_photo_url}")
         
+        # Method 2: Direct SQL verification (추가 검증)
+        from sqlalchemy import text
+        result = db.execute(
+            text("SELECT profile_photo_url FROM members WHERE id = :member_id"),
+            {"member_id": member_id}
+        ).fetchone()
+        
+        if result:
+            actual_url = result[0]
+            print(f"🔍 VERIFICATION - Direct SQL query result: {actual_url}")
+            
+            if actual_url != photo_url:
+                print(f"🚨 CRITICAL ERROR: DB value mismatch!")
+                print(f"🚨 Expected: {photo_url}")
+                print(f"🚨 Actual: {actual_url}")
+                
+                # Force update with direct SQL
+                print(f"🔧 ATTEMPTING DIRECT SQL UPDATE...")
+                db.execute(
+                    text("UPDATE members SET profile_photo_url = :photo_url, updated_at = CURRENT_TIMESTAMP WHERE id = :member_id"),
+                    {"photo_url": photo_url, "member_id": member_id}
+                )
+                db.commit()
+                print(f"🔧 DIRECT SQL UPDATE COMPLETED")
+                
+                # Re-verify
+                verify_result = db.execute(
+                    text("SELECT profile_photo_url FROM members WHERE id = :member_id"),
+                    {"member_id": member_id}
+                ).fetchone()
+                print(f"🔍 FINAL VERIFICATION: {verify_result[0] if verify_result else 'NO RESULT'}")
+            else:
+                print(f"✅ VERIFICATION PASSED - URLs match")
+        else:
+            print(f"❌ VERIFICATION FAILED - No member found with ID {member_id}")
+        
     except Exception as db_error:
         print(f"❌ DATABASE UPDATE ERROR: {db_error}")
+        print(f"❌ Error type: {type(db_error).__name__}")
+        import traceback
+        print(f"❌ Full traceback: {traceback.format_exc()}")
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Database update failed: {str(db_error)}")
 
+    # Final refresh to ensure we return the updated data
+    db.refresh(member)
     return member
 
 
