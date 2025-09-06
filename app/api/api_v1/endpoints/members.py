@@ -57,37 +57,70 @@ def read_members(
             traceback.print_exc()
             raise HTTPException(status_code=500, detail=f"Member count query failed: {str(count_error)}")
 
-        # Step 3: Try to get basic fields only
+        # Step 3: Build query with search functionality
         try:
+            # Start with base query
             if church_filter:
-                # Query only basic fields to avoid schema issues
-                basic_query = db.query(
-                    models.Member.id,
-                    models.Member.name,
-                    models.Member.email,
-                    models.Member.church_id,
-                    models.Member.created_at
-                ).filter(models.Member.church_id == church_filter)
+                query = db.query(models.Member).filter(models.Member.church_id == church_filter)
             else:
-                basic_query = db.query(
-                    models.Member.id,
-                    models.Member.name, 
-                    models.Member.email,
-                    models.Member.church_id,
-                    models.Member.created_at
-                )
+                query = db.query(models.Member)
             
-            basic_results = basic_query.offset(skip).limit(limit).all()
-            print(f"Basic query successful, got {len(basic_results)} results")
-            
-            # If basic query works, try full query
-            if church_filter:
-                full_query = db.query(models.Member).filter(models.Member.church_id == church_filter)
-            else:
-                full_query = db.query(models.Member)
+            # Add search functionality if search parameter is provided
+            if search and search.strip():
+                search_term = search.strip()
+                print(f"🔍 SEARCH REQUESTED: '{search_term}'")
                 
-            members = full_query.offset(skip).limit(limit).all()
-            print(f"Full query successful, got {len(members)} members")
+                # Search in name, email, phone fields
+                search_conditions = []
+                
+                # Check for Korean initial consonant search
+                if is_korean_initial_search(search_term):
+                    print(f"🔤 Korean initial consonant search detected")
+                    # Get all members first, then filter by consonant matching
+                    all_members = query.all()
+                    matching_members = []
+                    for member in all_members:
+                        if member.name and match_initial_consonants(member.name, search_term):
+                            matching_members.append(member)
+                    
+                    # Apply pagination to filtered results
+                    total_matches = len(matching_members)
+                    print(f"🔤 Found {total_matches} members matching Korean initials")
+                    paginated_members = matching_members[skip:skip + limit]
+                    return paginated_members
+                else:
+                    # Regular text search (name, email, phone)
+                    print(f"📝 Regular text search")
+                    search_conditions.append(models.Member.name.ilike(f"%{search_term}%"))
+                    
+                    if "@" in search_term:
+                        search_conditions.append(models.Member.email.ilike(f"%{search_term}%"))
+                    
+                    # Check if search term looks like a phone number
+                    if search_term.replace("-", "").replace(" ", "").replace("(", "").replace(")", "").isdigit():
+                        search_conditions.append(models.Member.phone.ilike(f"%{search_term}%"))
+                    
+                    # Apply search filter
+                    query = query.filter(or_(*search_conditions))
+            
+            # Add member status filter if provided
+            if member_status and member_status.strip():
+                print(f"📊 STATUS FILTER: '{member_status}'")
+                query = query.filter(models.Member.member_status == member_status.strip())
+            
+            # Get total count for debugging
+            total_count = query.count()
+            print(f"📊 Total matching members: {total_count}")
+            
+            # Apply pagination and execute query
+            members = query.offset(skip).limit(limit).all()
+            print(f"📋 Returning {len(members)} members (skip={skip}, limit={limit})")
+            
+            if search and search.strip():
+                print(f"🔍 Search results for '{search}': {len(members)} members")
+                if members:
+                    print(f"🔍 First result: {members[0].name} (ID: {members[0].id})")
+            
             return members
             
         except Exception as query_error:
