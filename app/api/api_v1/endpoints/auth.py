@@ -1,6 +1,6 @@
 from datetime import timedelta
 from typing import Any
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -9,6 +9,7 @@ from app.api import deps
 from app.core import security
 from app.core.config import settings
 from app.core.security import get_password_hash, verify_password
+from app.utils.simple_login_tracker import record_login_success, record_login_failure
 
 try:
     from app.utils.qr_code import generate_member_qr_code
@@ -23,7 +24,9 @@ router = APIRouter()
 
 @router.post("/login/access-token", response_model=schemas.TokenWithUser)
 def login_access_token(
-    db: Session = Depends(deps.get_db), form_data: OAuth2PasswordRequestForm = Depends()
+    db: Session = Depends(deps.get_db), 
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    request: Request = None
 ) -> Any:
     try:
         print(f"Auth login attempt - username: {form_data.username}")
@@ -43,11 +46,18 @@ def login_access_token(
         
         if not security.verify_password(form_data.password, user.hashed_password):
             print(f"Password verification failed for user: {form_data.username}")
+            # 안전하게 로그인 실패 기록 (실패해도 로그인에 영향 없음)
+            record_login_failure(db, user.id, request)
             raise HTTPException(status_code=400, detail="Incorrect username or password")
             
         if not user.is_active:
             print(f"Inactive user: {form_data.username}")
+            # 비활성 사용자도 실패로 기록
+            record_login_failure(db, user.id, request)
             raise HTTPException(status_code=400, detail="Inactive user")
+        
+        # 로그인 성공 - 안전하게 기록 (실패해도 로그인에 영향 없음)
+        record_login_success(db, user.id, request)
     except HTTPException:
         raise
     except Exception as e:
