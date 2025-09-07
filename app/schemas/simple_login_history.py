@@ -10,6 +10,7 @@ class LoginHistoryCreate(BaseModel):
     user_agent: Optional[str] = None
     status: str = "success"  # success, failed
     device_type: Optional[str] = None
+    location: Optional[str] = None
 
 
 class LoginHistoryResponse(BaseModel):
@@ -21,6 +22,7 @@ class LoginHistoryResponse(BaseModel):
     user_agent: Optional[str] = None
     status: str
     device_type: Optional[str] = None
+    location: Optional[str] = None
     created_at: datetime
 
     class Config:

@@ -58,7 +58,7 @@ def get_recent_login_info(
             timestamp=recent_login.timestamp,
             ip_address=recent_login.ip_address,
             device_info=device_info,
-            location="서울, 한국"  # 추후 GeoIP 구현 예정
+            location=recent_login.location or "위치 정보 없음"
         )
         
     except Exception as e:

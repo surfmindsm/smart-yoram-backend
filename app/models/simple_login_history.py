@@ -25,6 +25,7 @@ class LoginHistory(Base):
     # 상태 (단순)
     status = Column(String(20), default="success", nullable=False)  # success, failed
     device_type = Column(String(50), nullable=True)  # desktop, mobile, tablet
+    location = Column(String(200), nullable=True)  # 위치 정보 (IP 기반)
     
     # 메타데이터
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
