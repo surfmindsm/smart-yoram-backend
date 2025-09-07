@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from fastapi import Request
 
 from app import models
+from app.utils.geolocation import get_location_from_ip
 
 
 def get_client_ip(request: Request) -> Optional[str]:
@@ -88,11 +89,16 @@ def record_login_attempt(
         ip_address = None
         user_agent = None
         device_type = None
+        location = None
         
         if request:
             ip_address = get_client_ip(request)
             user_agent = request.headers.get("user-agent")
             device_type = get_device_type(user_agent)
+            
+            # 위치 정보 추출 (안전하게)
+            if ip_address:
+                location = get_location_from_ip(ip_address)
             
             # User-Agent 길이 제한 (DB 오류 방지)
             if user_agent and len(user_agent) > 500:
@@ -104,7 +110,8 @@ def record_login_attempt(
             ip_address=ip_address,
             user_agent=user_agent,
             status=status,
-            device_type=device_type
+            device_type=device_type,
+            location=location
         )
         
         # DB에 저장
