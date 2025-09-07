@@ -27,6 +27,7 @@ from .ai_agent import (
 )
 from .pastoral_care import PastoralCareRequest, PrayerRequest, PrayerParticipation
 from .sermon_material import SermonMaterial, SermonCategory
+from .simple_login_history import LoginHistory
 
 # Enhanced models
 from .member_enhanced import (

@@ -41,6 +41,14 @@ from app.api.api_v1.endpoints import (
     smart_assistant,
 )
 
+# 안전한 로그인 히스토리 import
+try:
+    from app.api.api_v1.endpoints import simple_login_history
+    SIMPLE_LOGIN_HISTORY_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️ Simple login history not available: {e}")
+    SIMPLE_LOGIN_HISTORY_AVAILABLE = False
+
 
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
@@ -111,3 +119,12 @@ api_router.include_router(
 api_router.include_router(
     smart_assistant.router, prefix="/smart-assistant", tags=["smart_assistant"]
 )
+
+# 안전한 로그인 히스토리 라우터 등록
+if SIMPLE_LOGIN_HISTORY_AVAILABLE:
+    api_router.include_router(
+        simple_login_history.router, prefix="/auth/login-history", tags=["login_history"]
+    )
+    print("✅ Simple login history routes registered")
+else:
+    print("⚠️ Simple login history routes skipped")

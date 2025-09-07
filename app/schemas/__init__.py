@@ -54,3 +54,9 @@ from .pastoral_care import (
 # Enhanced schemas
 from . import financial
 from . import member_enhanced
+from .simple_login_history import (
+    LoginHistoryCreate,
+    LoginHistoryResponse,
+    LoginHistoryRecent,
+    LoginHistoryList,
+)

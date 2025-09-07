@@ -49,3 +49,6 @@ class User(Base):
     prayer_requests = relationship("PrayerRequest", back_populates="member")
     prayer_participations = relationship("PrayerParticipation", back_populates="member")
     sermon_materials = relationship("SermonMaterial", back_populates="user")
+    
+    # Simple login history relationship
+    login_records = relationship("LoginHistory", back_populates="user")
