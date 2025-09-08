@@ -240,6 +240,16 @@ def get_community_applications(
         offset = (page - 1) * limit
         applications = query.offset(offset).limit(limit).all()
         
+        # attachments JSON 파싱 처리
+        for app in applications:
+            if app.attachments:
+                try:
+                    app.attachments = json.loads(app.attachments)
+                except:
+                    app.attachments = None
+            else:
+                app.attachments = None
+        
         # 통계 계산
         stats_query = db.query(CommunityApplication)
         statistics = {
