@@ -39,6 +39,7 @@ from app.api.api_v1.endpoints import (
     setup,
     sermon_materials,
     smart_assistant,
+    community_applications,
 )
 
 # 안전한 로그인 히스토리 import
@@ -118,6 +119,11 @@ api_router.include_router(
 )
 api_router.include_router(
     smart_assistant.router, prefix="/smart-assistant", tags=["smart_assistant"]
+)
+
+# 커뮤니티 신청 라우터
+api_router.include_router(
+    community_applications.router, prefix="/community", tags=["community_applications"]
 )
 
 # 안전한 로그인 히스토리 라우터 등록
