@@ -5,7 +5,7 @@ SELECT column_name, data_type, is_nullable, column_default
 FROM information_schema.columns 
 WHERE table_name = 'login_history'
 ORDER BY ordinal_position;
-
+ 
 -- 2. location 컬럼이 없다면 추가
 DO $$
 BEGIN
