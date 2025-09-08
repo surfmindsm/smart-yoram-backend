@@ -52,3 +52,6 @@ class User(Base):
     
     # Simple login history relationship
     login_records = relationship("LoginHistory", back_populates="user")
+    
+    # Community application review relationship
+    reviewed_applications = relationship("CommunityApplication", back_populates="reviewer")

@@ -60,3 +60,17 @@ from .simple_login_history import (
     LoginHistoryRecent,
     LoginHistoryList,
 )
+from .community_application import (
+    CommunityApplicationCreate,
+    CommunityApplicationResponse,
+    CommunityApplicationList,
+    CommunityApplicationSubmitResponse,
+    ApplicationApproval,
+    ApplicationRejection,
+    ApplicationApprovalResponse,
+    ApplicationRejectionResponse,
+    ApplicationQueryParams,
+    ApplicationStatistics,
+    ErrorResponse,
+    SuccessResponse,
+)
