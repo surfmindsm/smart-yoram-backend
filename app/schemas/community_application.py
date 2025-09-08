@@ -1,42 +1,27 @@
-from typing import Optional, List, Any
+from typing import Optional, List
 from datetime import datetime
-from pydantic import BaseModel, EmailStr, Field, validator
-from enum import Enum
-
-
-class ApplicantType(str, Enum):
-    company = "company"
-    individual = "individual"
-    musician = "musician"
-    minister = "minister"
-    organization = "organization"
-    other = "other"
-
-
-class ApplicationStatus(str, Enum):
-    pending = "pending"
-    approved = "approved"
-    rejected = "rejected"
-
-
-class AttachmentInfo(BaseModel):
-    filename: str
-    path: str
-    size: int
+from pydantic import BaseModel, EmailStr, Field
 
 
 # 신청서 제출용 스키마
 class CommunityApplicationCreate(BaseModel):
-    applicant_type: ApplicantType
+    applicant_type: str = Field(..., description="신청자 유형: company, individual, musician, minister, organization, other")
     organization_name: str = Field(..., max_length=200, description="단체/회사명")
-    contact_person: str = Field(..., max_length=100, description="담당자명")
+    contact_person: str = Field(..., max_length=100, description="담당자명")  
     email: EmailStr = Field(..., description="이메일")
-    phone: str = Field(..., max_length=50, description="연락처")
+    phone: str = Field(..., max_length=20, description="연락처")
     business_number: Optional[str] = Field(None, max_length=50, description="사업자등록번호")
     address: Optional[str] = Field(None, description="주소")
     description: str = Field(..., description="상세 소개 및 신청 사유")
     service_area: Optional[str] = Field(None, max_length=200, description="서비스 지역")
     website: Optional[str] = Field(None, max_length=500, description="웹사이트/SNS")
+
+
+# 첨부파일 정보
+class AttachmentInfo(BaseModel):
+    filename: str
+    path: str
+    size: int
 
 
 # 응답용 스키마
@@ -115,21 +100,8 @@ class ApplicationRejection(BaseModel):
     notes: Optional[str] = Field(None, description="검토 메모")
 
 
-# 신청서 제출 응답
-class ApplicationSubmissionResponse(BaseModel):
+# 응답 스키마
+class StandardResponse(BaseModel):
     success: bool = True
     message: str
-    data: dict
-
-
-# 승인 후 계정 정보
-class UserAccountInfo(BaseModel):
-    username: str
-    temporary_password: str
-    login_url: str
-
-
-class ApplicationApprovalResponse(BaseModel):
-    success: bool = True
-    message: str
-    data: dict
+    data: Optional[dict] = None
