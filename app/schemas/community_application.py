@@ -5,12 +5,17 @@ from pydantic import BaseModel, EmailStr, Field
 
 # 신청서 제출용 스키마
 class CommunityApplicationCreate(BaseModel):
-    applicant_type: str = Field(..., description="신청자 유형: company, individual, musician, minister, organization, other")
+    applicant_type: str = Field(
+        ...,
+        description="신청자 유형: company, individual, musician, minister, organization, other",
+    )
     organization_name: str = Field(..., max_length=200, description="단체/회사명")
-    contact_person: str = Field(..., max_length=100, description="담당자명")  
+    contact_person: str = Field(..., max_length=100, description="담당자명")
     email: EmailStr = Field(..., description="이메일")
     phone: str = Field(..., max_length=20, description="연락처")
-    business_number: Optional[str] = Field(None, max_length=50, description="사업자등록번호")
+    business_number: Optional[str] = Field(
+        None, max_length=50, description="사업자등록번호"
+    )
     address: Optional[str] = Field(None, description="주소")
     description: str = Field(..., description="상세 소개 및 신청 사유")
     service_area: Optional[str] = Field(None, max_length=200, description="서비스 지역")
@@ -51,7 +56,7 @@ class CommunityApplicationResponse(BaseModel):
         from_attributes = True
 
 
-# 목록 조회용 스키마 (간소화)
+# 목록 조회용 스키마 (전체 필드 포함)
 class CommunityApplicationList(BaseModel):
     id: int
     applicant_type: str
@@ -59,9 +64,20 @@ class CommunityApplicationList(BaseModel):
     contact_person: str
     email: str
     phone: str
+    business_number: Optional[str] = None
+    address: Optional[str] = None
+    description: str
+    service_area: Optional[str] = None
+    website: Optional[str] = None
+    attachments: Optional[List[AttachmentInfo]] = None
     status: str
     submitted_at: datetime
     reviewed_at: Optional[datetime] = None
+    reviewed_by: Optional[int] = None
+    rejection_reason: Optional[str] = None
+    notes: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         from_attributes = True
