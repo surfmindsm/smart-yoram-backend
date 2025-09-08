@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, s
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import text
 import json
 import os
 from datetime import datetime
@@ -184,6 +185,56 @@ async def submit_community_application(
         )
 
 
+@router.get("/admin/applications/debug", response_model=dict)
+def debug_community_applications(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_superuser)
+):
+    """디버깅용 Mock 데이터 엔드포인트"""
+    try:
+        # 테이블 존재 확인
+        table_count = db.execute(text("SELECT COUNT(*) FROM community_applications")).scalar()
+        
+        return {
+            "status": "success",
+            "table_exists": True,
+            "record_count": table_count,
+            "mock_data": {
+                "applications": [
+                    {
+                        "id": 1,
+                        "applicant_type": "company",
+                        "organization_name": "(주)교회음향시스템",
+                        "contact_person": "김테스트",
+                        "email": "test@company.com",
+                        "phone": "010-1234-5678",
+                        "status": "pending",
+                        "submitted_at": "2024-09-08T10:00:00Z",
+                        "reviewed_at": None
+                    }
+                ],
+                "pagination": {
+                    "current_page": 1,
+                    "total_pages": 1,
+                    "total_count": 1,
+                    "per_page": 20
+                },
+                "statistics": {
+                    "pending": 1,
+                    "approved": 0,
+                    "rejected": 0,
+                    "total": 1
+                }
+            }
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e),
+            "table_exists": False
+        }
+
+
 @router.get("/admin/applications", response_model=CommunityApplicationsListResponse)
 def get_community_applications(
     page: int = 1,
@@ -271,10 +322,13 @@ def get_community_applications(
         )
         
     except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
         logger.error(f"Application list error: {str(e)}")
+        logger.error(f"Full traceback: {error_details}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="신청서 목록 조회 중 오류가 발생했습니다."
+            detail=f"신청서 목록 조회 중 오류가 발생했습니다: {str(e)}"
         )
 
 
