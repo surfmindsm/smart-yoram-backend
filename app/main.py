@@ -49,24 +49,39 @@ app.add_middleware(
         "http://localhost:3000",
         "http://127.0.0.1:3000", 
         "http://localhost:3001",
-        "http://127.0.0.1:3001",  # 추가
-        "http://localhost:3002",  # 추가 개발 포트
-        "http://127.0.0.1:3002",  # 추가 개발 포트
+        "http://127.0.0.1:3001",
+        "http://localhost:3002",
+        "http://127.0.0.1:3002",
         "https://smart-yoram.vercel.app",
         "https://smart-yoram-frontend.vercel.app",
         "https://smart-yoram-admin.vercel.app",
         "https://api.surfmind-team.com",
+        "*",  # 임시 디버깅용 - 개발 완료 후 제거 예정
     ],
-    allow_credentials=True,  # Enable credentials for authentication
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"],
+    allow_credentials=True,
+    allow_methods=["*"],  # 모든 HTTP 메서드 허용
     allow_headers=["*"],
     expose_headers=["*"],
+    max_age=86400,  # preflight 캐시 24시간
 )
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
 app.include_router(spec_router, prefix="/api")
 app.include_router(admin_router)
 app.include_router(web_router)
+
+# Add explicit OPTIONS handler for CORS preflight
+@app.options("/{path:path}")
+async def handle_options(request: Request):
+    """Handle CORS preflight requests"""
+    return {
+        "message": "OK",
+        "headers": {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*",
+        }
+    }
 
 
 # Add middleware to limit file upload size (50MB = 52428800 bytes)
