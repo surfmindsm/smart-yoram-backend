@@ -471,7 +471,7 @@ def approve_community_application(
             if application.applicant_type == "church_admin"
             else "community_user"
         )
-        church_id = 0  # 기본값 (커뮤니티 사용자)
+        church_id = 9998  # 기본값: 커뮤니티 전용 테넌트
 
         # 교회 관리자인 경우 교회 생성 또는 연결
         if application.applicant_type == "church_admin":
