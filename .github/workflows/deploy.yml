@@ -81,20 +81,21 @@ jobs:
         host: ${{ env.EC2_HOST }}
         username: ${{ env.EC2_USER }}
         key: ${{ secrets.EC2_SSH_KEY }}
+        timeout: 60s
+        command_timeout: 3m
         script: |
           echo "🛑 Stopping services before file copy..."
-          cd ~/smart-yoram-backend || echo "Directory doesn't exist yet"
+          cd ~/smart-yoram-backend 2>/dev/null || echo "Directory doesn't exist yet"
           
           # Stop Docker containers if they exist
           if [ -f docker-compose.yml ]; then
-            sudo docker-compose down || true
+            echo "Stopping Docker containers..."
+            sudo docker-compose down --timeout 30 || true
           fi
           
           # Kill any Python processes
+          echo "Stopping Python processes..."
           pkill -f "uvicorn app.main:app" || true
-          
-          # Wait a bit for processes to stop
-          sleep 5
           
           echo "✅ Services stopped"
 
@@ -107,7 +108,8 @@ jobs:
         port: 22
         source: "."
         target: ${{ env.DEPLOY_PATH }}
-        rm: true
+        rm: false
+        overwrite: true
         strip_components: 0
         timeout: 60s
         command_timeout: 15m
