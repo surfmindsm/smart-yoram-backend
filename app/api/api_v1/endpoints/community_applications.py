@@ -478,11 +478,17 @@ def approve_community_application(
         # 데이터 검증
         logger.info(f"Validating application {application_id} data")
 
-        if not application.password_hash:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="신청서에 비밀번호 해시가 없습니다. 다시 신청해주세요.",
+        # password_hash가 없는 경우 임시 비밀번호 생성
+        if not hasattr(application, 'password_hash') or not application.password_hash:
+            logger.warning(f"Application {application_id} missing password_hash, generating temporary password")
+            temp_password = "".join(
+                secrets.choice(string.ascii_letters + string.digits) for _ in range(12)
             )
+            password_hash = pwd_context.hash(temp_password)
+            logger.info(f"Generated temporary password for {application.email}: {temp_password}")
+        else:
+            password_hash = application.password_hash
+            temp_password = None
 
         if not application.email:
             raise HTTPException(
@@ -546,7 +552,7 @@ def approve_community_application(
         new_user = User(
             email=application.email,
             username=application.email,  # 이메일을 username으로 사용
-            hashed_password=application.password_hash,  # 신청 시 저장된 해시 사용
+            hashed_password=password_hash,  # 위에서 처리된 password_hash 사용
             full_name=application.contact_person,
             phone=application.phone,
             church_id=church_id,
@@ -562,21 +568,29 @@ def approve_community_application(
         logger.info(f"Application approved: {application_id} by user {current_user.id}")
         logger.info(f"User account created: {new_user.email} with role {user_role}")
 
+        # 응답 데이터 구성
+        response_data = {
+            "application_id": application.id,
+            "status": application.status,
+            "reviewed_at": application.reviewed_at.isoformat(),
+            "user_account": {
+                "email": application.email,
+                "password_set": True,
+                "user_role": user_role,
+                "church_id": church_id,
+                "login_url": "https://admin.smartyoram.com/login",
+            },
+        }
+        
+        # 임시 비밀번호가 생성된 경우 추가
+        if temp_password:
+            response_data["user_account"]["temporary_password"] = temp_password
+            response_data["user_account"]["password_note"] = "기존 신청서에 비밀번호가 없어 임시 비밀번호를 생성했습니다."
+
         return StandardResponse(
             success=True,
             message="신청서가 승인되었습니다. 사용자 계정이 생성되었습니다.",
-            data={
-                "application_id": application.id,
-                "status": application.status,
-                "reviewed_at": application.reviewed_at.isoformat(),
-                "user_account": {
-                    "email": application.email,
-                    "password_set": True,  # 신청 시 입력한 비밀번호 사용
-                    "user_role": user_role,
-                    "church_id": church_id,
-                    "login_url": "https://admin.smartyoram.com/login",
-                },
-            },
+            data=response_data,
         )
 
     except HTTPException:
