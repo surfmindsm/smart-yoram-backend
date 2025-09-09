@@ -459,6 +459,31 @@ def approve_community_application(
                 detail="이미 처리된 신청서입니다.",
             )
 
+        # 데이터 검증
+        logger.info(f"Validating application {application_id} data")
+
+        if not application.password_hash:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="신청서에 비밀번호 해시가 없습니다. 다시 신청해주세요.",
+            )
+
+        if not application.email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="신청서에 이메일이 없습니다.",
+            )
+
+        # 이메일 중복 확인 (승인 전에 미리 확인)
+        existing_user = db.query(User).filter(User.email == application.email).first()
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"이미 등록된 이메일 주소입니다: {application.email}",
+            )
+
+        logger.info(f"Application {application_id} validation passed")
+
         # 승인 처리
         application.status = "approved"
         application.reviewed_at = datetime.utcnow()
@@ -500,15 +525,8 @@ def approve_community_application(
                 church_id = new_church.id
                 logger.info(f"Created new church: {new_church.name} (ID: {church_id})")
 
-        # 이메일 중복 확인
-        existing_user = db.query(User).filter(User.email == application.email).first()
-        if existing_user:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="이미 등록된 이메일 주소입니다.",
-            )
-
         # 사용자 계정 생성 (신청 시 입력한 비밀번호 해시 사용)
+        logger.info(f"Creating user account for {application.email}")
         new_user = User(
             email=application.email,
             username=application.email,  # 이메일을 username으로 사용
@@ -550,10 +568,22 @@ def approve_community_application(
         raise
     except Exception as e:
         db.rollback()
+        import traceback
+
+        error_details = traceback.format_exc()
         logger.error(f"Application approval error: {str(e)}")
+        logger.error(f"Full traceback: {error_details}")
+
+        # 개발 환경에서는 더 구체적인 에러 정보 제공
+        detail_message = "승인 처리 중 오류가 발생했습니다."
+        if (
+            "development" in str(settings.ENVIRONMENT).lower() or True
+        ):  # 임시로 항상 활성화
+            detail_message = f"승인 처리 에러: {str(e)} | 유형: {type(e).__name__}"
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="승인 처리 중 오류가 발생했습니다.",
+            detail=detail_message,
         )
 
 
