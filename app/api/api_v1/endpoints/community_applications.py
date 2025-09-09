@@ -1,5 +1,14 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    UploadFile,
+    File,
+    Form,
+    status,
+    Response,
+)
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -435,10 +444,17 @@ def get_community_application(
 def approve_community_application(
     application_id: int,
     request: ApplicationApproval,
+    response: Response,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_superuser),
 ):
     """신청서를 승인합니다 (슈퍼어드민 전용)."""
+
+    # 수동으로 CORS 헤더 추가 (500 에러 시에도 CORS 헤더 보장)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
 
     try:
         application = (
@@ -581,10 +597,18 @@ def approve_community_application(
         ):  # 임시로 항상 활성화
             detail_message = f"승인 처리 에러: {str(e)} | 유형: {type(e).__name__}"
 
-        raise HTTPException(
+        # 500 에러 시에도 CORS 헤더 추가
+        error_response = HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=detail_message,
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "*",
+                "Access-Control-Allow-Headers": "*",
+                "Access-Control-Allow-Credentials": "true",
+            },
         )
+        raise error_response
 
 
 @router.put(
