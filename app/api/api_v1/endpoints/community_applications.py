@@ -25,6 +25,7 @@ from app.schemas.community_application import (
     AttachmentInfo,
 )
 from app.models.user import User
+from app.models.church import Church
 
 # 로거 설정
 logger = logging.getLogger(__name__)
@@ -464,28 +465,81 @@ def approve_community_application(
         application.reviewed_by = current_user.id
         application.notes = request.notes
 
+        # 사용자 계정 생성
+        user_role = (
+            "church_admin"
+            if application.applicant_type == "church_admin"
+            else "community_user"
+        )
+        church_id = 0  # 기본값 (커뮤니티 사용자)
+
+        # 교회 관리자인 경우 교회 생성 또는 연결
+        if application.applicant_type == "church_admin":
+            # 기존 교회가 있는지 확인
+            existing_church = (
+                db.query(Church)
+                .filter(Church.name.ilike(f"%{application.organization_name}%"))
+                .first()
+            )
+
+            if existing_church:
+                church_id = existing_church.id
+                logger.info(
+                    f"Using existing church: {existing_church.name} (ID: {church_id})"
+                )
+            else:
+                # 새 교회 생성
+                new_church = Church(
+                    name=application.organization_name,
+                    address=application.address,
+                    phone=application.phone,
+                    is_active=True,
+                )
+                db.add(new_church)
+                db.flush()
+                church_id = new_church.id
+                logger.info(f"Created new church: {new_church.name} (ID: {church_id})")
+
+        # 이메일 중복 확인
+        existing_user = db.query(User).filter(User.email == application.email).first()
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="이미 등록된 이메일 주소입니다.",
+            )
+
+        # 사용자 계정 생성 (신청 시 입력한 비밀번호 해시 사용)
+        new_user = User(
+            email=application.email,
+            username=application.email,  # 이메일을 username으로 사용
+            hashed_password=application.password_hash,  # 신청 시 저장된 해시 사용
+            full_name=application.contact_person,
+            phone=application.phone,
+            church_id=church_id,
+            role=user_role,
+            is_active=True,
+            is_superuser=False,
+            is_first=True,
+        )
+        db.add(new_user)
+
         db.commit()
 
         logger.info(f"Application approved: {application_id} by user {current_user.id}")
-
-        # TODO: 사용자 계정 생성 및 이메일 발송
-        temp_password = "".join(
-            secrets.choice(string.ascii_letters + string.digits) for _ in range(12)
-        )
-        username = (
-            f"{application.organization_name.lower().replace(' ', '_')}_community"
-        )
+        logger.info(f"User account created: {new_user.email} with role {user_role}")
 
         return StandardResponse(
             success=True,
-            message="신청서가 승인되었습니다.",
+            message="신청서가 승인되었습니다. 사용자 계정이 생성되었습니다.",
             data={
                 "application_id": application.id,
                 "status": application.status,
                 "reviewed_at": application.reviewed_at.isoformat(),
                 "user_account": {
-                    "username": username,
-                    "temporary_password": temp_password,
+                    "email": application.email,
+                    "password_set": True,  # 신청 시 입력한 비밀번호 사용
+                    "user_role": user_role,
+                    "church_id": church_id,
                     "login_url": "https://admin.smartyoram.com/login",
                 },
             },
