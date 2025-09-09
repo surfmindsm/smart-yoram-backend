@@ -10,6 +10,7 @@ from datetime import datetime
 import secrets
 import string
 import logging
+from passlib.context import CryptContext
 
 from app.api.deps import get_db, get_current_active_superuser
 from app.models.community_application import CommunityApplication
@@ -28,6 +29,9 @@ from app.models.user import User
 # 로거 설정
 logger = logging.getLogger(__name__)
 
+# 비밀번호 해싱 설정
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 router = APIRouter()
 
 # 파일 업로드 설정
@@ -43,6 +47,7 @@ VALID_APPLICANT_TYPES = {
     "musician",
     "minister",
     "organization",
+    "church_admin",
     "other",
 }
 VALID_STATUS_TYPES = {"pending", "approved", "rejected"}
@@ -111,11 +116,15 @@ async def submit_community_application(
     contact_person: str = Form(...),
     email: str = Form(...),
     phone: str = Form(...),
+    password: str = Form(...),
     description: str = Form(...),
     business_number: Optional[str] = Form(None),
     address: Optional[str] = Form(None),
     service_area: Optional[str] = Form(None),
     website: Optional[str] = Form(None),
+    agree_terms: bool = Form(...),
+    agree_privacy: bool = Form(...),
+    agree_marketing: bool = Form(default=False),
     attachments: Optional[List[UploadFile]] = File(None),
     db: Session = Depends(get_db),
 ):
@@ -127,6 +136,26 @@ async def submit_community_application(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid applicant_type. Must be one of: {', '.join(VALID_APPLICANT_TYPES)}",
+            )
+
+        # 비밀번호 길이 검증
+        if len(password) < 8:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="비밀번호는 최소 8자 이상이어야 합니다.",
+            )
+
+        # 필수 약관 동의 검증
+        if not agree_terms:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="이용약관에 동의해야 합니다.",
+            )
+
+        if not agree_privacy:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="개인정보처리방침에 동의해야 합니다.",
             )
 
         # 이메일 중복 체크
@@ -143,6 +172,9 @@ async def submit_community_application(
                 data={"error_code": "EMAIL_ALREADY_EXISTS"},
             )
 
+        # 비밀번호 해싱
+        password_hash = pwd_context.hash(password)
+
         # 신청서 생성
         application = CommunityApplication(
             applicant_type=applicant_type,
@@ -150,11 +182,15 @@ async def submit_community_application(
             contact_person=contact_person[:100],
             email=email[:255],
             phone=phone[:20],
+            password_hash=password_hash,
             business_number=business_number[:50] if business_number else None,
             address=address,
             description=description,
             service_area=service_area[:200] if service_area else None,
             website=website[:500] if website else None,
+            agree_terms=agree_terms,
+            agree_privacy=agree_privacy,
+            agree_marketing=agree_marketing,
             status="pending",
         )
 

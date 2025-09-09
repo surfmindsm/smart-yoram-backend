@@ -1,17 +1,21 @@
 -- Create community_applications table for production PostgreSQL
 CREATE TABLE IF NOT EXISTS community_applications (
     id SERIAL PRIMARY KEY,
-    applicant_type VARCHAR(20) NOT NULL,
+    applicant_type VARCHAR(20) NOT NULL,  -- Added 'church_admin' support
     organization_name VARCHAR(200) NOT NULL,
     contact_person VARCHAR(100) NOT NULL,
     email VARCHAR(255) NOT NULL,
     phone VARCHAR(20) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,  -- NEW: Hashed password
     business_number VARCHAR(50),
     address TEXT,
     description TEXT NOT NULL,
     service_area VARCHAR(200),
     website VARCHAR(500),
     attachments TEXT,  -- JSON string for file info
+    agree_terms BOOLEAN DEFAULT FALSE NOT NULL,    -- NEW: Terms agreement
+    agree_privacy BOOLEAN DEFAULT FALSE NOT NULL,  -- NEW: Privacy agreement  
+    agree_marketing BOOLEAN DEFAULT FALSE NOT NULL, -- NEW: Marketing agreement
     status VARCHAR(20) DEFAULT 'pending' NOT NULL,
     submitted_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     reviewed_at TIMESTAMP WITH TIME ZONE,

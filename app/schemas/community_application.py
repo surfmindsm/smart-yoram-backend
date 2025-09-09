@@ -7,12 +7,13 @@ from pydantic import BaseModel, EmailStr, Field
 class CommunityApplicationCreate(BaseModel):
     applicant_type: str = Field(
         ...,
-        description="신청자 유형: company, individual, musician, minister, organization, other",
+        description="신청자 유형: company, individual, musician, minister, organization, church_admin, other",
     )
     organization_name: str = Field(..., max_length=200, description="단체/회사명")
     contact_person: str = Field(..., max_length=100, description="담당자명")
     email: EmailStr = Field(..., description="이메일")
     phone: str = Field(..., max_length=20, description="연락처")
+    password: str = Field(..., min_length=8, description="로그인 비밀번호")
     business_number: Optional[str] = Field(
         None, max_length=50, description="사업자등록번호"
     )
@@ -20,6 +21,9 @@ class CommunityApplicationCreate(BaseModel):
     description: str = Field(..., description="상세 소개 및 신청 사유")
     service_area: Optional[str] = Field(None, max_length=200, description="서비스 지역")
     website: Optional[str] = Field(None, max_length=500, description="웹사이트/SNS")
+    agree_terms: bool = Field(..., description="이용약관 동의")
+    agree_privacy: bool = Field(..., description="개인정보처리방침 동의")
+    agree_marketing: bool = Field(default=False, description="마케팅 수신 동의")
 
 
 # 첨부파일 정보
@@ -43,6 +47,9 @@ class CommunityApplicationResponse(BaseModel):
     service_area: Optional[str] = None
     website: Optional[str] = None
     attachments: Optional[List[AttachmentInfo]] = None
+    agree_terms: bool
+    agree_privacy: bool
+    agree_marketing: bool
     status: str
     submitted_at: datetime
     reviewed_at: Optional[datetime] = None
@@ -70,6 +77,9 @@ class CommunityApplicationList(BaseModel):
     service_area: Optional[str] = None
     website: Optional[str] = None
     attachments: Optional[List[AttachmentInfo]] = None
+    agree_terms: bool
+    agree_privacy: bool
+    agree_marketing: bool
     status: str
     submitted_at: datetime
     reviewed_at: Optional[datetime] = None
