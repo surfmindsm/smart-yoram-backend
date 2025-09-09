@@ -528,6 +528,7 @@ def approve_community_application(
             community_church = Church(
                 id=9998,
                 name="스마트요람 커뮤니티",
+                subscription_plan="community",  # 커뮤니티 전용 플랜
                 is_active=True,
             )
             db.add(community_church)
@@ -582,6 +583,9 @@ def approve_community_application(
         logger.info(f"Application approved: {application_id} by user {current_user.id}")
         logger.info(f"User account created: {new_user.email} with role {user_role}")
 
+        # 교회 정보 가져오기
+        created_church = db.query(Church).filter(Church.id == church_id).first()
+        
         # 응답 데이터 구성
         response_data = {
             "application_id": application.id,
@@ -593,6 +597,12 @@ def approve_community_application(
                 "user_role": user_role,
                 "church_id": church_id,
                 "login_url": "https://admin.smartyoram.com/login",
+            },
+            "church": {
+                "id": created_church.id,
+                "name": created_church.name,
+                "subscription_plan": created_church.subscription_plan,
+                "is_community": created_church.subscription_plan == "community",
             },
         }
         
