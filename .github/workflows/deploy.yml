@@ -75,6 +75,29 @@ jobs:
         fi
         echo "✅ All required secrets are configured"
 
+    - name: Stop running services before file copy
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ env.EC2_HOST }}
+        username: ${{ env.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          echo "🛑 Stopping services before file copy..."
+          cd ~/smart-yoram-backend || echo "Directory doesn't exist yet"
+          
+          # Stop Docker containers if they exist
+          if [ -f docker-compose.yml ]; then
+            sudo docker-compose down || true
+          fi
+          
+          # Kill any Python processes
+          pkill -f "uvicorn app.main:app" || true
+          
+          # Wait a bit for processes to stop
+          sleep 5
+          
+          echo "✅ Services stopped"
+
     - name: Copy files to EC2
       uses: appleboy/scp-action@v0.1.7
       with:
