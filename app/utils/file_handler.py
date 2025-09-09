@@ -5,7 +5,11 @@ from typing import Optional, Tuple
 from pathlib import Path
 from fastapi import UploadFile, HTTPException
 import aiofiles
-import magic
+try:
+    import magic
+    MAGIC_AVAILABLE = True
+except ImportError:
+    MAGIC_AVAILABLE = False
 import PyPDF2
 import docx
 import logging
