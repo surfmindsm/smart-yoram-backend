@@ -606,11 +606,7 @@ def approve_community_application(
         logger.error(f"Full traceback: {error_details}")
 
         # 개발 환경에서는 더 구체적인 에러 정보 제공
-        detail_message = "승인 처리 중 오류가 발생했습니다."
-        if (
-            "development" in str(settings.ENVIRONMENT).lower() or True
-        ):  # 임시로 항상 활성화
-            detail_message = f"승인 처리 에러: {str(e)} | 유형: {type(e).__name__}"
+        detail_message = f"승인 처리 에러: {str(e)} | 유형: {type(e).__name__}"
 
         # 500 에러 시에도 CORS 헤더 추가
         error_response = HTTPException(
