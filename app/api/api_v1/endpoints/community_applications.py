@@ -528,7 +528,6 @@ def approve_community_application(
             community_church = Church(
                 id=9998,
                 name="스마트요람 커뮤니티",
-                description="커뮤니티 사용자들을 위한 가상 교회",
                 is_active=True,
             )
             db.add(community_church)
