@@ -75,6 +75,23 @@ jobs:
         fi
         echo "✅ All required secrets are configured"
 
+    - name: Prepare deployment directory
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ env.EC2_HOST }}
+        username: ${{ env.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          echo "🔧 Preparing deployment directory..."
+          # Create directory if it doesn't exist
+          mkdir -p ~/smart-yoram-backend
+          
+          # Fix directory permissions
+          sudo chown -R ubuntu:ubuntu ~/smart-yoram-backend || true
+          chmod -R 755 ~/smart-yoram-backend || true
+          
+          echo "✅ Directory prepared"
+
     - name: Copy files to EC2
       uses: appleboy/scp-action@v0.1.7
       with:
