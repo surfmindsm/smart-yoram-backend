@@ -85,11 +85,14 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     response.headers["Access-Control-Allow-Credentials"] = "true"
     return response
 
-@app.exception_handler(500)
-async def internal_server_error_handler(request: Request, exc):
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    import traceback
+    error_detail = f"Server Error: {str(exc)} | Type: {type(exc).__name__} | Traceback: {traceback.format_exc()}"
+    
     response = JSONResponse(
         status_code=500,
-        content={"detail": "Internal Server Error"}
+        content={"detail": error_detail}
     )
     # Add CORS headers to 500 error responses
     response.headers["Access-Control-Allow-Origin"] = "*"
