@@ -5,6 +5,7 @@ warnings.filterwarnings("ignore", message=".*error reading bcrypt version.*")
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 import os
 import logging
 
@@ -69,6 +70,33 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 app.include_router(spec_router, prefix="/api")
 app.include_router(admin_router)
 app.include_router(web_router)
+
+# Global exception handler to add CORS headers to all error responses
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    response = JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail}
+    )
+    # Add CORS headers to error responses
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    return response
+
+@app.exception_handler(500)
+async def internal_server_error_handler(request: Request, exc):
+    response = JSONResponse(
+        status_code=500,
+        content={"detail": "Internal Server Error"}
+    )
+    # Add CORS headers to 500 error responses
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    return response
 
 # Add explicit OPTIONS handler for CORS preflight
 @app.options("/{path:path}")
