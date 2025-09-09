@@ -49,13 +49,16 @@ app.add_middleware(
         "http://localhost:3000",
         "http://127.0.0.1:3000", 
         "http://localhost:3001",
+        "http://127.0.0.1:3001",  # 추가
+        "http://localhost:3002",  # 추가 개발 포트
+        "http://127.0.0.1:3002",  # 추가 개발 포트
         "https://smart-yoram.vercel.app",
         "https://smart-yoram-frontend.vercel.app",
         "https://smart-yoram-admin.vercel.app",
         "https://api.surfmind-team.com",
     ],
     allow_credentials=True,  # Enable credentials for authentication
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"],
     allow_headers=["*"],
     expose_headers=["*"],
 )
@@ -69,7 +72,9 @@ app.include_router(web_router)
 # Add middleware to limit file upload size (50MB = 52428800 bytes)
 @app.middleware("http")
 async def limit_upload_size(request: Request, call_next):
-    if request.method == "POST" and "upload" in request.url.path:
+    # Check for file uploads (but allow community applications)
+    if (request.method == "POST" and 
+        ("upload" in request.url.path or "/community/applications" in request.url.path)):
         content_length = request.headers.get("content-length")
         if content_length:
             content_length = int(content_length)
