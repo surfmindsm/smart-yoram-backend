@@ -40,6 +40,10 @@ from app.api.api_v1.endpoints import (
     sermon_materials,
     smart_assistant,
     community_applications,
+    community_home,
+    community_sharing,
+    community_request,
+    job_posts,
 )
 
 # 안전한 로그인 히스토리 import
@@ -124,6 +128,26 @@ api_router.include_router(
 # 커뮤니티 신청 라우터
 api_router.include_router(
     community_applications.router, prefix="/community", tags=["community_applications"]
+)
+
+# 커뮤니티 홈 라우터
+api_router.include_router(
+    community_home.router, prefix="/community", tags=["community_home"]
+)
+
+# 커뮤니티 나눔 라우터
+api_router.include_router(
+    community_sharing.router, prefix="/community", tags=["community_sharing"]
+)
+
+# 커뮤니티 요청 라우터
+api_router.include_router(
+    community_request.router, prefix="/community", tags=["community_request"]
+)
+
+# 구인/구직 라우터
+api_router.include_router(
+    job_posts.router, prefix="/community", tags=["job_posts"]
 )
 
 # 안전한 로그인 히스토리 라우터 등록

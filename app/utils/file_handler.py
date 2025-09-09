@@ -28,8 +28,24 @@ ALLOWED_EXTENSIONS = {
     "m4a": ["audio/m4a"],
 }
 
+# 커뮤니티 신청서용 허용 확장자
+COMMUNITY_ALLOWED_EXTENSIONS = {
+    "pdf": ["application/pdf"],
+    "jpg": ["image/jpeg"],
+    "jpeg": ["image/jpeg"],
+    "png": ["image/png"],
+    "doc": ["application/msword"],
+    "docx": ["application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+}
+
 # 최대 파일 크기 (100MB)
 MAX_FILE_SIZE = 100 * 1024 * 1024
+
+# 커뮤니티 신청서용 최대 파일 크기 (10MB)
+COMMUNITY_MAX_FILE_SIZE = 10 * 1024 * 1024
+
+# 커뮤니티 신청서용 최대 파일 개수
+COMMUNITY_MAX_FILES = 5
 
 
 class FileHandler:
