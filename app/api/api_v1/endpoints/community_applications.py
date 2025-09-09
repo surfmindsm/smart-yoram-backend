@@ -521,6 +521,20 @@ def approve_community_application(
         )
         church_id = 9998  # 기본값: 커뮤니티 전용 테넌트
 
+        # 커뮤니티 전용 교회가 없는 경우 생성
+        community_church = db.query(Church).filter(Church.id == 9998).first()
+        if not community_church:
+            logger.info("Creating community church with ID 9998")
+            community_church = Church(
+                id=9998,
+                name="스마트요람 커뮤니티",
+                description="커뮤니티 사용자들을 위한 가상 교회",
+                is_active=True,
+            )
+            db.add(community_church)
+            db.flush()
+            logger.info("Community church created successfully")
+
         # 교회 관리자인 경우 교회 생성 또는 연결
         if application.applicant_type == "church_admin":
             # 기존 교회가 있는지 확인
