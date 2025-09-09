@@ -35,6 +35,7 @@ from app.schemas.community_application import (
 )
 from app.models.user import User
 from app.models.church import Church
+from app.core.config import settings
 
 # 로거 설정
 logger = logging.getLogger(__name__)
