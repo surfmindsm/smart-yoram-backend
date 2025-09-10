@@ -46,6 +46,7 @@ from app.api.api_v1.endpoints import (
     job_posts,
     music_requests,
     church_events,
+    community_images,
 )
 
 # 안전한 로그인 히스토리 import
@@ -160,6 +161,11 @@ api_router.include_router(
 # 교회 행사 라우터
 api_router.include_router(
     church_events.router, prefix="/community", tags=["church_events"]
+)
+
+# 커뮤니티 이미지 업로드 라우터
+api_router.include_router(
+    community_images.router, prefix="/community", tags=["community_images"]
 )
 
 # 안전한 로그인 히스토리 라우터 등록
