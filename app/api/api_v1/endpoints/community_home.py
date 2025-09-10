@@ -20,42 +20,49 @@ def get_community_stats(
 ):
     """커뮤니티 홈 통계 조회"""
     try:
-        # 총 게시글 수 계산
+        # 기본 테이블들만 사용해서 안전하게 계산
         sharing_count = db.query(CommunitySharing).count()
         request_count = db.query(CommunityRequest).count()
         job_post_count = db.query(JobPost).count()
         job_seeker_count = db.query(JobSeeker).count()
-        music_recruit_count = db.query(MusicTeamRecruit).count()
-        music_application_count = db.query(MusicTeamApplication).count()
-        event_count = db.query(ChurchEvent).count()
+        music_request_count = 0  # music_requests 테이블 사용
+        event_count = 0  # event_announcements 테이블 사용
+        
+        # 존재하는 테이블들만 안전하게 쿼리
+        try:
+            from app.models.music_request import MusicRequest
+            music_request_count = db.query(MusicRequest).count()
+        except:
+            music_request_count = 0
+            
+        try:
+            from app.models.event_announcement import EventAnnouncement
+            event_count = db.query(EventAnnouncement).count()
+        except:
+            event_count = 0
         
         total_posts = (
             sharing_count + request_count + job_post_count + 
-            job_seeker_count + music_recruit_count + 
-            music_application_count + event_count
+            job_seeker_count + music_request_count + event_count
         )
         
-        # 활성 상태별 통계
+        # 활성 상태별 통계 (안전하게)
         active_sharing = db.query(CommunitySharing).filter(
             CommunitySharing.status == "available"
         ).count()
         
         active_requests = db.query(CommunityRequest).filter(
-            CommunityRequest.status == "active"
+            CommunityRequest.status == "open"
         ).count()
         
         open_job_posts = db.query(JobPost).filter(
-            JobPost.status == "open"
+            JobPost.status == "active"
         ).count()
         
-        open_music_teams = db.query(MusicTeamRecruit).filter(
-            MusicTeamRecruit.status == "open"
-        ).count()
+        open_music_requests = music_request_count  # 모든 음악 요청
         
-        # 이번 달 행사 수 (간단하게 전체 upcoming 이벤트로 계산)
-        events_this_month = db.query(ChurchEvent).filter(
-            ChurchEvent.status == "upcoming"
-        ).count()
+        # 이번 달 행사 수
+        events_this_month = event_count  # 모든 이벤트
         
         # 총 회원 수 (모든 사용자)
         total_members = db.query(User).count()
@@ -67,7 +74,7 @@ def get_community_stats(
                 "active_sharing": active_sharing,
                 "active_requests": active_requests,
                 "job_posts": open_job_posts,
-                "music_teams": open_music_teams,
+                "music_teams": open_music_requests,
                 "events_this_month": events_this_month,
                 "total_members": total_members
             }
@@ -100,12 +107,12 @@ def get_recent_posts(
                 "id": post.id,
                 "type": "free-sharing",
                 "title": post.title,
-                "author_id": post.author_id,
+                "user_id": post.user_id,  # author_id 대신 user_id 사용
                 "church_id": post.church_id,
                 "created_at": post.created_at,
                 "status": post.status,
-                "views": post.views,
-                "likes": post.likes
+                "views": getattr(post, 'view_count', 0),  # views 대신 view_count 사용
+                "likes": 0  # likes 컬럼이 없으므로 기본값 0
             })
         
         # 최근 요청 게시글
@@ -118,12 +125,12 @@ def get_recent_posts(
                 "id": post.id,
                 "type": "item-request",
                 "title": post.title,
-                "author_id": post.author_id,
+                "user_id": post.user_id,  # author_id 대신 user_id 사용
                 "church_id": post.church_id,
                 "created_at": post.created_at,
                 "status": post.status,
-                "views": post.views,
-                "likes": post.likes
+                "views": getattr(post, 'view_count', 0),  # views 대신 view_count 사용
+                "likes": 0  # likes 컬럼이 없으므로 기본값 0
             })
         
         # 생성일 기준으로 정렬
@@ -158,7 +165,7 @@ def get_my_posts(
         # 나눔 게시글
         if not post_type or post_type == "free-sharing":
             sharing_query = db.query(CommunitySharing).filter(
-                CommunitySharing.author_id == current_user.id
+                CommunitySharing.user_id == current_user.id
             )
             if status:
                 sharing_query = sharing_query.filter(CommunitySharing.status == status)
@@ -173,8 +180,8 @@ def get_my_posts(
                     "title": post.title,
                     "status": post.status,
                     "created_at": post.created_at,
-                    "views": post.views,
-                    "likes": post.likes,
+                    "views": getattr(post, 'view_count', 0),  # views 대신 view_count 사용
+                    "likes": 0,  # likes 컬럼이 없으므로 기본값 0
                     "church_id": post.church_id,
                     "location": post.location
                 })
@@ -182,7 +189,7 @@ def get_my_posts(
         # 요청 게시글
         if not post_type or post_type == "item-request":
             request_query = db.query(CommunityRequest).filter(
-                CommunityRequest.author_id == current_user.id
+                CommunityRequest.user_id == current_user.id
             )
             if status:
                 request_query = request_query.filter(CommunityRequest.status == status)
@@ -197,8 +204,8 @@ def get_my_posts(
                     "title": post.title,
                     "status": post.status,
                     "created_at": post.created_at,
-                    "views": post.views,
-                    "likes": post.likes,
+                    "views": getattr(post, 'view_count', 0),  # views 대신 view_count 사용
+                    "likes": 0,  # likes 컬럼이 없으므로 기본값 0
                     "church_id": post.church_id,
                     "location": post.location
                 })
@@ -206,7 +213,7 @@ def get_my_posts(
         # 구인 공고
         if not post_type or post_type == "job-post":
             job_query = db.query(JobPost).filter(
-                JobPost.author_id == current_user.id
+                JobPost.user_id == current_user.id
             )
             if status:
                 job_query = job_query.filter(JobPost.status == status)
@@ -221,8 +228,8 @@ def get_my_posts(
                     "title": post.title,
                     "status": post.status,
                     "created_at": post.created_at,
-                    "views": post.views,
-                    "likes": post.likes,
+                    "views": getattr(post, 'view_count', 0),  # views 대신 view_count 사용
+                    "likes": 0,  # likes 컬럼이 없으므로 기본값 0
                     "church_id": post.church_id,
                     "location": post.location
                 })
@@ -230,7 +237,7 @@ def get_my_posts(
         # 구직 신청
         if not post_type or post_type == "job-seeker":
             seeker_query = db.query(JobSeeker).filter(
-                JobSeeker.author_id == current_user.id
+                JobSeeker.user_id == current_user.id
             )
             if status:
                 seeker_query = seeker_query.filter(JobSeeker.status == status)
@@ -245,8 +252,8 @@ def get_my_posts(
                     "title": post.title,
                     "status": post.status,
                     "created_at": post.created_at,
-                    "views": post.views,
-                    "likes": post.likes,
+                    "views": getattr(post, 'view_count', 0),  # views 대신 view_count 사용
+                    "likes": 0,  # likes 컬럼이 없으므로 기본값 0
                     "church_id": post.church_id,
                     "location": post.desired_location
                 })
