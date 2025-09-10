@@ -94,6 +94,7 @@ def get_sharing_list(
                 "description": sharing.description,
                 "category": sharing.category,
                 "condition": sharing.condition,
+                "quantity": sharing.quantity or 1,  # quantity 컬럼 추가
                 "status": sharing.status,
                 "location": sharing.location,
                 "contact_method": sharing.contact_method,
@@ -159,6 +160,7 @@ async def create_sharing(
             description=sharing_data.description,
             category=sharing_data.category,
             condition=sharing_data.condition,
+            quantity=sharing_data.quantity,  # quantity 컬럼 추가
             location=sharing_data.location,
             contact_method=sharing_data.contact_method,
             contact_info=sharing_data.contact_info,
@@ -168,7 +170,7 @@ async def create_sharing(
             status=sharing_data.status or "available",
             # images=sharing_data.images or [],  # 테이블에 없는 컬럼이므로 제거
             author_id=current_user.id,  # user_id → author_id
-            church_id=current_user.church_id
+            church_id=9998  # 커뮤니티 고정값 (current_user.church_id 대신)
         )
         
         db.add(sharing_record)
@@ -186,6 +188,7 @@ async def create_sharing(
                 "description": sharing_record.description,
                 "category": sharing_record.category,
                 "condition": sharing_record.condition,
+                "quantity": sharing_record.quantity or 1,  # quantity 컬럼 추가
                 "location": sharing_record.location,
                 "contact_method": sharing_record.contact_method,
                 "contact_info": sharing_record.contact_info,
