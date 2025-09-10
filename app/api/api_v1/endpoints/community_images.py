@@ -75,9 +75,17 @@ async def upload_community_images(
                     current_user.church_id
                 )
                 
-                # 단순화된 URL 생성 (실제 파일 저장은 나중에 구현)
-                fallback_url = f"https://api.surfmind-team.com/static/community/images/{unique_filename}"
-                uploaded_urls.append(fallback_url)
+                # 실제 파일 저장
+                import os
+                os.makedirs("static/community/images", exist_ok=True)
+                file_path = f"static/community/images/{unique_filename}"
+                
+                with open(file_path, "wb") as buffer:
+                    buffer.write(content)
+                
+                # URL 생성
+                file_url = f"https://api.surfmind-team.com/static/community/images/{unique_filename}"
+                uploaded_urls.append(file_url)
                 
             except Exception as file_error:
                 continue  # 개별 파일 에러는 무시하고 계속 진행
@@ -124,12 +132,20 @@ async def upload_single_community_image(
             current_user.church_id
         )
         
-        # 단순화된 URL 생성
-        fallback_url = f"https://api.surfmind-team.com/static/community/images/{unique_filename}"
+        # 실제 파일 저장
+        import os
+        os.makedirs("static/community/images", exist_ok=True)
+        file_path = f"static/community/images/{unique_filename}"
+        
+        with open(file_path, "wb") as buffer:
+            buffer.write(content)
+        
+        # URL 생성
+        file_url = f"https://api.surfmind-team.com/static/community/images/{unique_filename}"
         
         return {
             "success": True,
-            "url": fallback_url,
+            "url": file_url,
             "message": "이미지가 성공적으로 업로드되었습니다."
         }
         
