@@ -1,13 +1,27 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, desc
+from pydantic import BaseModel
 import json
 
 from app.api.deps import get_db, get_current_active_user
 from app.models.user import User
 from app.models.community_request import CommunityRequest
-from app.schemas.community_request import CommunityRequest as RequestSchemas
+
+
+class RequestCreateRequest(BaseModel):
+    title: str
+    description: str
+    category: str
+    urgency_level: str
+    needed_by: Optional[str] = None
+    request_reason: Optional[str] = None
+    location: str
+    contact_method: Optional[str] = "기타"  # 프론트엔드에서 보내지 않는 경우 기본값 제공
+    contact_info: str
+    images: Optional[List[str]] = []
+    status: Optional[str] = "active"
 
 router = APIRouter()
 
@@ -127,35 +141,38 @@ def get_request_list(
 
 @router.post("/requests", response_model=dict)
 async def create_request(
-    title: str = Form(..., description="제목"),
-    description: str = Form(..., description="상세 설명"),
-    category: str = Form(..., description="카테고리"),
-    urgency_level: str = Form(..., description="긴급도: 낮음, 보통, 높음"),
-    needed_by: Optional[str] = Form(None, description="필요한 날짜 (ISO format)"),
-    request_reason: Optional[str] = Form(None, description="요청 사유"),
-    location: str = Form(..., description="지역"),
-    contact_method: str = Form(..., description="연락 방법"),
-    contact_info: str = Form(..., description="연락처"),
-    images: List[UploadFile] = File(None, description="참고 이미지 파일들"),
+    request: Request,
+    request_data: RequestCreateRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """요청 등록 - 단순화된 버전"""
+    """요청 등록 - JSON 요청 방식"""
     try:
+        print(f"🔍 Request data: {request_data}")
+        print(f"🔍 User ID: {current_user.id}, Church ID: {current_user.church_id}")
+        
         return {
             "success": True,
             "message": "요청 게시글이 등록되었습니다.",
             "data": {
                 "id": 1,
-                "title": title,
-                "description": description,
-                "category": category,
-                "urgency_level": urgency_level,
-                "status": "active"
+                "title": request_data.title,
+                "description": request_data.description,
+                "category": request_data.category,
+                "urgency_level": request_data.urgency_level,
+                "location": request_data.location,
+                "contact_method": request_data.contact_method,
+                "contact_info": request_data.contact_info,
+                "status": request_data.status,
+                "images": request_data.images,
+                "user_id": current_user.id,
+                "church_id": current_user.church_id,
+                "created_at": "2024-01-01T00:00:00"
             }
         }
         
     except Exception as e:
+        print(f"❌ 요청 등록 실패: {str(e)}")
         return {
             "success": False,
             "message": f"요청 등록 중 오류가 발생했습니다: {str(e)}"

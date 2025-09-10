@@ -1,9 +1,42 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Form, Query
+from fastapi import APIRouter, Depends, HTTPException, Form, Query, Request
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 
 from app.api.deps import get_db, get_current_active_user
 from app.models.user import User
+
+
+class JobPostCreateRequest(BaseModel):
+    title: str
+    company: str
+    position: str
+    employment_type: str
+    location: str
+    salary_range: Optional[str] = None
+    description: str
+    requirements: Optional[str] = None
+    benefits: Optional[str] = None
+    contact_method: Optional[str] = "기타"  # 프론트엔드에서 보내지 않는 경우 기본값 제공
+    contact_info: str
+    expires_at: Optional[str] = None
+    status: Optional[str] = "open"
+
+
+class JobSeekerCreateRequest(BaseModel):
+    title: str
+    desired_position: str
+    employment_type: str
+    desired_location: str
+    salary_expectation: Optional[str] = None
+    experience_summary: str
+    education_background: Optional[str] = None
+    skills: Optional[str] = None
+    portfolio_url: Optional[str] = None
+    contact_method: Optional[str] = "기타"  # 프론트엔드에서 보내지 않는 경우 기본값 제공
+    contact_info: str
+    available_start_date: Optional[str] = None
+    status: Optional[str] = "active"
 
 router = APIRouter()
 
@@ -157,39 +190,42 @@ def get_job_posts(
 
 @router.post("/job-posts", response_model=dict)
 async def create_job_post(
-    title: str = Form(..., description="제목"),
-    company: str = Form(..., description="회사명"),
-    position: str = Form(..., description="직책/포지션"),
-    employment_type: str = Form(..., description="고용 형태"),
-    location: str = Form(..., description="근무 지역"),
-    salary: Optional[str] = Form(None, description="급여"),
-    work_hours: Optional[str] = Form(None, description="근무 시간"),
-    description: str = Form(..., description="상세 설명"),
-    requirements: Optional[str] = Form(None, description="자격 요건"),
-    benefits: Optional[str] = Form(None, description="복리후생"),
-    contact_method: str = Form(..., description="연락 방법"),
-    contact_info: str = Form(..., description="연락처"),
-    deadline: Optional[str] = Form(None, description="마감일 (ISO format)"),
+    request: Request,
+    job_data: JobPostCreateRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """구인 공고 등록 - 단순화된 버전"""
+    """구인 공고 등록 - JSON 요청 방식"""
     try:
+        print(f"🔍 Job post data: {job_data}")
+        print(f"🔍 User ID: {current_user.id}, Church ID: {current_user.church_id}")
+        
         return {
             "success": True,
             "message": "구인 공고가 등록되었습니다.",
             "data": {
                 "id": 1,
-                "title": title,
-                "company": company,
-                "position": position,
-                "employment_type": employment_type,
-                "location": location,
-                "status": "open"
+                "title": job_data.title,
+                "company": job_data.company,
+                "position": job_data.position,
+                "employment_type": job_data.employment_type,
+                "location": job_data.location,
+                "salary_range": job_data.salary_range,
+                "description": job_data.description,
+                "requirements": job_data.requirements,
+                "benefits": job_data.benefits,
+                "contact_method": job_data.contact_method,
+                "contact_info": job_data.contact_info,
+                "expires_at": job_data.expires_at,
+                "status": job_data.status,
+                "user_id": current_user.id,
+                "church_id": current_user.church_id,
+                "created_at": "2024-01-01T00:00:00"
             }
         }
         
     except Exception as e:
+        print(f"❌ 구인 공고 등록 실패: {str(e)}")
         return {
             "success": False,
             "message": f"구인 공고 등록 중 오류가 발생했습니다: {str(e)}"
@@ -417,37 +453,42 @@ def get_job_seekers(
 
 @router.post("/job-seekers", response_model=dict)
 async def create_job_seeker(
-    title: str = Form(..., description="제목"),
-    desired_position: str = Form(..., description="희망 직책"),
-    employment_type: str = Form(..., description="희망 고용 형태"),
-    desired_location: str = Form(..., description="희망 근무 지역"),
-    desired_salary: Optional[str] = Form(None, description="희망 급여"),
-    experience: Optional[str] = Form(None, description="경력"),
-    skills: Optional[str] = Form(None, description="기술/스킬"),
-    education: Optional[str] = Form(None, description="학력"),
-    introduction: str = Form(..., description="자기소개"),
-    contact_method: str = Form(..., description="연락 방법"),
-    contact_info: str = Form(..., description="연락처"),
-    available_from: Optional[str] = Form(None, description="근무 가능 시작일 (ISO format)"),
+    request: Request,
+    seeker_data: JobSeekerCreateRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """구직 신청 등록 - 단순화된 버전"""
+    """구직 신청 등록 - JSON 요청 방식"""
     try:
+        print(f"🔍 Job seeker data: {seeker_data}")
+        print(f"🔍 User ID: {current_user.id}, Church ID: {current_user.church_id}")
+        
         return {
             "success": True,
             "message": "구직 신청이 등록되었습니다.",
             "data": {
                 "id": 1,
-                "title": title,
-                "desired_position": desired_position,
-                "employment_type": employment_type,
-                "desired_location": desired_location,
-                "status": "active"
+                "title": seeker_data.title,
+                "desired_position": seeker_data.desired_position,
+                "employment_type": seeker_data.employment_type,
+                "desired_location": seeker_data.desired_location,
+                "salary_expectation": seeker_data.salary_expectation,
+                "experience_summary": seeker_data.experience_summary,
+                "education_background": seeker_data.education_background,
+                "skills": seeker_data.skills,
+                "portfolio_url": seeker_data.portfolio_url,
+                "contact_method": seeker_data.contact_method,
+                "contact_info": seeker_data.contact_info,
+                "available_start_date": seeker_data.available_start_date,
+                "status": seeker_data.status,
+                "user_id": current_user.id,
+                "church_id": current_user.church_id,
+                "created_at": "2024-01-01T00:00:00"
             }
         }
         
     except Exception as e:
+        print(f"❌ 구직 신청 등록 실패: {str(e)}")
         return {
             "success": False,
             "message": f"구직 신청 등록 중 오류가 발생했습니다: {str(e)}"

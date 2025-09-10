@@ -17,7 +17,7 @@ class SharingCreateRequest(BaseModel):
     condition: Optional[str] = None
     quantity: Optional[int] = 1
     location: str
-    contact_method: str
+    contact_method: Optional[str] = "기타"  # 프론트엔드에서 보내지 않는 경우 기본값 제공
     contact_info: str
     pickup_location: Optional[str] = None
     available_times: Optional[str] = None

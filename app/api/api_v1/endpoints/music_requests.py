@@ -1,9 +1,36 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Form, Query
+from fastapi import APIRouter, Depends, HTTPException, Form, Query, Request
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 
 from app.api.deps import get_db, get_current_active_user
 from app.models.user import User
+
+
+class MusicTeamRecruitRequest(BaseModel):
+    title: str
+    description: str
+    instrument: str
+    church_name: str
+    location: str
+    requirements: Optional[str] = None
+    schedule: Optional[str] = None
+    contact_method: Optional[str] = "기타"  # 프론트엔드에서 보내지 않는 경우 기본값 제공
+    contact_info: str
+    status: Optional[str] = "recruiting"
+
+
+class MusicTeamSeekingRequest(BaseModel):
+    title: str
+    description: str
+    instrument: str
+    experience_level: str
+    preferred_location: str
+    availability: Optional[str] = None
+    introduction: Optional[str] = None
+    contact_method: Optional[str] = "기타"  # 프론트엔드에서 보내지 않는 경우 기본값 제공
+    contact_info: str
+    status: Optional[str] = "active"
 
 router = APIRouter()
 
@@ -76,34 +103,39 @@ def get_music_team_recruit_list(
 
 @router.post("/music-team-recruit", response_model=dict)
 async def create_music_team_recruit(
-    title: str = Form(..., description="제목"),
-    description: str = Form(..., description="상세 설명"),
-    instrument: str = Form(..., description="모집 악기"),
-    church_name: str = Form(..., description="교회명"),
-    location: str = Form(..., description="지역"),
-    contact_method: str = Form(..., description="연락 방법"),
-    contact_info: str = Form(..., description="연락처"),
-    requirements: Optional[str] = Form(None, description="자격 요건"),
-    schedule: Optional[str] = Form(None, description="연습 일정"),
+    request: Request,
+    recruit_data: MusicTeamRecruitRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """음악팀 모집 등록 - 단순화된 버전"""
+    """음악팀 모집 등록 - JSON 요청 방식"""
     try:
+        print(f"🔍 Music team recruit data: {recruit_data}")
+        print(f"🔍 User ID: {current_user.id}, Church ID: {current_user.church_id}")
+        
         return {
             "success": True,
             "message": "음악팀 모집 공고가 등록되었습니다.",
             "data": {
                 "id": 1,
-                "title": title,
-                "instrument": instrument,
-                "church_name": church_name,
-                "location": location,
-                "status": "recruiting"
+                "title": recruit_data.title,
+                "description": recruit_data.description,
+                "instrument": recruit_data.instrument,
+                "church_name": recruit_data.church_name,
+                "location": recruit_data.location,
+                "requirements": recruit_data.requirements,
+                "schedule": recruit_data.schedule,
+                "contact_method": recruit_data.contact_method,
+                "contact_info": recruit_data.contact_info,
+                "status": recruit_data.status,
+                "user_id": current_user.id,
+                "church_id": current_user.church_id,
+                "created_at": "2024-01-01T00:00:00"
             }
         }
         
     except Exception as e:
+        print(f"❌ 음악팀 모집 등록 실패: {str(e)}")
         return {
             "success": False,
             "message": f"음악팀 모집 등록 중 오류가 발생했습니다: {str(e)}"
@@ -229,34 +261,39 @@ def get_music_team_seeking_list(
 
 @router.post("/music-team-seeking", response_model=dict)
 async def create_music_team_seeking(
-    title: str = Form(..., description="제목"),
-    description: str = Form(..., description="상세 설명"),
-    instrument: str = Form(..., description="연주 악기"),
-    genre: Optional[str] = Form(None, description="선호 장르"),
-    experience_level: str = Form(..., description="경험 수준"),
-    location: str = Form(..., description="지역"),
-    contact_method: str = Form(..., description="연락 방법"),
-    contact_info: str = Form(..., description="연락처"),
-    available_times: Optional[str] = Form(None, description="가능한 시간"),
+    request: Request,
+    seeking_data: MusicTeamSeekingRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """음악팀 참여 희망 등록 - 단순화된 버전"""
+    """음악팀 참여 희망 등록 - JSON 요청 방식"""
     try:
+        print(f"🔍 Music team seeking data: {seeking_data}")
+        print(f"🔍 User ID: {current_user.id}, Church ID: {current_user.church_id}")
+        
         return {
             "success": True,
             "message": "음악팀 참여 희망이 등록되었습니다.",
             "data": {
                 "id": 1,
-                "title": title,
-                "instrument": instrument,
-                "genre": genre,
-                "location": location,
-                "status": "active"
+                "title": seeking_data.title,
+                "description": seeking_data.description,
+                "instrument": seeking_data.instrument,
+                "experience_level": seeking_data.experience_level,
+                "preferred_location": seeking_data.preferred_location,
+                "availability": seeking_data.availability,
+                "introduction": seeking_data.introduction,
+                "contact_method": seeking_data.contact_method,
+                "contact_info": seeking_data.contact_info,
+                "status": seeking_data.status,
+                "user_id": current_user.id,
+                "church_id": current_user.church_id,
+                "created_at": "2024-01-01T00:00:00"
             }
         }
         
     except Exception as e:
+        print(f"❌ 음악팀 참여 희망 등록 실패: {str(e)}")
         return {
             "success": False,
             "message": f"음악팀 참여 희망 등록 중 오류가 발생했습니다: {str(e)}"
