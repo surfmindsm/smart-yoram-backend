@@ -7,6 +7,7 @@ import json
 
 from app.api.deps import get_db, get_current_active_user
 from app.models.user import User
+from app.models.community_sharing import CommunitySharing
 
 
 class SharingCreateRequest(BaseModel):
@@ -27,7 +28,7 @@ class SharingCreateRequest(BaseModel):
 router = APIRouter()
 
 
-# 프론트엔드에서 호출하는 나눔 제공 URL에 맞춰 추가
+# 프론트엔드에서 호출하는 나눔 제공 URL에 맞춰 추가 (실제 DB 조회)
 @router.get("/sharing-offer", response_model=dict)
 def get_sharing_offer_list(
     status: Optional[str] = Query(None, description="상태 필터: available, reserved, completed"),
@@ -40,59 +41,9 @@ def get_sharing_offer_list(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """나눔 제공 목록 조회 - 단순화된 버전"""
-    try:
-        # 프론트엔드에서 기대하는 기본 구조 제공
-        sample_items = []
-        
-        # 테스트용 샘플 데이터 (필요시)
-        if page == 1:  # 첫 페이지에만 샘플 데이터 표시
-            sample_items = [
-                {
-                    "id": 1,
-                    "title": "테스트 나눔 제공",
-                    "description": "테스트용 샘플 나눔 제공입니다",
-                    "category": "생활용품",
-                    "status": "available",
-                    "location": "서울",
-                    "contact_method": "카카오톡",
-                    "contact_info": "test123",
-                    "images": [],
-                    "created_at": "2024-01-01T00:00:00",
-                    "updated_at": "2024-01-01T00:00:00",
-                    "view_count": 0,
-                    "user_id": current_user.id,
-                    "church_id": current_user.church_id
-                }
-            ]
-        
-        return {
-            "success": True,
-            "data": sample_items,
-            "pagination": {
-                "current_page": page,
-                "total_pages": 1 if sample_items else 0,
-                "total_count": len(sample_items),
-                "per_page": limit,
-                "has_next": False,
-                "has_prev": False
-            }
-        }
-        
-    except Exception as e:
-        # 에러가 발생해도 기본 구조는 유지
-        return {
-            "success": True,
-            "data": [],
-            "pagination": {
-                "current_page": page,
-                "total_pages": 0,
-                "total_count": 0,
-                "per_page": limit,
-                "has_next": False,
-                "has_prev": False
-            }
-        }
+    """나눔 제공 목록 조회 - 실제 데이터베이스에서 조회"""
+    # /sharing-offer와 /sharing은 동일한 로직 사용
+    return get_sharing_list(status, category, location, search, church_filter, page, limit, db, current_user)
 
 
 @router.get("/sharing", response_model=dict)
@@ -107,46 +58,73 @@ def get_sharing_list(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """나눔 목록 조회 - 단순화된 버전"""
+    """나눔 목록 조회 - 실제 데이터베이스에서 조회"""
     try:
-        # 프론트엔드에서 기대하는 기본 구조 제공
-        sample_items = []
+        # 기본 쿼리 (커뮤니티용 church_id = 9998)
+        query = db.query(CommunitySharing).filter(
+            CommunitySharing.church_id == 9998
+        )
         
-        # 테스트용 샘플 데이터 (필요시)
-        if page == 1:  # 첫 페이지에만 샘플 데이터 표시
-            sample_items = [
-                {
-                    "id": 1,
-                    "title": "테스트 나눔 상품",
-                    "description": "테스트용 샘플 데이터입니다",
-                    "category": "생활용품",
-                    "status": "available",
-                    "location": "서울",
-                    "contact_method": "카카오톡",
-                    "contact_info": "test123",
-                    "images": [],
-                    "created_at": "2024-01-01T00:00:00",
-                    "updated_at": "2024-01-01T00:00:00",
-                    "view_count": 0,
-                    "user_id": current_user.id,
-                    "church_id": current_user.church_id
-                }
-            ]
+        # 필터링 적용
+        if status:
+            query = query.filter(CommunitySharing.status == status)
+        if category:
+            query = query.filter(CommunitySharing.category == category)
+        if location:
+            query = query.filter(CommunitySharing.location.ilike(f"%{location}%"))
+        if search:
+            query = query.filter(
+                (CommunitySharing.title.ilike(f"%{search}%")) |
+                (CommunitySharing.description.ilike(f"%{search}%"))
+            )
+        
+        # 전체 개수 계산
+        total_count = query.count()
+        
+        # 페이지네이션
+        offset = (page - 1) * limit
+        sharing_list = query.order_by(CommunitySharing.created_at.desc()).offset(offset).limit(limit).all()
+        
+        # 응답 데이터 구성
+        data_items = []
+        for sharing in sharing_list:
+            data_items.append({
+                "id": sharing.id,
+                "title": sharing.title,
+                "description": sharing.description,
+                "category": sharing.category,
+                "condition": sharing.condition,
+                "status": sharing.status,
+                "location": sharing.location,
+                "contact_method": sharing.contact_method,
+                "contact_info": sharing.contact_info,
+                "images": sharing.images or [],
+                "created_at": sharing.created_at.isoformat() if sharing.created_at else None,
+                "updated_at": sharing.updated_at.isoformat() if sharing.updated_at else None,
+                "view_count": sharing.view_count or 0,
+                "user_id": sharing.user_id,
+                "church_id": sharing.church_id
+            })
+        
+        total_pages = (total_count + limit - 1) // limit
+        
+        print(f"🔍 나눔 목록 조회: 총 {total_count}개, 페이지 {page}/{total_pages}")
         
         return {
             "success": True,
-            "data": sample_items,
+            "data": data_items,
             "pagination": {
                 "current_page": page,
-                "total_pages": 1 if sample_items else 0,
-                "total_count": len(sample_items),
+                "total_pages": total_pages,
+                "total_count": total_count,
                 "per_page": limit,
-                "has_next": False,
-                "has_prev": False
+                "has_next": page < total_pages,
+                "has_prev": page > 1
             }
         }
         
     except Exception as e:
+        print(f"❌ 나눔 목록 조회 실패: {str(e)}")
         # 에러가 발생해도 기본 구조는 유지
         return {
             "success": True,
@@ -169,39 +147,59 @@ async def create_sharing(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """나눔 등록 - JSON 요청 지원"""
+    """나눔 등록 - 실제 데이터베이스 저장"""
     try:
         # 디버깅 로그 추가
-        body = await request.body()
-        print(f"🔍 Raw body: {body}")
-        
-        content_type = request.headers.get("content-type")
-        print(f"🔍 Content-Type: {content_type}")
-        
         print(f"🔍 Parsed data: {sharing_data}")
         print(f"🔍 User ID: {current_user.id}, Church ID: {current_user.church_id}")
+        
+        # 실제 데이터베이스에 저장
+        sharing_record = CommunitySharing(
+            title=sharing_data.title,
+            description=sharing_data.description,
+            category=sharing_data.category,
+            condition=sharing_data.condition,
+            location=sharing_data.location,
+            contact_method=sharing_data.contact_method,
+            contact_info=sharing_data.contact_info,
+            pickup_location=sharing_data.pickup_location,
+            available_times=sharing_data.available_times,
+            expires_at=None,  # sharing_data.expires_at을 처리하려면 datetime 변환 필요
+            status=sharing_data.status or "available",
+            images=sharing_data.images or [],
+            user_id=current_user.id,
+            church_id=current_user.church_id
+        )
+        
+        db.add(sharing_record)
+        db.commit()
+        db.refresh(sharing_record)
+        
+        print(f"✅ 새로운 나눔 게시글 저장됨: ID={sharing_record.id}")
         
         return {
             "success": True,
             "message": "나눔 게시글이 등록되었습니다.",
             "data": {
-                "id": 1,
-                "title": sharing_data.title,
-                "description": sharing_data.description,
-                "category": sharing_data.category,
-                "condition": sharing_data.condition,
-                "quantity": sharing_data.quantity,
-                "location": sharing_data.location,
-                "contact_method": sharing_data.contact_method,
-                "contact_info": sharing_data.contact_info,
-                "status": sharing_data.status,
-                "images": sharing_data.images,
-                "user_id": current_user.id,
-                "church_id": current_user.church_id
+                "id": sharing_record.id,
+                "title": sharing_record.title,
+                "description": sharing_record.description,
+                "category": sharing_record.category,
+                "condition": sharing_record.condition,
+                "location": sharing_record.location,
+                "contact_method": sharing_record.contact_method,
+                "contact_info": sharing_record.contact_info,
+                "status": sharing_record.status,
+                "images": sharing_record.images,
+                "user_id": sharing_record.user_id,
+                "church_id": sharing_record.church_id,
+                "created_at": sharing_record.created_at.isoformat() if sharing_record.created_at else None
             }
         }
         
     except Exception as e:
+        db.rollback()
+        print(f"❌ 나눔 등록 실패: {str(e)}")
         return {
             "success": False,
             "message": f"나눔 등록 중 오류가 발생했습니다: {str(e)}"
