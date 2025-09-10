@@ -1,11 +1,28 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+from pydantic import BaseModel
 import json
 
 from app.api.deps import get_db, get_current_active_user
 from app.models.user import User
+
+
+class SharingCreateRequest(BaseModel):
+    title: str
+    description: str
+    category: str
+    condition: Optional[str] = None
+    quantity: Optional[int] = 1
+    location: str
+    contact_method: str
+    contact_info: str
+    pickup_location: Optional[str] = None
+    available_times: Optional[str] = None
+    expires_at: Optional[str] = None
+    images: Optional[List[str]] = []
+    status: Optional[str] = "available"
 
 router = APIRouter()
 
@@ -147,31 +164,40 @@ def get_sharing_list(
 
 @router.post("/sharing", response_model=dict)
 async def create_sharing(
-    title: str = Form(..., description="제목"),
-    description: str = Form(..., description="상세 설명"),
-    category: str = Form(..., description="카테고리"),
-    condition: Optional[str] = Form(None, description="상태"),
-    location: str = Form(..., description="지역"),
-    contact_method: str = Form(..., description="연락 방법"),
-    contact_info: str = Form(..., description="연락처"),
-    pickup_location: Optional[str] = Form(None, description="픽업 장소"),
-    available_times: Optional[str] = Form(None, description="가능한 시간"),
-    expires_at: Optional[str] = Form(None, description="만료일시 (ISO format)"),
-    images: List[UploadFile] = File(None, description="이미지 파일들"),
+    request: Request,
+    sharing_data: SharingCreateRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """나눔 등록 - 단순화된 버전"""
+    """나눔 등록 - JSON 요청 지원"""
     try:
+        # 디버깅 로그 추가
+        body = await request.body()
+        print(f"🔍 Raw body: {body}")
+        
+        content_type = request.headers.get("content-type")
+        print(f"🔍 Content-Type: {content_type}")
+        
+        print(f"🔍 Parsed data: {sharing_data}")
+        print(f"🔍 User ID: {current_user.id}, Church ID: {current_user.church_id}")
+        
         return {
             "success": True,
             "message": "나눔 게시글이 등록되었습니다.",
             "data": {
                 "id": 1,
-                "title": title,
-                "description": description,
-                "category": category,
-                "status": "available"
+                "title": sharing_data.title,
+                "description": sharing_data.description,
+                "category": sharing_data.category,
+                "condition": sharing_data.condition,
+                "quantity": sharing_data.quantity,
+                "location": sharing_data.location,
+                "contact_method": sharing_data.contact_method,
+                "contact_info": sharing_data.contact_info,
+                "status": sharing_data.status,
+                "images": sharing_data.images,
+                "user_id": current_user.id,
+                "church_id": current_user.church_id
             }
         }
         
