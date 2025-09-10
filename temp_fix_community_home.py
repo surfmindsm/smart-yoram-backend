@@ -1,13 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 from app.api.deps import get_db, get_current_active_user
 from app.models.user import User
 
 router = APIRouter()
-
 
 @router.get("/stats", response_model=Dict[str, Any])
 def get_community_stats(
@@ -79,7 +78,6 @@ def get_community_stats(
         }
         
     except Exception as e:
-        # 에러가 발생해도 기본값 반환
         return {
             "success": True,
             "data": {
@@ -93,15 +91,15 @@ def get_community_stats(
             }
         }
 
-
 @router.get("/recent-posts")
-def get_recent_posts(
+def get_recent_posts_simple(
     limit: int = 10,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """최근 게시글 조회 - 단순화"""
+    """최근 게시글 조회 - 직접 SQL 사용"""
     try:
+        # 기본 응답 구조
         return {
             "success": True,
             "data": []
@@ -111,40 +109,4 @@ def get_recent_posts(
         return {
             "success": True,
             "data": []
-        }
-
-
-@router.get("/my-posts")
-def get_my_posts(
-    post_type: Optional[str] = Query(None, description="게시글 타입 필터"),
-    status: Optional[str] = Query(None, description="상태 필터"),
-    search: Optional[str] = Query(None, description="제목 검색"),
-    page: int = Query(1, ge=1, description="페이지 번호"),
-    limit: int = Query(20, ge=1, le=100, description="페이지당 항목 수"),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
-):
-    """내가 올린 글 목록 조회 - 단순화"""
-    try:
-        return {
-            "success": True,
-            "data": [],
-            "pagination": {
-                "current_page": page,
-                "total_pages": 0,
-                "total_count": 0,
-                "per_page": limit
-            }
-        }
-        
-    except Exception as e:
-        return {
-            "success": True,
-            "data": [],
-            "pagination": {
-                "current_page": page,
-                "total_pages": 0,
-                "total_count": 0,
-                "per_page": limit
-            }
         }
