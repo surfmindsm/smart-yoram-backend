@@ -111,7 +111,7 @@ def get_recent_posts(
                 "church_id": post.church_id,
                 "created_at": post.created_at,
                 "status": post.status,
-                "views": getattr(post, 'view_count', 0),  # views 대신 view_count 사용
+                "views": post.view_count,
                 "likes": 0  # likes 컬럼이 없으므로 기본값 0
             })
         
@@ -129,7 +129,7 @@ def get_recent_posts(
                 "church_id": post.church_id,
                 "created_at": post.created_at,
                 "status": post.status,
-                "views": getattr(post, 'view_count', 0),  # views 대신 view_count 사용
+                "views": post.view_count,
                 "likes": 0  # likes 컬럼이 없으므로 기본값 0
             })
         
@@ -180,7 +180,7 @@ def get_my_posts(
                     "title": post.title,
                     "status": post.status,
                     "created_at": post.created_at,
-                    "views": getattr(post, 'view_count', 0),  # views 대신 view_count 사용
+                    "views": post.view_count,
                     "likes": 0,  # likes 컬럼이 없으므로 기본값 0
                     "church_id": post.church_id,
                     "location": post.location
@@ -204,7 +204,7 @@ def get_my_posts(
                     "title": post.title,
                     "status": post.status,
                     "created_at": post.created_at,
-                    "views": getattr(post, 'view_count', 0),  # views 대신 view_count 사용
+                    "views": post.view_count,
                     "likes": 0,  # likes 컬럼이 없으므로 기본값 0
                     "church_id": post.church_id,
                     "location": post.location
@@ -228,7 +228,7 @@ def get_my_posts(
                     "title": post.title,
                     "status": post.status,
                     "created_at": post.created_at,
-                    "views": getattr(post, 'view_count', 0),  # views 대신 view_count 사용
+                    "views": post.view_count,
                     "likes": 0,  # likes 컬럼이 없으므로 기본값 0
                     "church_id": post.church_id,
                     "location": post.location
@@ -252,7 +252,7 @@ def get_my_posts(
                     "title": post.title,
                     "status": post.status,
                     "created_at": post.created_at,
-                    "views": getattr(post, 'view_count', 0),  # views 대신 view_count 사용
+                    "views": post.view_count,
                     "likes": 0,  # likes 컬럼이 없으므로 기본값 0
                     "church_id": post.church_id,
                     "location": post.desired_location

@@ -49,16 +49,15 @@ class CommunityRequest(Base):
     provider_info = Column(String(200), nullable=True, comment="제공자 정보")
     
     # 작성자 정보
-    author_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="작성자 ID")
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="작성자 ID")  # author_id → user_id
     church_id = Column(Integer, nullable=True, comment="교회 ID (9998=커뮤니티)")
     
     # 통계
-    views = Column(Integer, default=0, comment="조회수")
-    likes = Column(Integer, default=0, comment="좋아요수")
+    view_count = Column(Integer, default=0, comment="조회수")  # views → view_count
     
     # 시간 정보
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     # Relationships
-    author = relationship("User", foreign_keys=[author_id])
+    author = relationship("User", foreign_keys=[user_id])  # author_id → user_id
