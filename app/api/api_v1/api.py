@@ -44,7 +44,6 @@ from app.api.api_v1.endpoints import (
     community_sharing,
     community_request,
     job_posts,
-    admin_utils,
 )
 
 # 안전한 로그인 히스토리 import
@@ -149,11 +148,6 @@ api_router.include_router(
 # 구인/구직 라우터
 api_router.include_router(
     job_posts.router, prefix="/community", tags=["job_posts"]
-)
-
-# 관리자 유틸리티 라우터
-api_router.include_router(
-    admin_utils.router, prefix="/admin", tags=["admin_utils"]
 )
 
 # 안전한 로그인 히스토리 라우터 등록
