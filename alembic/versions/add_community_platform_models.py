@@ -1,7 +1,7 @@
 """Add community platform models - sharing, requests, jobs, music, events
 
 Revision ID: community_platform_001
-Revises: add_location_fields_pastoral_care
+Revises: de7501bc3e2f
 Create Date: 2025-09-10 07:45:00.000000
 
 """
@@ -11,7 +11,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = 'community_platform_001'
-down_revision = 'add_location_fields_pastoral_care'
+down_revision = 'de7501bc3e2f'
 branch_labels = None
 depends_on = None
 

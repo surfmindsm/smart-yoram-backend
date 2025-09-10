@@ -20,43 +20,62 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Add location-related columns to pastoral_care_requests table
-    op.add_column(
-        "pastoral_care_requests",
-        sa.Column("address", sa.String(length=500), nullable=True),
-    )
-    op.add_column(
-        "pastoral_care_requests",
-        sa.Column("latitude", sa.Numeric(precision=10, scale=8), nullable=True),
-    )
-    op.add_column(
-        "pastoral_care_requests",
-        sa.Column("longitude", sa.Numeric(precision=11, scale=8), nullable=True),
-    )
-    op.add_column(
-        "pastoral_care_requests",
-        sa.Column("contact_info", sa.String(length=500), nullable=True),
-    )
-    op.add_column(
-        "pastoral_care_requests",
-        sa.Column("is_urgent", sa.Boolean(), server_default="false", nullable=True),
-    )
+    # Check if columns exist before adding them to avoid duplicate column errors
+    import sqlalchemy as sa
+    from sqlalchemy import inspect
+    
+    # Get current connection
+    connection = op.get_bind()
+    inspector = inspect(connection)
+    
+    # Get existing columns
+    existing_columns = [col['name'] for col in inspector.get_columns('pastoral_care_requests')]
+    
+    # Add location-related columns to pastoral_care_requests table only if they don't exist
+    if "address" not in existing_columns:
+        op.add_column(
+            "pastoral_care_requests",
+            sa.Column("address", sa.String(length=500), nullable=True),
+        )
+    if "latitude" not in existing_columns:
+        op.add_column(
+            "pastoral_care_requests",
+            sa.Column("latitude", sa.Numeric(precision=10, scale=8), nullable=True),
+        )
+    if "longitude" not in existing_columns:
+        op.add_column(
+            "pastoral_care_requests",
+            sa.Column("longitude", sa.Numeric(precision=11, scale=8), nullable=True),
+        )
+    if "contact_info" not in existing_columns:
+        op.add_column(
+            "pastoral_care_requests",
+            sa.Column("contact_info", sa.String(length=500), nullable=True),
+        )
+    if "is_urgent" not in existing_columns:
+        op.add_column(
+            "pastoral_care_requests",
+            sa.Column("is_urgent", sa.Boolean(), server_default="false", nullable=True),
+        )
 
-    # Create index for location-based queries
-    op.create_index(
-        "idx_pastoral_care_location",
-        "pastoral_care_requests",
-        ["latitude", "longitude"],
-        unique=False,
-    )
+    # Create indexes only if they don't exist
+    existing_indexes = [idx['name'] for idx in inspector.get_indexes('pastoral_care_requests')]
+    
+    if "idx_pastoral_care_location" not in existing_indexes:
+        op.create_index(
+            "idx_pastoral_care_location",
+            "pastoral_care_requests",
+            ["latitude", "longitude"],
+            unique=False,
+        )
 
-    # Create index for urgent requests
-    op.create_index(
-        "idx_pastoral_care_is_urgent",
-        "pastoral_care_requests",
-        ["is_urgent"],
-        unique=False,
-    )
+    if "idx_pastoral_care_is_urgent" not in existing_indexes:
+        op.create_index(
+            "idx_pastoral_care_is_urgent",
+            "pastoral_care_requests",
+            ["is_urgent"],
+            unique=False,
+        )
 
 
 def downgrade() -> None:
