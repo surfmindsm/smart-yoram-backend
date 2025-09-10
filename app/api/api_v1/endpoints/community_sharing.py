@@ -98,11 +98,11 @@ def get_sharing_list(
                 "location": sharing.location,
                 "contact_method": sharing.contact_method,
                 "contact_info": sharing.contact_info,
-                "images": sharing.images or [],
+                "images": [],  # 이미지 컬럼이 없으므로 빈 배열
                 "created_at": sharing.created_at.isoformat() if sharing.created_at else None,
                 "updated_at": sharing.updated_at.isoformat() if sharing.updated_at else None,
-                "view_count": sharing.view_count or 0,
-                "user_id": sharing.user_id,
+                "view_count": sharing.views or 0,  # views 컬럼 사용
+                "user_id": sharing.author_id,  # author_id를 user_id로 응답
                 "church_id": sharing.church_id
             })
         
@@ -153,7 +153,7 @@ async def create_sharing(
         print(f"🔍 Parsed data: {sharing_data}")
         print(f"🔍 User ID: {current_user.id}, Church ID: {current_user.church_id}")
         
-        # 실제 데이터베이스에 저장
+        # 실제 데이터베이스에 저장 (테이블 컬럼명에 맞춤)
         sharing_record = CommunitySharing(
             title=sharing_data.title,
             description=sharing_data.description,
@@ -166,8 +166,8 @@ async def create_sharing(
             available_times=sharing_data.available_times,
             expires_at=None,  # sharing_data.expires_at을 처리하려면 datetime 변환 필요
             status=sharing_data.status or "available",
-            images=sharing_data.images or [],
-            user_id=current_user.id,
+            # images=sharing_data.images or [],  # 테이블에 없는 컬럼이므로 제거
+            author_id=current_user.id,  # user_id → author_id
             church_id=current_user.church_id
         )
         
@@ -190,8 +190,8 @@ async def create_sharing(
                 "contact_method": sharing_record.contact_method,
                 "contact_info": sharing_record.contact_info,
                 "status": sharing_record.status,
-                "images": sharing_record.images,
-                "user_id": sharing_record.user_id,
+                "images": sharing_data.images,  # 요청에서 받은 이미지 URL들
+                "user_id": sharing_record.author_id,  # author_id를 user_id로 응답
                 "church_id": sharing_record.church_id,
                 "created_at": sharing_record.created_at.isoformat() if sharing_record.created_at else None
             }

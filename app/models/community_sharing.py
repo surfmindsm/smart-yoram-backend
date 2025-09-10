@@ -39,7 +39,7 @@ class CommunitySharing(Base):
     description = Column(Text, nullable=False, comment="상세 설명")
     category = Column(String(20), nullable=False, comment="카테고리")
     condition = Column(String(50), nullable=True, comment="상태 (양호, 보통, 나쁨)")
-    images = Column(JSON, nullable=True, comment="이미지 URL 배열")
+    # images = Column(JSON, nullable=True, comment="이미지 URL 배열")  # 실제 테이블에 없음
     location = Column(String(100), nullable=False, comment="지역")
     contact_method = Column(String(20), nullable=False, comment="연락 방법")
     contact_info = Column(String(100), nullable=False, comment="연락처")
@@ -50,15 +50,16 @@ class CommunitySharing(Base):
     expires_at = Column(DateTime(timezone=True), nullable=True, comment="만료일시")
     
     # 작성자 정보
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="작성자 ID")  # author_id → user_id
+    author_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="작성자 ID")  # 실제 테이블 컬럼명
     church_id = Column(Integer, nullable=True, comment="교회 ID (9998=커뮤니티)")
     
     # 통계
-    view_count = Column(Integer, default=0, comment="조회수")  # views → view_count
+    views = Column(Integer, default=0, comment="조회수")  # 실제 테이블 컬럼명
+    likes = Column(Integer, default=0, comment="좋아요 수")
     
     # 시간 정보
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     # Relationships
-    author = relationship("User", foreign_keys=[user_id])  # author_id → user_id
+    author = relationship("User", foreign_keys=[author_id])  # 실제 테이블 컬럼명 사용
