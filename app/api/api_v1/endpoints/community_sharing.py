@@ -15,13 +15,8 @@ class SharingCreateRequest(BaseModel):
     description: str
     category: str
     condition: Optional[str] = None
-    quantity: Optional[int] = 1
     location: str
-    contact_method: Optional[str] = "기타"  # 프론트엔드에서 보내지 않는 경우 기본값 제공
     contact_info: str
-    pickup_location: Optional[str] = None
-    available_times: Optional[str] = None
-    expires_at: Optional[str] = None
     images: Optional[List[str]] = []
     status: Optional[str] = "available"
 
@@ -94,16 +89,16 @@ def get_sharing_list(
                 "description": sharing.description,
                 "category": sharing.category,
                 "condition": sharing.condition,
-                # "quantity": sharing.quantity or 1,  # 실제 테이블에 없음
+                "price": sharing.price or 0,  # 실제 컬럼
+                "is_free": sharing.is_free,  # 실제 컬럼
                 "status": sharing.status,
                 "location": sharing.location,
-                "contact_method": sharing.contact_method,
                 "contact_info": sharing.contact_info,
-                "images": [],  # 이미지 컬럼이 없으므로 빈 배열
+                "images": sharing.images or [],  # JSON 컬럼으로 실제 존재함!
                 "created_at": sharing.created_at.isoformat() if sharing.created_at else None,
                 "updated_at": sharing.updated_at.isoformat() if sharing.updated_at else None,
-                "view_count": sharing.views or 0,  # views 컬럼 사용
-                "user_id": sharing.author_id,  # author_id를 user_id로 응답
+                "view_count": sharing.view_count or 0,  # 실제 컬럼명
+                "user_id": sharing.user_id,  # 실제 컬럼명
                 "church_id": sharing.church_id
             })
         
@@ -154,23 +149,20 @@ async def create_sharing(
         print(f"🔍 Parsed data: {sharing_data}")
         print(f"🔍 User ID: {current_user.id}, Church ID: {current_user.church_id}")
         
-        # 실제 데이터베이스에 저장 (테이블 컬럼명에 맞춤)
+        # 실제 데이터베이스에 저장 (실제 테이블 컬럼명에 맞춤)
         sharing_record = CommunitySharing(
+            church_id=9998,  # 커뮤니티 고정값
+            user_id=current_user.id,  # 실제 컬럼명: user_id
             title=sharing_data.title,
             description=sharing_data.description,
             category=sharing_data.category,
             condition=sharing_data.condition,
-            # quantity=sharing_data.quantity,  # 실제 테이블에 없음
+            price=0,  # 무료나눔이므로 0
+            is_free=True,  # 무료나눔이므로 True
             location=sharing_data.location,
-            contact_method=sharing_data.contact_method,
             contact_info=sharing_data.contact_info,
-            pickup_location=sharing_data.pickup_location,
-            available_times=sharing_data.available_times,
-            expires_at=None,  # sharing_data.expires_at을 처리하려면 datetime 변환 필요
+            images=sharing_data.images or [],  # JSON 컬럼으로 실제 존재함!
             status=sharing_data.status or "available",
-            # images=sharing_data.images or [],  # 테이블에 없는 컬럼이므로 제거
-            author_id=current_user.id,  # user_id → author_id
-            church_id=9998  # 커뮤니티 고정값 (current_user.church_id 대신)
         )
         
         db.add(sharing_record)
@@ -188,13 +180,13 @@ async def create_sharing(
                 "description": sharing_record.description,
                 "category": sharing_record.category,
                 "condition": sharing_record.condition,
-                # "quantity": sharing_record.quantity or 1,  # 실제 테이블에 없음
+                "price": sharing_record.price,
+                "is_free": sharing_record.is_free,
                 "location": sharing_record.location,
-                "contact_method": sharing_record.contact_method,
                 "contact_info": sharing_record.contact_info,
                 "status": sharing_record.status,
-                "images": sharing_data.images,  # 요청에서 받은 이미지 URL들
-                "user_id": sharing_record.author_id,  # author_id를 user_id로 응답
+                "images": sharing_record.images or [],  # 실제로 DB에 저장된 이미지들
+                "user_id": sharing_record.user_id,  # 실제 컬럼명
                 "church_id": sharing_record.church_id,
                 "created_at": sharing_record.created_at.isoformat() if sharing_record.created_at else None
             }

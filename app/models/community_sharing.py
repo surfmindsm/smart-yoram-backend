@@ -35,32 +35,26 @@ class CommunitySharing(Base):
     __tablename__ = "community_sharing"
     
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(200), nullable=False, comment="제목")
-    description = Column(Text, nullable=False, comment="상세 설명")
-    category = Column(String(20), nullable=False, comment="카테고리")
-    condition = Column(String(50), nullable=True, comment="상태 (양호, 보통, 나쁨)")
-    # quantity = Column(Integer, default=1, nullable=True, comment="수량")  # 실제 테이블에 없음
-    # images = Column(JSON, nullable=True, comment="이미지 URL 배열")  # 실제 테이블에 없음
-    location = Column(String(100), nullable=False, comment="지역")
-    contact_method = Column(String(20), nullable=False, comment="연락 방법")
-    contact_info = Column(String(100), nullable=False, comment="연락처")
-    pickup_location = Column(String(200), nullable=True, comment="픽업 장소")
-    available_times = Column(Text, nullable=True, comment="가능한 시간")
-    status = Column(String(20), default="available", nullable=False, comment="상태")
-    recipient_info = Column(String(200), nullable=True, comment="수령자 정보")
-    expires_at = Column(DateTime(timezone=True), nullable=True, comment="만료일시")
-    
-    # 작성자 정보
-    author_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="작성자 ID")  # 실제 테이블 컬럼명
-    church_id = Column(Integer, nullable=True, comment="교회 ID (9998=커뮤니티)")
-    
-    # 통계
-    views = Column(Integer, default=0, comment="조회수")  # 실제 테이블 컬럼명
-    likes = Column(Integer, default=0, comment="좋아요 수")
+    church_id = Column(Integer, nullable=False, default=9998, comment="교회 ID (9998=커뮤니티)")
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="작성자 ID")  # 실제 컬럼명
+    title = Column(String, nullable=False, comment="제목")
+    description = Column(Text, nullable=True, comment="상세 설명")
+    category = Column(String, nullable=True, comment="카테고리")
+    condition = Column(String, nullable=True, default="good", comment="상태")
+    price = Column(Integer, nullable=True, default=0, comment="가격")
+    is_free = Column(Boolean, nullable=True, default=True, comment="무료 여부")
+    location = Column(String, nullable=True, comment="지역")
+    contact_info = Column(String, nullable=True, comment="연락처")
+    images = Column(JSON, nullable=True, comment="이미지 URL 배열")  # 실제로 존재함!
+    status = Column(String, nullable=True, default="available", comment="상태")
+    view_count = Column(Integer, nullable=True, default=0, comment="조회수")  # 실제 컬럼명
+    views = Column(Integer, nullable=True, default=0, comment="조회수2")  # 중복 컬럼
+    likes = Column(Integer, nullable=True, default=0, comment="좋아요 수")
+    author_id = Column(Integer, nullable=True, comment="작성자 ID2")  # 중복 컬럼
     
     # 시간 정보
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     # Relationships
-    author = relationship("User", foreign_keys=[author_id])  # 실제 테이블 컬럼명 사용
+    author = relationship("User", foreign_keys=[user_id])  # 실제 컬럼명 사용
