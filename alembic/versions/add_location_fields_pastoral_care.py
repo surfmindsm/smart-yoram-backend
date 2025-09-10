@@ -1,6 +1,6 @@
 """add location fields to pastoral care
 
-Revision ID: add_location_fields_pastoral_care
+Revision ID: add_pastoral_location
 Revises: add_geocoding_fields
 Create Date: 2025-08-22 16:30:00.000000
 
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = "add_location_fields_pastoral_care"
+revision: str = "add_pastoral_location"
 down_revision: Union[str, None] = "add_geocoding_fields"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None

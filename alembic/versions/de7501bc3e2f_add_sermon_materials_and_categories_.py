@@ -1,7 +1,7 @@
 """Add sermon materials and categories tables with JSON tags
 
 Revision ID: de7501bc3e2f
-Revises: add_location_fields_pastoral_care
+Revises: add_pastoral_location
 Create Date: 2025-08-26 20:57:27.579264
 
 """
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = 'de7501bc3e2f'
-down_revision: Union[str, None] = 'add_location_fields_pastoral_care'
+down_revision: Union[str, None] = 'add_pastoral_location'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
