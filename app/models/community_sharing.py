@@ -39,7 +39,7 @@ class CommunitySharing(Base):
     description = Column(Text, nullable=False, comment="상세 설명")
     category = Column(String(20), nullable=False, comment="카테고리")
     condition = Column(String(50), nullable=True, comment="상태 (양호, 보통, 나쁨)")
-    quantity = Column(Integer, default=1, nullable=True, comment="수량")  # quantity 컬럼 추가
+    # quantity = Column(Integer, default=1, nullable=True, comment="수량")  # 실제 테이블에 없음
     # images = Column(JSON, nullable=True, comment="이미지 URL 배열")  # 실제 테이블에 없음
     location = Column(String(100), nullable=False, comment="지역")
     contact_method = Column(String(20), nullable=False, comment="연락 방법")

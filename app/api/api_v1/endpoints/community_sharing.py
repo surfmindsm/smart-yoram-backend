@@ -94,7 +94,7 @@ def get_sharing_list(
                 "description": sharing.description,
                 "category": sharing.category,
                 "condition": sharing.condition,
-                "quantity": sharing.quantity or 1,  # quantity 컬럼 추가
+                # "quantity": sharing.quantity or 1,  # 실제 테이블에 없음
                 "status": sharing.status,
                 "location": sharing.location,
                 "contact_method": sharing.contact_method,
@@ -160,7 +160,7 @@ async def create_sharing(
             description=sharing_data.description,
             category=sharing_data.category,
             condition=sharing_data.condition,
-            quantity=sharing_data.quantity,  # quantity 컬럼 추가
+            # quantity=sharing_data.quantity,  # 실제 테이블에 없음
             location=sharing_data.location,
             contact_method=sharing_data.contact_method,
             contact_info=sharing_data.contact_info,
@@ -188,7 +188,7 @@ async def create_sharing(
                 "description": sharing_record.description,
                 "category": sharing_record.category,
                 "condition": sharing_record.condition,
-                "quantity": sharing_record.quantity or 1,  # quantity 컬럼 추가
+                # "quantity": sharing_record.quantity or 1,  # 실제 테이블에 없음
                 "location": sharing_record.location,
                 "contact_method": sharing_record.contact_method,
                 "contact_info": sharing_record.contact_info,
