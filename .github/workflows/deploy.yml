@@ -221,6 +221,10 @@ jobs:
             echo "🔄 Running database migrations..."
             sudo docker-compose exec -T backend alembic upgrade head || echo "⚠️  Migration failed (continuing)"
             
+            # 커뮤니티 플랫폼 마이그레이션 확인 및 실행
+            echo "🏘️  Checking community platform migration..."
+            sudo docker-compose exec -T backend alembic upgrade community_platform_001 || echo "⚠️  Community migration failed (continuing)"
+            
             # 데모 데이터 생성 (church_id 9999용)
             echo "📊 Creating demo data for church ID 9999..."
             sudo docker-compose exec -T backend python3 deploy_demo_data.py || echo "⚠️  Demo data creation failed (continuing)"
@@ -245,6 +249,10 @@ jobs:
             # 마이그레이션 실행
             echo "🔄 Running database migrations..."
             alembic upgrade head || echo "⚠️  Migration failed (continuing)"
+            
+            # 커뮤니티 플랫폼 마이그레이션 확인 및 실행
+            echo "🏘️  Checking community platform migration..."
+            alembic upgrade community_platform_001 || echo "⚠️  Community migration failed (continuing)"
             
             # 데모 데이터 생성 (church_id 9999용)
             echo "📊 Creating demo data for church ID 9999..."
