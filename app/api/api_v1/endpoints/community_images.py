@@ -48,34 +48,28 @@ async def upload_community_images(
                 prefix=f"community_{current_user.church_id}"
             )
             
-            try:
-                # Supabase Storage에 업로드
-                result = supabase.storage.from_(COMMUNITY_IMAGES_BUCKET).upload(
-                    path=f"church_{current_user.church_id}/{unique_filename}",
-                    file=content,
-                    file_options={
-                        "content-type": image.content_type or "image/jpeg",
-                        "cache-control": "3600"
-                    }
+            # Supabase Storage에 업로드 (필수)
+            result = supabase.storage.from_(COMMUNITY_IMAGES_BUCKET).upload(
+                path=f"church_{current_user.church_id}/{unique_filename}",
+                file=content,
+                file_options={
+                    "content-type": image.content_type or "image/jpeg",
+                    "cache-control": "3600"
+                }
+            )
+            
+            if hasattr(result, 'error') and result.error:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Supabase Storage 업로드 실패: {result.error.message}"
                 )
-                
-                if hasattr(result, 'error') and result.error:
-                    raise HTTPException(
-                        status_code=500,
-                        detail=f"이미지 업로드 실패: {result.error.message}"
-                    )
-                
-                # 공개 URL 생성
-                public_url = supabase.storage.from_(COMMUNITY_IMAGES_BUCKET).get_public_url(
-                    f"church_{current_user.church_id}/{unique_filename}"
-                )
-                
-                uploaded_urls.append(public_url)
-                
-            except Exception as upload_error:
-                # Supabase 업로드 실패시 로컬 저장 대안 (단순화된 버전)
-                fallback_url = f"https://api.surfmind-team.com/static/community/images/{unique_filename}"
-                uploaded_urls.append(fallback_url)
+            
+            # 공개 URL 생성
+            public_url = supabase.storage.from_(COMMUNITY_IMAGES_BUCKET).get_public_url(
+                f"church_{current_user.church_id}/{unique_filename}"
+            )
+            
+            uploaded_urls.append(public_url)
         
         return {
             "success": True,
@@ -117,42 +111,32 @@ async def upload_single_community_image(
             prefix=f"community_{current_user.church_id}"
         )
         
-        try:
-            # Supabase Storage에 업로드
-            result = supabase.storage.from_(COMMUNITY_IMAGES_BUCKET).upload(
-                path=f"church_{current_user.church_id}/{unique_filename}",
-                file=content,
-                file_options={
-                    "content-type": image.content_type or "image/jpeg",
-                    "cache-control": "3600"
-                }
-            )
-            
-            if hasattr(result, 'error') and result.error:
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"이미지 업로드 실패: {result.error.message}"
-                )
-            
-            # 공개 URL 생성
-            public_url = supabase.storage.from_(COMMUNITY_IMAGES_BUCKET).get_public_url(
-                f"church_{current_user.church_id}/{unique_filename}"
-            )
-            
-            return {
-                "success": True,
-                "url": public_url,
-                "message": "이미지가 성공적으로 업로드되었습니다."
+        # Supabase Storage에 업로드 (필수)
+        result = supabase.storage.from_(COMMUNITY_IMAGES_BUCKET).upload(
+            path=f"church_{current_user.church_id}/{unique_filename}",
+            file=content,
+            file_options={
+                "content-type": image.content_type or "image/jpeg",
+                "cache-control": "3600"
             }
-            
-        except Exception as upload_error:
-            # Supabase 업로드 실패시 로컬 저장 대안
-            fallback_url = f"https://api.surfmind-team.com/static/community/images/{unique_filename}"
-            return {
-                "success": True,
-                "url": fallback_url,
-                "message": "이미지가 업로드되었습니다. (로컬 저장)"
-            }
+        )
+        
+        if hasattr(result, 'error') and result.error:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Supabase Storage 업로드 실패: {result.error.message}"
+            )
+        
+        # 공개 URL 생성
+        public_url = supabase.storage.from_(COMMUNITY_IMAGES_BUCKET).get_public_url(
+            f"church_{current_user.church_id}/{unique_filename}"
+        )
+        
+        return {
+            "success": True,
+            "url": public_url,
+            "message": "이미지가 성공적으로 업로드되었습니다."
+        }
         
     except HTTPException:
         raise
