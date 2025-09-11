@@ -43,6 +43,7 @@ from app.api.api_v1.endpoints import (
     community_home,
     community_sharing,
     community_request,
+    community_item_sale,
     job_posts,
     music_requests,
     church_events,
@@ -146,6 +147,11 @@ api_router.include_router(
 # 커뮤니티 요청 라우터
 api_router.include_router(
     community_request.router, prefix="/community", tags=["community_request"]
+)
+
+# 커뮤니티 물건 판매 라우터
+api_router.include_router(
+    community_item_sale.router, prefix="/community", tags=["community_item_sale"]
 )
 
 # 구인/구직 라우터

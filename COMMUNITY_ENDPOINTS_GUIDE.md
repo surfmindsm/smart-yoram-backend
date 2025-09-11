@@ -3,17 +3,18 @@
 ## 📋 요청하신 모든 엔드포인트 구현 완료!
 
 ### ✅ **구현 현황**
-**7개 요청 엔드포인트 모두 구현되어 있습니다!**
+**8개 요청 엔드포인트 모두 구현되어 있습니다!**
 
 | 번호 | 요청 엔드포인트 | 실제 구현 엔드포인트 | 상태 |
 |------|----------------|---------------------|------|
 | 1 | `POST /api/v1/community/request` | `POST /api/v1/community/requests` | ✅ 구현됨 |
 | 2 | `POST /api/v1/community/sharing-offer` | `POST /api/v1/community/sharing-offer` | ✅ 구현됨 (별칭 추가) |
-| 3 | `POST /api/v1/community/job-posting` | `POST /api/v1/community/job-posts` | ✅ 구현됨 |
-| 4 | `POST /api/v1/community/job-seeking` | `POST /api/v1/community/job-seekers` | ✅ 구현됨 |
-| 5 | `POST /api/v1/community/music-team-recruit` | `POST /api/v1/community/music-team-recruit` | ✅ 구현됨 |
-| 6 | `POST /api/v1/community/music-team-seeking` | `POST /api/v1/community/music-team-seeking` | ✅ 구현됨 |
-| 7 | `POST /api/v1/community/church-events` | `POST /api/v1/community/church-events` | ✅ 구현됨 |
+| 3 | `POST /api/v1/community/item-sale` | `POST /api/v1/community/item-sale` | ✅ 구현됨 (NEW!) |
+| 4 | `POST /api/v1/community/job-posting` | `POST /api/v1/community/job-posts` | ✅ 구현됨 |
+| 5 | `POST /api/v1/community/job-seeking` | `POST /api/v1/community/job-seekers` | ✅ 구현됨 |
+| 6 | `POST /api/v1/community/music-team-recruit` | `POST /api/v1/community/music-team-recruit` | ✅ 구현됨 |
+| 7 | `POST /api/v1/community/music-team-seeking` | `POST /api/v1/community/music-team-seeking` | ✅ 구현됨 |
+| 8 | `POST /api/v1/community/church-events` | `POST /api/v1/community/church-events` | ✅ 구현됨 |
 
 ---
 
@@ -82,7 +83,42 @@ POST /api/v1/community/sharing-offer
 }
 ```
 
-### 3. **사역자 모집**
+### 3. **물건 판매** 🆕
+```http
+POST /api/v1/community/item-sale
+```
+
+**요청 데이터:**
+```json
+{
+  "title": "중고 피아노 판매합니다",
+  "description": "잘 관리된 중고 피아노를 판매합니다",
+  "category": "악기",
+  "condition": "좋음",
+  "price": 500000,
+  "location": "서울시 강남구",
+  "contact_info": "010-1234-5678",
+  "images": ["https://supabase.co/.../piano.jpg"],
+  "status": "available"
+}
+```
+
+**응답:**
+```json
+{
+  "success": true,
+  "message": "물건 판매 게시글이 등록되었습니다.",
+  "data": {
+    "id": 125,
+    "title": "중고 피아노 판매합니다",
+    "price": 500000,
+    "is_free": false,
+    "status": "available"
+  }
+}
+```
+
+### 4. **사역자 모집**
 ```http
 POST /api/v1/community/job-posts
 ```
@@ -101,7 +137,7 @@ POST /api/v1/community/job-posts
 }
 ```
 
-### 4. **사역자 지원**
+### 5. **사역자 지원**
 ```http
 POST /api/v1/community/job-seekers
 ```
@@ -119,7 +155,7 @@ POST /api/v1/community/job-seekers
 }
 ```
 
-### 5. **행사팀 모집**
+### 6. **행사팀 모집**
 ```http
 POST /api/v1/community/music-team-recruit
 ```
@@ -137,7 +173,7 @@ POST /api/v1/community/music-team-recruit
 }
 ```
 
-### 6. **행사팀 지원**
+### 7. **행사팀 지원**
 ```http
 POST /api/v1/community/music-team-seeking
 ```
@@ -154,7 +190,7 @@ POST /api/v1/community/music-team-seeking
 }
 ```
 
-### 7. **행사 소식**
+### 8. **행사 소식**
 ```http
 POST /api/v1/community/church-events
 ```
