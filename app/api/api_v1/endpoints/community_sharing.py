@@ -196,7 +196,7 @@ async def create_sharing(
                 "status": sharing_record.status,
                 "images": sharing_record.images or [],  # 실제로 DB에 저장된 이미지들
                 "user_id": sharing_record.user_id,  # 실제 컬럼명
-                "user_name": current_user.full_name or current_user.name or "익명",  # 현재 사용자 이름
+                "user_name": current_user.full_name or "익명",  # 현재 사용자 이름
                 "church_id": sharing_record.church_id,
                 "created_at": sharing_record.created_at.isoformat() if sharing_record.created_at else None
             }

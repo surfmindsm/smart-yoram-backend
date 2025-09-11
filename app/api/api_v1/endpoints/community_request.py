@@ -168,7 +168,7 @@ async def create_request(
                 "status": request_data.status,
                 "images": request_data.images,
                 "user_id": current_user.id,
-                "user_name": current_user.full_name or current_user.name or "익명",  # 현재 사용자 이름
+                "user_name": current_user.full_name or "익명",  # 현재 사용자 이름
                 "church_id": current_user.church_id,
                 "created_at": "2024-01-01T00:00:00"
             }

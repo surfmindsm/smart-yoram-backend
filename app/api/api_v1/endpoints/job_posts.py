@@ -82,7 +82,7 @@ def get_job_posting_list(
                     "expires_at": "2024-12-31T23:59:59",
                     "view_count": 0,
                     "user_id": current_user.id,
-                    "user_name": current_user.full_name or current_user.name or "익명",
+                    "user_name": current_user.full_name or "익명",
                     "church_id": current_user.church_id
                 }
             ]
@@ -154,7 +154,7 @@ def get_job_posts(
                     "expires_at": "2024-12-31T23:59:59",
                     "view_count": 0,
                     "user_id": current_user.id,
-                    "user_name": current_user.full_name or current_user.name or "익명",
+                    "user_name": current_user.full_name or "익명",
                     "church_id": current_user.church_id
                 }
             ]
@@ -219,7 +219,7 @@ async def create_job_post(
                 "expires_at": job_data.expires_at,
                 "status": job_data.status,
                 "user_id": current_user.id,
-                "user_name": current_user.full_name or current_user.name or "익명",
+                "user_name": current_user.full_name or "익명",
                 "church_id": current_user.church_id,
                 "created_at": "2024-01-01T00:00:00"
             }
@@ -483,7 +483,7 @@ async def create_job_seeker(
                 "available_start_date": seeker_data.available_start_date,
                 "status": seeker_data.status,
                 "user_id": current_user.id,
-                "user_name": current_user.full_name or current_user.name or "익명",
+                "user_name": current_user.full_name or "익명",
                 "church_id": current_user.church_id,
                 "created_at": "2024-01-01T00:00:00"
             }

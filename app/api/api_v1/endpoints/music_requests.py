@@ -67,7 +67,7 @@ def get_music_team_recruit_list(
                     "updated_at": "2024-01-01T00:00:00",
                     "view_count": 0,
                     "user_id": current_user.id,
-                    "user_name": current_user.full_name or current_user.name or "익명",
+                    "user_name": current_user.full_name or "익명",
                     "church_id": current_user.church_id
                 }
             ]
@@ -129,7 +129,7 @@ async def create_music_team_recruit(
                 "contact_info": recruit_data.contact_info,
                 "status": recruit_data.status,
                 "user_id": current_user.id,
-                "user_name": current_user.full_name or current_user.name or "익명",
+                "user_name": current_user.full_name or "익명",
                 "church_id": current_user.church_id,
                 "created_at": "2024-01-01T00:00:00"
             }
@@ -288,7 +288,7 @@ async def create_music_team_seeking(
                 "contact_info": seeking_data.contact_info,
                 "status": seeking_data.status,
                 "user_id": current_user.id,
-                "user_name": current_user.full_name or current_user.name or "익명",
+                "user_name": current_user.full_name or "익명",
                 "church_id": current_user.church_id,
                 "created_at": "2024-01-01T00:00:00"
             }
