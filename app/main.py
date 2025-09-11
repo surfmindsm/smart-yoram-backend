@@ -115,20 +115,29 @@ async def handle_options(request: Request):
     }
 
 
-# Add middleware to limit file upload size (50MB = 52428800 bytes)
+# Add middleware to limit file upload size 
 @app.middleware("http")
 async def limit_upload_size(request: Request, call_next):
-    # Check for file uploads (but allow community applications)
-    if (request.method == "POST" and 
-        ("upload" in request.url.path or "/community/applications" in request.url.path)):
+    # Check for file uploads and community endpoints
+    if request.method == "POST":
         content_length = request.headers.get("content-length")
         if content_length:
             content_length = int(content_length)
-            max_size = 52428800  # 50MB in bytes
+            
+            # Different size limits for different endpoints
+            if "/community/" in request.url.path or "upload" in request.url.path:
+                # Community endpoints: 15MB (to allow some overhead over Supabase 10MB)
+                max_size = 15728640  # 15MB in bytes
+                endpoint_type = "community"
+            else:
+                # Other endpoints: 50MB
+                max_size = 52428800  # 50MB in bytes  
+                endpoint_type = "general"
+                
             if content_length > max_size:
                 raise HTTPException(
                     status_code=413,
-                    detail=f"File too large. Maximum size allowed is {max_size // 1048576}MB"
+                    detail=f"File too large. Maximum size allowed for {endpoint_type} uploads is {max_size // 1048576}MB"
                 )
     
     response = await call_next(request)
