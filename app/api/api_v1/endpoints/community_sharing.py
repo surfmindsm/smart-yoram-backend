@@ -55,8 +55,11 @@ def get_sharing_list(
 ):
     """나눔 목록 조회 - 실제 데이터베이스에서 조회"""
     try:
-        # 기본 쿼리 (커뮤니티용 church_id = 9998)
-        query = db.query(CommunitySharing).filter(
+        # 기본 쿼리 (커뮤니티용 church_id = 9998) - User 테이블과 JOIN
+        from app.models.user import User
+        query = db.query(CommunitySharing, User.full_name, User.name).join(
+            User, CommunitySharing.user_id == User.id
+        ).filter(
             CommunitySharing.church_id == 9998
         )
         
@@ -82,7 +85,7 @@ def get_sharing_list(
         
         # 응답 데이터 구성
         data_items = []
-        for sharing in sharing_list:
+        for sharing, user_full_name, user_name in sharing_list:
             data_items.append({
                 "id": sharing.id,
                 "title": sharing.title,
@@ -99,6 +102,7 @@ def get_sharing_list(
                 "updated_at": sharing.updated_at.isoformat() if sharing.updated_at else None,
                 "view_count": sharing.view_count or 0,  # 실제 컬럼명
                 "user_id": sharing.user_id,  # 실제 컬럼명
+                "user_name": user_full_name or user_name or "익명",  # 사용자 이름 추가
                 "church_id": sharing.church_id
             })
         
@@ -187,6 +191,7 @@ async def create_sharing(
                 "status": sharing_record.status,
                 "images": sharing_record.images or [],  # 실제로 DB에 저장된 이미지들
                 "user_id": sharing_record.user_id,  # 실제 컬럼명
+                "user_name": current_user.full_name or current_user.name or "익명",  # 현재 사용자 이름
                 "church_id": sharing_record.church_id,
                 "created_at": sharing_record.created_at.isoformat() if sharing_record.created_at else None
             }
