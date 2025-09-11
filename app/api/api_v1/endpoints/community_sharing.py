@@ -55,13 +55,12 @@ def get_sharing_list(
 ):
     """나눔 목록 조회 - 실제 데이터베이스에서 조회"""
     try:
-        # 기본 쿼리 (커뮤니티용 church_id = 9998) - User 테이블과 JOIN
+        # 기본 쿼리 (커뮤니티는 모든 교회가 공유) - User 테이블과 JOIN
         from app.models.user import User
         query = db.query(CommunitySharing, User.full_name, User.name).join(
             User, CommunitySharing.user_id == User.id
-        ).filter(
-            CommunitySharing.church_id == 9998
         )
+        # 커뮤니티는 교회 구분없이 모든 사용자가 볼 수 있음
         
         # 필터링 적용
         if status:
@@ -155,7 +154,7 @@ async def create_sharing(
         
         # 실제 데이터베이스에 저장 (실제 테이블 컬럼명에 맞춤)
         sharing_record = CommunitySharing(
-            church_id=9998,  # 커뮤니티 고정값
+            church_id=current_user.church_id,  # 사용자의 교회 ID 사용
             user_id=current_user.id,  # 실제 컬럼명: user_id
             title=sharing_data.title,
             description=sharing_data.description,

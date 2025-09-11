@@ -42,12 +42,11 @@ def get_item_request_list(
 ):
     """물품 요청 목록 조회 - 실제 데이터베이스에서 조회"""
     try:
-        # 기본 쿼리 (커뮤니티용 church_id = 9998) - User 테이블과 JOIN
+        # 기본 쿼리 (커뮤니티는 모든 교회가 공유) - User 테이블과 JOIN
         query = db.query(CommunityRequest, User.full_name, User.name).join(
             User, CommunityRequest.user_id == User.id
-        ).filter(
-            CommunityRequest.church_id == 9998
         )
+        # 커뮤니티는 교회 구분없이 모든 사용자가 볼 수 있음
         
         # 필터링 적용
         if status:
