@@ -157,6 +157,16 @@ async def upload_single_community_image(
         }
 
 
+@router.post("/upload-image", response_model=dict)
+async def upload_community_image_alias(
+    images: List[UploadFile] = File(..., description="업로드할 이미지 파일들"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """커뮤니티 이미지 업로드 - 프론트엔드 호환성을 위한 별칭 엔드포인트"""
+    return await upload_community_images(images, db, current_user)
+
+
 @router.get("/images/health", response_model=dict)
 def check_image_upload_health(
     db: Session = Depends(get_db),
