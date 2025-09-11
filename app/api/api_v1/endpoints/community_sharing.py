@@ -60,7 +60,7 @@ def get_sharing_list(
         
         # 기본 쿼리 (커뮤니티는 모든 교회가 공유) - User 테이블과 LEFT JOIN
         from app.models.user import User
-        query = db.query(CommunitySharing, User.full_name, User.name).outerjoin(
+        query = db.query(CommunitySharing, User.full_name).outerjoin(
             User, CommunitySharing.user_id == User.id
         )
         # 커뮤니티는 교회 구분없이 모든 사용자가 볼 수 있음
@@ -90,7 +90,7 @@ def get_sharing_list(
         
         # 응답 데이터 구성
         data_items = []
-        for sharing, user_full_name, user_name in sharing_list:
+        for sharing, user_full_name in sharing_list:
             data_items.append({
                 "id": sharing.id,
                 "title": sharing.title,
@@ -107,7 +107,7 @@ def get_sharing_list(
                 "updated_at": sharing.updated_at.isoformat() if sharing.updated_at else None,
                 "view_count": sharing.view_count or 0,  # 실제 컬럼명
                 "user_id": sharing.user_id,  # 실제 컬럼명
-                "user_name": user_full_name or user_name or "익명",  # 사용자 이름 추가
+                "user_name": user_full_name or "익명",  # 사용자 이름 추가
                 "church_id": sharing.church_id
             })
         

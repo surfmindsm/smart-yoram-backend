@@ -42,8 +42,8 @@ def get_item_request_list(
 ):
     """물품 요청 목록 조회 - 실제 데이터베이스에서 조회"""
     try:
-        # 기본 쿼리 (커뮤니티는 모든 교회가 공유) - User 테이블과 JOIN
-        query = db.query(CommunityRequest, User.full_name, User.name).join(
+        # 기본 쿼리 (커뮤니티는 모든 교회가 공유) - User 테이블과 LEFT JOIN
+        query = db.query(CommunityRequest, User.full_name).outerjoin(
             User, CommunityRequest.user_id == User.id
         )
         # 커뮤니티는 교회 구분없이 모든 사용자가 볼 수 있음
@@ -72,7 +72,7 @@ def get_item_request_list(
         
         # 응답 데이터 구성
         data_items = []
-        for request, user_full_name, user_name in request_list:
+        for request, user_full_name in request_list:
             data_items.append({
                 "id": request.id,
                 "title": request.title,
@@ -87,7 +87,7 @@ def get_item_request_list(
                 "updated_at": request.updated_at.isoformat() if request.updated_at else None,
                 "view_count": request.view_count or 0,
                 "user_id": request.user_id,
-                "user_name": user_full_name or user_name or "익명",  # 사용자 이름 추가
+                "user_name": user_full_name or "익명",  # 사용자 이름 추가
                 "church_id": request.church_id
             })
         
