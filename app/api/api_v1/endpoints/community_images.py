@@ -172,7 +172,7 @@ def check_image_upload_health(
             "success": True,
             "message": "이미지 업로드 서비스가 정상 작동 중입니다.",
             "storage_status": "connected",
-            "max_file_size_mb": 5,
+            "max_file_size_mb": 10,
             "max_files_count": MAX_FILES_COUNT,
             "allowed_extensions": [".jpg", ".jpeg", ".png", ".gif", ".webp"]
         }
@@ -181,7 +181,7 @@ def check_image_upload_health(
             "success": False,
             "message": f"Supabase Storage 연결 실패: {str(e)}",
             "storage_status": "disconnected",
-            "max_file_size_mb": 5,
+            "max_file_size_mb": 10,
             "max_files_count": MAX_FILES_COUNT,
             "allowed_extensions": [".jpg", ".jpeg", ".png", ".gif", ".webp"]
         }
