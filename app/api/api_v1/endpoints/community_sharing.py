@@ -211,6 +211,17 @@ async def create_sharing(
         }
 
 
+@router.post("/sharing-offer", response_model=dict)
+async def create_sharing_offer(
+    request: Request,
+    sharing_data: SharingCreateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """나눔 제공 등록 - 프론트엔드 호환성을 위한 별칭 엔드포인트"""
+    return await create_sharing(request, sharing_data, db, current_user)
+
+
 @router.get("/sharing/{sharing_id}", response_model=dict)
 def get_sharing_detail(
     sharing_id: int,
