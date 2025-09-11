@@ -59,15 +59,15 @@ def get_music_team_recruit_list(
                     "instrument": "피아노",
                     "church_name": "샘플 교회",
                     "location": "서울",
-                    "contact_method": "이메일",
                     "contact_info": "music@test.com",
                     "requirements": "중급 이상",
                     "schedule": "매주 일요일",
                     "status": "recruiting",
                     "created_at": "2024-01-01T00:00:00",
                     "updated_at": "2024-01-01T00:00:00",
-                    "views": 0,
-                    "author_id": current_user.id,
+                    "view_count": 0,
+                    "user_id": current_user.id,
+                    "user_name": current_user.full_name or current_user.name or "익명",
                     "church_id": current_user.church_id
                 }
             ]
@@ -129,6 +129,7 @@ async def create_music_team_recruit(
                 "contact_info": recruit_data.contact_info,
                 "status": recruit_data.status,
                 "user_id": current_user.id,
+                "user_name": current_user.full_name or current_user.name or "익명",
                 "church_id": current_user.church_id,
                 "created_at": "2024-01-01T00:00:00"
             }
@@ -287,6 +288,7 @@ async def create_music_team_seeking(
                 "contact_info": seeking_data.contact_info,
                 "status": seeking_data.status,
                 "user_id": current_user.id,
+                "user_name": current_user.full_name or current_user.name or "익명",
                 "church_id": current_user.church_id,
                 "created_at": "2024-01-01T00:00:00"
             }

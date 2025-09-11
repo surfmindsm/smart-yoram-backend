@@ -40,43 +40,72 @@ def get_item_request_list(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """물품 요청 목록 조회 - 단순화된 버전"""
+    """물품 요청 목록 조회 - 실제 데이터베이스에서 조회"""
     try:
-        # 프론트엔드에서 기대하는 기본 구조 제공
-        sample_items = []
+        # 기본 쿼리 (커뮤니티용 church_id = 9998) - User 테이블과 JOIN
+        query = db.query(CommunityRequest, User.full_name, User.name).join(
+            User, CommunityRequest.user_id == User.id
+        ).filter(
+            CommunityRequest.church_id == 9998
+        )
         
-        # 테스트용 샘플 데이터 (필요시)
-        if page == 1:  # 첫 페이지에만 샘플 데이터 표시
-            sample_items = [
-                {
-                    "id": 1,
-                    "title": "테스트 물품 요청",
-                    "description": "테스트용 샘플 요청입니다",
-                    "category": "생활용품",
-                    "status": "active",
-                    "urgency_level": "보통",
-                    "location": "서울",
-                    "contact_method": "카카오톡",
-                    "contact_info": "test123",
-                    "images": [],
-                    "created_at": "2024-01-01T00:00:00",
-                    "updated_at": "2024-01-01T00:00:00",
-                    "views": 0,
-                    "author_id": current_user.id,
-                    "church_id": current_user.church_id
-                }
-            ]
+        # 필터링 적용
+        if status:
+            query = query.filter(CommunityRequest.status == status)
+        if category:
+            query = query.filter(CommunityRequest.category == category)
+        if urgency_level:
+            query = query.filter(CommunityRequest.urgency_level == urgency_level)
+        if location:
+            query = query.filter(CommunityRequest.location.ilike(f"%{location}%"))
+        if search:
+            query = query.filter(
+                (CommunityRequest.title.ilike(f"%{search}%")) |
+                (CommunityRequest.description.ilike(f"%{search}%"))
+            )
+        
+        # 전체 개수 계산
+        total_count = query.count()
+        
+        # 페이지네이션
+        offset = (page - 1) * limit
+        request_list = query.order_by(CommunityRequest.created_at.desc()).offset(offset).limit(limit).all()
+        
+        # 응답 데이터 구성
+        data_items = []
+        for request, user_full_name, user_name in request_list:
+            data_items.append({
+                "id": request.id,
+                "title": request.title,
+                "description": request.description,
+                "category": request.category,
+                "urgency_level": request.urgency_level,
+                "status": request.status,
+                "location": request.location,
+                "contact_info": request.contact_info,
+                "images": request.images or [],
+                "created_at": request.created_at.isoformat() if request.created_at else None,
+                "updated_at": request.updated_at.isoformat() if request.updated_at else None,
+                "view_count": request.view_count or 0,
+                "user_id": request.user_id,
+                "user_name": user_full_name or user_name or "익명",  # 사용자 이름 추가
+                "church_id": request.church_id
+            })
+        
+        total_pages = (total_count + limit - 1) // limit
+        
+        print(f"🔍 요청 목록 조회: 총 {total_count}개, 페이지 {page}/{total_pages}")
         
         return {
             "success": True,
-            "data": sample_items,
+            "data": data_items,
             "pagination": {
                 "current_page": page,
-                "total_pages": 1 if sample_items else 0,
-                "total_count": len(sample_items),
+                "total_pages": total_pages,
+                "total_count": total_count,
                 "per_page": limit,
-                "has_next": False,
-                "has_prev": False
+                "has_next": page < total_pages,
+                "has_prev": page > 1
             }
         }
         
@@ -109,34 +138,9 @@ def get_request_list(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """요청 목록 조회 - 단순화된 버전"""
-    try:
-        return {
-            "success": True,
-            "data": [],
-            "pagination": {
-                "current_page": page,
-                "total_pages": 0,
-                "total_count": 0,
-                "per_page": limit,
-                "has_next": False,
-                "has_prev": False
-            }
-        }
-        
-    except Exception as e:
-        return {
-            "success": True,
-            "data": [],
-            "pagination": {
-                "current_page": page,
-                "total_pages": 0,
-                "total_count": 0,
-                "per_page": limit,
-                "has_next": False,
-                "has_prev": False
-            }
-        }
+    """요청 목록 조회 - 실제 데이터베이스에서 조회"""
+    # /requests와 /item-request는 동일한 로직 사용
+    return get_item_request_list(status, category, urgency_level, location, search, church_filter, page, limit, db, current_user)
 
 
 @router.post("/requests", response_model=dict)
@@ -161,11 +165,11 @@ async def create_request(
                 "category": request_data.category,
                 "urgency_level": request_data.urgency_level,
                 "location": request_data.location,
-                "contact_method": request_data.contact_method,
                 "contact_info": request_data.contact_info,
                 "status": request_data.status,
                 "images": request_data.images,
                 "user_id": current_user.id,
+                "user_name": current_user.full_name or current_user.name or "익명",  # 현재 사용자 이름
                 "church_id": current_user.church_id,
                 "created_at": "2024-01-01T00:00:00"
             }

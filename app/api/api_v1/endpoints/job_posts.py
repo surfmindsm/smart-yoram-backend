@@ -76,13 +76,13 @@ def get_job_posting_list(
                     "description": "테스트용 샘플 구인공고입니다",
                     "requirements": "경력 무관",
                     "benefits": "4대보험",
-                    "contact_method": "이메일",
                     "contact_info": "test@company.com",
                     "created_at": "2024-01-01T00:00:00",
                     "updated_at": "2024-01-01T00:00:00",
                     "expires_at": "2024-12-31T23:59:59",
-                    "views": 0,
-                    "author_id": current_user.id,
+                    "view_count": 0,
+                    "user_id": current_user.id,
+                    "user_name": current_user.full_name or current_user.name or "익명",
                     "church_id": current_user.church_id
                 }
             ]
@@ -148,13 +148,13 @@ def get_job_posts(
                     "description": "테스트용 샘플 구인공고입니다",
                     "requirements": "경력 무관",
                     "benefits": "4대보험",
-                    "contact_method": "이메일",
                     "contact_info": "test@company.com",
                     "created_at": "2024-01-01T00:00:00",
                     "updated_at": "2024-01-01T00:00:00",
                     "expires_at": "2024-12-31T23:59:59",
-                    "views": 0,
-                    "author_id": current_user.id,
+                    "view_count": 0,
+                    "user_id": current_user.id,
+                    "user_name": current_user.full_name or current_user.name or "익명",
                     "church_id": current_user.church_id
                 }
             ]
@@ -219,6 +219,7 @@ async def create_job_post(
                 "expires_at": job_data.expires_at,
                 "status": job_data.status,
                 "user_id": current_user.id,
+                "user_name": current_user.full_name or current_user.name or "익명",
                 "church_id": current_user.church_id,
                 "created_at": "2024-01-01T00:00:00"
             }
@@ -482,6 +483,7 @@ async def create_job_seeker(
                 "available_start_date": seeker_data.available_start_date,
                 "status": seeker_data.status,
                 "user_id": current_user.id,
+                "user_name": current_user.full_name or current_user.name or "익명",
                 "church_id": current_user.church_id,
                 "created_at": "2024-01-01T00:00:00"
             }

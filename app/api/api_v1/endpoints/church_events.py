@@ -44,7 +44,8 @@ def get_church_events_list(
                     "status": "upcoming",
                     "created_at": "2024-01-01T00:00:00",
                     "updated_at": "2024-01-01T00:00:00",
-                    "author_id": current_user.id,
+                    "user_id": current_user.id,
+                    "user_name": current_user.full_name or current_user.name or "익명",
                     "church_id": current_user.church_id
                 }
             ]
