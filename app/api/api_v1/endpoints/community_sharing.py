@@ -55,12 +55,16 @@ def get_sharing_list(
 ):
     """나눔 목록 조회 - 실제 데이터베이스에서 조회"""
     try:
-        # 기본 쿼리 (커뮤니티는 모든 교회가 공유) - User 테이블과 JOIN
+        print(f"🚀 [DEBUG] 커뮤니티 나눔 API 호출됨 - 배포 버전 2024-09-11")
+        print(f"🚀 [DEBUG] 현재 사용자: church_id={current_user.church_id}, user_id={current_user.id}")
+        
+        # 기본 쿼리 (커뮤니티는 모든 교회가 공유) - User 테이블과 LEFT JOIN
         from app.models.user import User
-        query = db.query(CommunitySharing, User.full_name, User.name).join(
+        query = db.query(CommunitySharing, User.full_name, User.name).outerjoin(
             User, CommunitySharing.user_id == User.id
         )
         # 커뮤니티는 교회 구분없이 모든 사용자가 볼 수 있음
+        print(f"🚀 [DEBUG] 교회 필터링 제거됨 - 모든 교회 데이터 조회")
         
         # 필터링 적용
         if status:
@@ -77,10 +81,12 @@ def get_sharing_list(
         
         # 전체 개수 계산
         total_count = query.count()
+        print(f"🚀 [DEBUG] 총 데이터 개수: {total_count}")
         
         # 페이지네이션
         offset = (page - 1) * limit
         sharing_list = query.order_by(CommunitySharing.created_at.desc()).offset(offset).limit(limit).all()
+        print(f"🚀 [DEBUG] 조회된 데이터 개수: {len(sharing_list)}")
         
         # 응답 데이터 구성
         data_items = []
