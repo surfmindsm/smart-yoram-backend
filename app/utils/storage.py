@@ -19,6 +19,7 @@ supabase: Client = create_client(
 MEMBER_PHOTOS_BUCKET = "member-photos"
 BULLETINS_BUCKET = "bulletins"
 DOCUMENTS_BUCKET = "documents"
+COMMUNITY_IMAGES_BUCKET = "community-images"
 
 # Allowed file extensions
 ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
@@ -28,7 +29,7 @@ MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 
 def ensure_buckets_exist():
     """Ensure all required storage buckets exist."""
-    buckets = [MEMBER_PHOTOS_BUCKET, BULLETINS_BUCKET, DOCUMENTS_BUCKET]
+    buckets = [MEMBER_PHOTOS_BUCKET, BULLETINS_BUCKET, DOCUMENTS_BUCKET, COMMUNITY_IMAGES_BUCKET]
 
     try:
         existing_buckets = supabase.storage.list_buckets()
