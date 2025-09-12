@@ -11,32 +11,22 @@ from app.models.user import User
 from app.models.church_events import ChurchEvent
 
 
-class MusicRecruitmentCreateRequest(BaseModel):
-    """행사팀 모집 등록 요청 스키마"""
+class ChurchEventCreateRequest(BaseModel):
+    """교회 행사 등록 요청 스키마"""
     # 기본 정보
     title: str  # 제목 (필수)
-    event_type: Optional[str] = None  # 행사 유형
     description: Optional[str] = None  # 상세 설명
     
     # 일정 및 장소
+    event_date: Optional[str] = None  # 행사 일시 (ISO 형식)
     location: Optional[str] = None  # 장소
-    address: Optional[str] = None  # 주소
-    organizer: Optional[str] = None  # 주최자
-    
-    # 연락처
-    contact_method: Optional[str] = None  # 연락 방법
-    contact_info: Optional[str] = None  # 연락처
     
     # 참가 관련
-    capacity: Optional[int] = None  # 정원
-    fee: Optional[str] = None  # 참가비
-    fee_description: Optional[str] = None  # 참가비 설명
-    target_audience: Optional[str] = None  # 대상
-    requirements: Optional[str] = None  # 요구사항
-    includes: Optional[str] = None  # 포함사항
+    max_participants: Optional[int] = None  # 최대 참가자
+    contact_info: Optional[str] = None  # 연락처 정보
     
     # 상태
-    status: Optional[str] = "active"  # 기본값: 'active'
+    status: Optional[str] = "upcoming"  # 기본값: 'upcoming'
 
 
 router = APIRouter()
@@ -64,20 +54,13 @@ def get_church_events_list(
         )
         
         # 필터링 적용
-        if eventType and eventType != 'all':
-            query = query.filter(ChurchEvent.event_type == eventType)
-            print(f"🔍 [CHURCH_EVENTS_LIST] 행사 유형 필터 적용: {eventType}")
-        if recruitmentType and recruitmentType != 'all':
-            query = query.filter(ChurchEvent.event_type == recruitmentType)
-            print(f"🔍 [CHURCH_EVENTS_LIST] 모집 유형 필터 적용: {recruitmentType}")
         if status and status != 'all':
             query = query.filter(ChurchEvent.status == status)
             print(f"🔍 [CHURCH_EVENTS_LIST] 상태 필터 적용: {status}")
         if search:
             query = query.filter(
                 (ChurchEvent.title.ilike(f"%{search}%")) |
-                (ChurchEvent.description.ilike(f"%{search}%")) |
-                (ChurchEvent.organizer.ilike(f"%{search}%"))
+                (ChurchEvent.description.ilike(f"%{search}%"))
             )
         
         # 전체 개수 계산
@@ -95,28 +78,16 @@ def get_church_events_list(
             data_items.append({
                 "id": event.id,
                 "title": event.title,
-                "eventType": event.event_type,
                 "description": event.description,
+                "eventDate": event.event_date.isoformat() if event.event_date else None,
                 "location": event.location,
-                "address": event.address,
-                "organizer": event.organizer,
-                "contactMethod": event.contact_method,
+                "maxParticipants": event.max_participants,
                 "contactInfo": event.contact_info,
                 "status": event.status,
-                "capacity": event.capacity,
-                "currentParticipants": event.current_participants or 0,
-                "fee": event.fee,
-                "feeDescription": event.fee_description,
-                "targetAudience": event.target_audience,
-                "requirements": event.requirements,
-                "includes": event.includes,
-                "startDate": event.start_date.isoformat() if event.start_date else None,
-                "endDate": event.end_date.isoformat() if event.end_date else None,
-                "registrationDeadline": event.registration_deadline.isoformat() if event.registration_deadline else None,
-                "created_at": event.created_at.isoformat() if event.created_at else None,
-                "updated_at": event.updated_at.isoformat() if event.updated_at else None,
                 "views": event.views or 0,
                 "likes": event.likes or 0,
+                "created_at": event.created_at.isoformat() if event.created_at else None,
+                "updated_at": event.updated_at.isoformat() if event.updated_at else None,
                 "author_id": event.author_id,
                 "user_name": user_full_name or "익명",
                 "church_id": event.church_id
@@ -156,37 +127,36 @@ def get_church_events_list(
         }
 
 
-@router.post("/music-recruitment", response_model=dict)
-async def create_music_recruitment(
+@router.post("/church-events", response_model=dict)
+async def create_church_event(
     request: Request,
-    recruitment_data: MusicRecruitmentCreateRequest,
+    event_data: ChurchEventCreateRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """행사팀 모집 등록 - 실제 데이터베이스 저장"""
+    """교회 행사 등록 - 실제 데이터베이스 저장"""
     try:
-        print(f"🔍 [MUSIC_RECRUITMENT] Music recruitment data received: {recruitment_data}")
-        print(f"🔍 [MUSIC_RECRUITMENT] User ID: {current_user.id}, Church ID: {current_user.church_id}")
-        print(f"🔍 [MUSIC_RECRUITMENT] User name: {current_user.full_name}")
+        print(f"🔍 [CHURCH_EVENT] Church event data received: {event_data}")
+        print(f"🔍 [CHURCH_EVENT] User ID: {current_user.id}, Church ID: {current_user.church_id}")
+        print(f"🔍 [CHURCH_EVENT] User name: {current_user.full_name}")
         
         # 실제 데이터베이스에 저장
+        from datetime import datetime
+        event_date_obj = None
+        if event_data.event_date:
+            try:
+                event_date_obj = datetime.fromisoformat(event_data.event_date.replace('Z', '+00:00'))
+            except:
+                print(f"⚠️ [CHURCH_EVENT] Invalid date format: {event_data.event_date}")
+        
         event_record = ChurchEvent(
-            title=recruitment_data.title,
-            event_type=recruitment_data.event_type,
-            description=recruitment_data.description,
-            location=recruitment_data.location,
-            address=recruitment_data.address,
-            organizer=recruitment_data.organizer,
-            contact_method=recruitment_data.contact_method,
-            contact_info=recruitment_data.contact_info,
-            capacity=recruitment_data.capacity,
-            current_participants=0,
-            fee=recruitment_data.fee,
-            fee_description=recruitment_data.fee_description,
-            target_audience=recruitment_data.target_audience,
-            requirements=recruitment_data.requirements,
-            includes=recruitment_data.includes,
-            status=recruitment_data.status or "active",
+            title=event_data.title,
+            description=event_data.description,
+            event_date=event_date_obj,
+            location=event_data.location,
+            max_participants=event_data.max_participants,
+            contact_info=event_data.contact_info,
+            status=event_data.status or "upcoming",
             author_id=current_user.id,
             church_id=current_user.church_id or 9998,  # 커뮤니티 기본값
             views=0,
@@ -212,20 +182,11 @@ async def create_music_recruitment(
             "data": {
                 "id": event_record.id,
                 "title": event_record.title,
-                "eventType": event_record.event_type,
                 "description": event_record.description,
+                "eventDate": event_record.event_date.isoformat() if event_record.event_date else None,
                 "location": event_record.location,
-                "address": event_record.address,
-                "organizer": event_record.organizer,
-                "contactMethod": event_record.contact_method,
+                "maxParticipants": event_record.max_participants,
                 "contactInfo": event_record.contact_info,
-                "capacity": event_record.capacity,
-                "currentParticipants": event_record.current_participants,
-                "fee": event_record.fee,
-                "feeDescription": event_record.fee_description,
-                "targetAudience": event_record.target_audience,
-                "requirements": event_record.requirements,
-                "includes": event_record.includes,
                 "status": event_record.status,
                 "views": event_record.views,
                 "likes": event_record.likes,
@@ -247,15 +208,6 @@ async def create_music_recruitment(
         }
 
 
-@router.post("/church-events", response_model=dict)
-async def create_church_event(
-    request: Request,
-    recruitment_data: MusicRecruitmentCreateRequest,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
-):
-    """교회 행사 등록 - music-recruitment와 동일한 로직 (별칭 엔드포인트)"""
-    return await create_music_recruitment(request, recruitment_data, db, current_user)
 
 
 @router.get("/church-events/{event_id}", response_model=dict)
@@ -278,20 +230,11 @@ def get_church_event_detail(
             "data": {
                 "id": event.id,
                 "title": event.title,
-                "eventType": event.event_type,
                 "description": event.description,
+                "eventDate": event.event_date.isoformat() if event.event_date else None,
                 "location": event.location,
-                "address": event.address,
-                "organizer": event.organizer,
-                "contactMethod": event.contact_method,
+                "maxParticipants": event.max_participants,
                 "contactInfo": event.contact_info,
-                "capacity": event.capacity,
-                "currentParticipants": event.current_participants or 0,
-                "fee": event.fee,
-                "feeDescription": event.fee_description,
-                "targetAudience": event.target_audience,
-                "requirements": event.requirements,
-                "includes": event.includes,
                 "status": event.status,
                 "views": event.views or 0,
                 "likes": event.likes or 0
