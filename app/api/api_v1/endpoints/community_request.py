@@ -127,7 +127,7 @@ def get_item_request_list(
 def get_request_list(
     status: Optional[str] = Query(None, description="상태 필터: active, fulfilled, cancelled"),
     category: Optional[str] = Query(None, description="카테고리 필터"),
-    urgency_level: Optional[str] = Query(None, description="긴급도 필터: 낮음, 보통, 높음"),
+    urgency: Optional[str] = Query(None, description="긴급도 필터: 낮음, 보통, 높음"),
     location: Optional[str] = Query(None, description="지역 필터"),
     search: Optional[str] = Query(None, description="제목/내용 검색"),
     church_filter: Optional[int] = Query(None, description="교회 필터 (선택사항)"),
@@ -138,7 +138,7 @@ def get_request_list(
 ):
     """요청 목록 조회 - 실제 데이터베이스에서 조회"""
     # /requests와 /item-request는 동일한 로직 사용
-    return get_item_request_list(status, category, urgency_level, location, search, church_filter, page, limit, db, current_user)
+    return get_item_request_list(status, category, urgency, location, search, church_filter, page, limit, db, current_user)
 
 
 @router.post("/requests", response_model=dict)
@@ -239,7 +239,7 @@ def get_item_requests_list(
     current_user: User = Depends(get_current_active_user)
 ):
     """물품 요청 목록 조회 - 프론트엔드 호환성을 위한 별칭 엔드포인트"""
-    return get_request_list(category, urgency, status, location, search, church_filter, page, limit, db, current_user)
+    return get_request_list(status, category, urgency, location, search, church_filter, page, limit, db, current_user)
 
 
 @router.get("/requests/{request_id}", response_model=dict)
