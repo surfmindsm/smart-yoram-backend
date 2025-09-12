@@ -13,15 +13,16 @@ from app.models.community_request import CommunityRequest
 class RequestCreateRequest(BaseModel):
     title: str
     description: str
-    category: str
-    urgency_level: str
+    category: Optional[str] = None
+    urgency: Optional[str] = "normal"  # urgency_level → urgency
     needed_by: Optional[str] = None
     request_reason: Optional[str] = None
-    location: str
-    contact_method: Optional[str] = "기타"  # 프론트엔드에서 보내지 않는 경우 기본값 제공
-    contact_info: str
+    location: Optional[str] = None
+    contact_info: Optional[str] = None
+    reward_type: Optional[str] = "none"
+    reward_amount: Optional[int] = None
     images: Optional[List[str]] = []
-    status: Optional[str] = "active"
+    status: Optional[str] = "open"  # active → open
 
 router = APIRouter()
 
@@ -149,33 +150,67 @@ async def create_request(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """요청 등록 - JSON 요청 방식"""
+    """요청 등록 - 실제 데이터베이스 저장"""
     try:
-        print(f"🔍 Request data: {request_data}")
-        print(f"🔍 User ID: {current_user.id}, Church ID: {current_user.church_id}")
+        print(f"🔍 [REQUEST] Request data received: {request_data}")
+        print(f"🔍 [REQUEST] User ID: {current_user.id}, Church ID: {current_user.church_id}")
+        print(f"🔍 [REQUEST] User name: {current_user.full_name}")
+        
+        # 실제 데이터베이스에 저장
+        request_record = CommunityRequest(
+            title=request_data.title,
+            description=request_data.description,
+            category=request_data.category,
+            urgency=request_data.urgency or "normal",
+            needed_by=request_data.needed_by,
+            location=request_data.location,
+            contact_info=request_data.contact_info,
+            reward_type=request_data.reward_type or "none",
+            reward_amount=request_data.reward_amount,
+            status=request_data.status or "open",
+            images=request_data.images or [],
+            user_id=current_user.id,  # 실제 테이블의 user_id 사용
+            church_id=current_user.church_id or 9998,  # 커뮤니티 기본값
+        )
+        
+        print(f"🔍 [REQUEST] About to save request record...")
+        db.add(request_record)
+        db.commit()
+        db.refresh(request_record)
+        print(f"✅ [REQUEST] Successfully saved request with ID: {request_record.id}")
+        
+        # 저장 후 검증 - 실제로 DB에서 다시 조회
+        saved_record = db.query(CommunityRequest).filter(CommunityRequest.id == request_record.id).first()
+        if saved_record:
+            print(f"✅ [REQUEST] Verification successful: Record exists in DB with ID {saved_record.id}")
+        else:
+            print(f"❌ [REQUEST] Verification failed: Record not found in DB!")
         
         return {
             "success": True,
             "message": "요청 게시글이 등록되었습니다.",
             "data": {
-                "id": 1,
-                "title": request_data.title,
-                "description": request_data.description,
-                "category": request_data.category,
-                "urgency_level": request_data.urgency_level,
-                "location": request_data.location,
-                "contact_info": request_data.contact_info,
-                "status": request_data.status,
-                "images": request_data.images,
-                "user_id": current_user.id,
-                "user_name": current_user.full_name or "익명",  # 현재 사용자 이름
-                "church_id": current_user.church_id,
-                "created_at": "2024-01-01T00:00:00"
+                "id": request_record.id,
+                "title": request_record.title,
+                "description": request_record.description,
+                "category": request_record.category,
+                "urgency_level": request_record.urgency_level,
+                "location": request_record.location,
+                "contact_info": request_record.contact_info,
+                "status": request_record.status,
+                "images": request_record.images or [],
+                "user_id": request_record.user_id,
+                "user_name": current_user.full_name or "익명",
+                "church_id": request_record.church_id,
+                "created_at": request_record.created_at.isoformat() if request_record.created_at else None
             }
         }
         
     except Exception as e:
-        print(f"❌ 요청 등록 실패: {str(e)}")
+        db.rollback()
+        print(f"❌ [REQUEST] 요청 등록 실패: {str(e)}")
+        import traceback
+        print(f"❌ [REQUEST] Traceback: {traceback.format_exc()}")
         return {
             "success": False,
             "message": f"요청 등록 중 오류가 발생했습니다: {str(e)}"
