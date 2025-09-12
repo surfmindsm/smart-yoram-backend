@@ -19,7 +19,8 @@ class JobPostCreateRequest(BaseModel):
     requirements: Optional[str] = None
     benefits: Optional[str] = None
     contact_method: Optional[str] = "기타"  # 프론트엔드에서 보내지 않는 경우 기본값 제공
-    contact_info: str
+    contact_phone: str  # 필수 전화번호
+    contact_email: Optional[str] = None  # 선택적 이메일
     expires_at: Optional[str] = None
     status: Optional[str] = "open"
 
@@ -35,7 +36,8 @@ class JobSeekerCreateRequest(BaseModel):
     skills: Optional[str] = None
     portfolio_url: Optional[str] = None
     contact_method: Optional[str] = "기타"  # 프론트엔드에서 보내지 않는 경우 기본값 제공
-    contact_info: str
+    contact_phone: str  # 필수 전화번호
+    contact_email: Optional[str] = None  # 선택적 이메일
     available_start_date: Optional[str] = None
     status: Optional[str] = "active"
 
@@ -95,6 +97,19 @@ def get_job_posting_list(
         # 응답 데이터 구성
         data_items = []
         for job, user_full_name in job_list:
+            # contact_info에서 전화번호와 이메일 분리
+            contact_phone = ""
+            contact_email = ""
+            
+            if job.contact_info:
+                # "전화: 010-1234-5678 | 이메일: test@example.com" 형태에서 분리
+                parts = job.contact_info.split(" | ")
+                for part in parts:
+                    if part.startswith("전화: "):
+                        contact_phone = part.replace("전화: ", "")
+                    elif part.startswith("이메일: "):
+                        contact_email = part.replace("이메일: ", "")
+            
             data_items.append({
                 "id": job.id,
                 "title": job.title,
@@ -106,7 +121,9 @@ def get_job_posting_list(
                 "salary_range": job.salary_range,
                 "description": job.description,
                 "requirements": job.requirements,
-                "contact_info": job.contact_info,
+                "contact_phone": contact_phone,  # 분리된 전화번호
+                "contact_email": contact_email if contact_email else None,  # 분리된 이메일
+                "contact_info": job.contact_info,  # 원본 (하위 호환성)
                 "created_at": job.created_at.isoformat() if job.created_at else None,
                 "updated_at": job.updated_at.isoformat() if job.updated_at else None,
                 "view_count": job.view_count or 0,
@@ -245,6 +262,12 @@ async def create_job_post(
         print(f"🔍 [JOB_POST] User ID: {current_user.id}, Church ID: {current_user.church_id}")
         print(f"🔍 [JOB_POST] User name: {current_user.full_name}")
         
+        # contact_info를 phone과 email 조합으로 생성
+        contact_parts = [f"전화: {job_data.contact_phone}"]
+        if job_data.contact_email:
+            contact_parts.append(f"이메일: {job_data.contact_email}")
+        combined_contact_info = " | ".join(contact_parts)
+        
         # 실제 데이터베이스에 저장
         job_record = JobPost(
             title=job_data.title,
@@ -255,7 +278,7 @@ async def create_job_post(
             location=job_data.location,
             salary_range=job_data.salary_range,
             requirements=job_data.requirements,
-            contact_info=job_data.contact_info,
+            contact_info=combined_contact_info,  # 조합된 연락처 정보
             # application_deadline은 expires_at에서 변환 필요시 처리
             status=job_data.status or "active",
             user_id=current_user.id,
@@ -289,7 +312,9 @@ async def create_job_post(
                 "salary_range": job_record.salary_range,
                 "description": job_record.description,
                 "requirements": job_record.requirements,
-                "contact_info": job_record.contact_info,
+                "contact_phone": job_data.contact_phone,  # 분리된 전화번호
+                "contact_email": job_data.contact_email,  # 분리된 이메일
+                "contact_info": job_record.contact_info,  # 조합된 연락처 (하위 호환성)
                 "status": job_record.status,
                 "user_id": job_record.user_id,
                 "user_name": current_user.full_name or "익명",
