@@ -86,13 +86,16 @@ def get_item_request_list(
         total_without_filter = query.count()
         print(f"🔍 [LIST] 필터링 전 전체 데이터 개수: {total_without_filter}")
         
-        # 필터링 적용
-        if status:
+        # 필터링 적용 (빈 문자열도 None으로 처리)
+        if status and status != 'all':
             query = query.filter(CommunityRequest.status == status)
-        if category:
+            print(f"🔍 [LIST] 상태 필터 적용: {status}")
+        if category and category != 'all':
             query = query.filter(CommunityRequest.category == category)
-        if urgency:
+            print(f"🔍 [LIST] 카테고리 필터 적용: {category}")
+        if urgency and urgency != 'all':
             query = query.filter(CommunityRequest.urgency == urgency)
+            print(f"🔍 [LIST] 긴급도 필터 적용: {urgency}")
         if location:
             query = query.filter(CommunityRequest.location.ilike(f"%{location}%"))
         if search:
