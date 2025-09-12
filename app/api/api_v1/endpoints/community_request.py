@@ -12,17 +12,15 @@ from app.models.community_request import CommunityRequest
 
 class RequestCreateRequest(BaseModel):
     title: str
-    description: str
+    description: Optional[str] = None
     category: Optional[str] = None
-    urgency: Optional[str] = "normal"  # urgency_level → urgency
-    needed_by: Optional[str] = None
-    request_reason: Optional[str] = None
+    urgency: Optional[str] = "normal"
     location: Optional[str] = None
     contact_info: Optional[str] = None
     reward_type: Optional[str] = "none"
     reward_amount: Optional[int] = None
     images: Optional[List[str]] = []
-    status: Optional[str] = "open"  # active → open
+    status: Optional[str] = "open"
 
 router = APIRouter()
 
@@ -162,7 +160,6 @@ async def create_request(
             description=request_data.description,
             category=request_data.category,
             urgency=request_data.urgency or "normal",
-            needed_by=request_data.needed_by,
             location=request_data.location,
             contact_info=request_data.contact_info,
             reward_type=request_data.reward_type or "none",
