@@ -239,7 +239,7 @@ def get_item_requests_list(
     current_user: User = Depends(get_current_active_user)
 ):
     """물품 요청 목록 조회 - 프론트엔드 호환성을 위한 별칭 엔드포인트"""
-    return get_requests_list(category, urgency, status, location, search, church_filter, page, limit, db, current_user)
+    return get_request_list(category, urgency, status, location, search, church_filter, page, limit, db, current_user)
 
 
 @router.get("/requests/{request_id}", response_model=dict)
