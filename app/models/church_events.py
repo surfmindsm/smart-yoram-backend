@@ -49,43 +49,36 @@ class RecruitmentStatus(str, enum.Enum):
 class ChurchEvent(Base):
     """교회 행사팀 모집"""
     
-    __tablename__ = "church_events"
+    __tablename__ = "community_church_events"
     
     id = Column(Integer, primary_key=True, index=True)
-    church_id = Column(Integer, nullable=False, default=9998, comment="교회 ID (9998=커뮤니티)")
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="작성자 ID")
-    author_id = Column(Integer, nullable=True, comment="작성자 ID (중복)")
-    
-    # 기본 정보
-    title = Column(String, nullable=False, comment="모집 제목")
-    church_name = Column(String, nullable=False, comment="교회명")
-    recruitment_type = Column(String, nullable=False, comment="행사 유형")
-    
-    # 모집 상세
-    instruments = Column(JSON, nullable=False, comment="모집 악기/포지션 배열")
-    schedule = Column(Text, nullable=True, comment="일정 정보")
-    location = Column(String, nullable=True, comment="장소 정보")
-    
-    # 상세 내용
+    title = Column(String(200), nullable=False, comment="모집 제목")
+    event_type = Column(String(10), nullable=True, comment="행사 유형")
     description = Column(Text, nullable=True, comment="상세 설명")
-    requirements = Column(Text, nullable=True, comment="자격 요건")
-    compensation = Column(String, nullable=True, comment="보상/사례비")
-    
-    # 연락처 정보
-    contact_info = Column(String, nullable=True, comment="연락처 정보 (조합)")
-    contact_phone = Column(String, nullable=True, comment="전화번호")
-    contact_email = Column(String, nullable=True, comment="이메일")
-    
-    # 상태 및 통계
-    status = Column(String, default="open", comment="모집 상태")
-    applications = Column(Integer, default=0, comment="지원자 수")
-    view_count = Column(Integer, default=0, comment="조회수")
-    views = Column(Integer, default=0, comment="조회수 (중복)")
-    likes = Column(Integer, default=0, comment="좋아요수")
-    
-    # 시간 정보
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    start_date = Column(DateTime, nullable=True, comment="시작일")
+    end_date = Column(DateTime, nullable=True, comment="종료일")
+    registration_deadline = Column(DateTime, nullable=True, comment="등록 마감일")
+    location = Column(String(200), nullable=True, comment="장소")
+    address = Column(String(300), nullable=True, comment="주소")
+    venue_details = Column(Text, nullable=True, comment="장소 상세")
+    capacity = Column(Integer, nullable=True, comment="정원")
+    current_participants = Column(Integer, default=0, comment="현재 참가자")
+    min_participants = Column(Integer, nullable=True, comment="최소 참가자")
+    fee = Column(String, nullable=True, comment="참가비")
+    fee_description = Column(String(200), nullable=True, comment="참가비 설명")
+    target_audience = Column(String(100), nullable=True, comment="대상")
+    requirements = Column(Text, nullable=True, comment="요구사항")
+    includes = Column(Text, nullable=True, comment="포함사항")
+    contact_method = Column(String(7), nullable=True, comment="연락 방법")
+    contact_info = Column(String(100), nullable=True, comment="연락처")
+    organizer = Column(String(100), nullable=True, comment="주최자")
+    status = Column(String(9), default="active", comment="상태")
+    author_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="작성자 ID")
+    church_id = Column(Integer, nullable=False, default=9998, comment="교회 ID")
+    views = Column(Integer, default=0, comment="조회수")
+    likes = Column(Integer, default=0, comment="좋아요")
+    created_at = Column(DateTime, nullable=True, comment="생성일")
+    updated_at = Column(DateTime, nullable=True, comment="수정일")
     
     # Relationships
-    author = relationship("User", foreign_keys=[user_id])
+    author = relationship("User", foreign_keys=[author_id])

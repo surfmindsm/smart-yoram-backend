@@ -14,27 +14,29 @@ from app.models.church_events import ChurchEvent
 class MusicRecruitmentCreateRequest(BaseModel):
     """행사팀 모집 등록 요청 스키마"""
     # 기본 정보
-    title: str  # 모집 제목 (필수)
-    churchName: str  # 교회명 (필수)
-    recruitmentType: str  # 행사 유형 (필수)
+    title: str  # 제목 (필수)
+    event_type: Optional[str] = None  # 행사 유형
+    description: Optional[str] = None  # 상세 설명
     
-    # 모집 상세
-    instruments: List[str]  # 모집 악기/포지션 배열 (필수)
-    schedule: str  # 일정 정보
-    location: str  # 장소 정보
+    # 일정 및 장소
+    location: Optional[str] = None  # 장소
+    address: Optional[str] = None  # 주소
+    organizer: Optional[str] = None  # 주최자
     
-    # 상세 내용
-    description: str  # 상세 설명
-    requirements: Optional[str] = None  # 자격 요건
-    compensation: Optional[str] = None  # 보상/사례비
+    # 연락처
+    contact_method: Optional[str] = None  # 연락 방법
+    contact_info: Optional[str] = None  # 연락처
     
-    # 연락처 (분리된 형태)
-    contactPhone: str  # 전화번호 (필수)
-    contactEmail: Optional[str] = None  # 이메일 (선택)
+    # 참가 관련
+    capacity: Optional[int] = None  # 정원
+    fee: Optional[str] = None  # 참가비
+    fee_description: Optional[str] = None  # 참가비 설명
+    target_audience: Optional[str] = None  # 대상
+    requirements: Optional[str] = None  # 요구사항
+    includes: Optional[str] = None  # 포함사항
     
-    # 시스템 필드
-    status: Optional[str] = "open"  # 기본값: 'open'
-    applications: Optional[int] = 0  # 초기값: 0
+    # 상태
+    status: Optional[str] = "active"  # 기본값: 'active'
 
 
 router = APIRouter()
@@ -58,15 +60,15 @@ def get_church_events_list(
         
         # 기본 쿼리 - User 테이블과 LEFT JOIN
         query = db.query(ChurchEvent, User.full_name).outerjoin(
-            User, ChurchEvent.user_id == User.id
+            User, ChurchEvent.author_id == User.id
         )
         
         # 필터링 적용
         if eventType and eventType != 'all':
-            query = query.filter(ChurchEvent.recruitment_type == eventType)
+            query = query.filter(ChurchEvent.event_type == eventType)
             print(f"🔍 [CHURCH_EVENTS_LIST] 행사 유형 필터 적용: {eventType}")
         if recruitmentType and recruitmentType != 'all':
-            query = query.filter(ChurchEvent.recruitment_type == recruitmentType)
+            query = query.filter(ChurchEvent.event_type == recruitmentType)
             print(f"🔍 [CHURCH_EVENTS_LIST] 모집 유형 필터 적용: {recruitmentType}")
         if status and status != 'all':
             query = query.filter(ChurchEvent.status == status)
@@ -75,7 +77,7 @@ def get_church_events_list(
             query = query.filter(
                 (ChurchEvent.title.ilike(f"%{search}%")) |
                 (ChurchEvent.description.ilike(f"%{search}%")) |
-                (ChurchEvent.church_name.ilike(f"%{search}%"))
+                (ChurchEvent.organizer.ilike(f"%{search}%"))
             )
         
         # 전체 개수 계산
@@ -90,31 +92,32 @@ def get_church_events_list(
         # 응답 데이터 구성
         data_items = []
         for event, user_full_name in events_list:
-            # contact_info에서 전화번호와 이메일 분리
-            contact_phone = event.contact_phone or ""
-            contact_email = event.contact_email or ""
-            
             data_items.append({
                 "id": event.id,
                 "title": event.title,
-                "churchName": event.church_name,
-                "recruitmentType": event.recruitment_type,
-                "instruments": event.instruments or [],
-                "schedule": event.schedule,
-                "location": event.location,
+                "eventType": event.event_type,
                 "description": event.description,
-                "requirements": event.requirements,
-                "compensation": event.compensation,
-                "contactPhone": contact_phone,
-                "contactEmail": contact_email,
-                "contact": event.contact_info,  # 프론트엔드 호환성
-                "contactInfo": event.contact_info,  # 프론트엔드 호환성
+                "location": event.location,
+                "address": event.address,
+                "organizer": event.organizer,
+                "contactMethod": event.contact_method,
+                "contactInfo": event.contact_info,
                 "status": event.status,
-                "applications": event.applications or 0,
+                "capacity": event.capacity,
+                "currentParticipants": event.current_participants or 0,
+                "fee": event.fee,
+                "feeDescription": event.fee_description,
+                "targetAudience": event.target_audience,
+                "requirements": event.requirements,
+                "includes": event.includes,
+                "startDate": event.start_date.isoformat() if event.start_date else None,
+                "endDate": event.end_date.isoformat() if event.end_date else None,
+                "registrationDeadline": event.registration_deadline.isoformat() if event.registration_deadline else None,
                 "created_at": event.created_at.isoformat() if event.created_at else None,
                 "updated_at": event.updated_at.isoformat() if event.updated_at else None,
-                "view_count": event.view_count or 0,
-                "user_id": event.user_id,
+                "views": event.views or 0,
+                "likes": event.likes or 0,
+                "author_id": event.author_id,
                 "user_name": user_full_name or "익명",
                 "church_id": event.church_id
             })
@@ -166,31 +169,28 @@ async def create_music_recruitment(
         print(f"🔍 [MUSIC_RECRUITMENT] User ID: {current_user.id}, Church ID: {current_user.church_id}")
         print(f"🔍 [MUSIC_RECRUITMENT] User name: {current_user.full_name}")
         
-        # contact_info를 phone과 email 조합으로 생성
-        contact_parts = [f"전화: {recruitment_data.contactPhone}"]
-        if recruitment_data.contactEmail:
-            contact_parts.append(f"이메일: {recruitment_data.contactEmail}")
-        combined_contact_info = " | ".join(contact_parts)
-        
         # 실제 데이터베이스에 저장
         event_record = ChurchEvent(
             title=recruitment_data.title,
-            church_name=recruitment_data.churchName,
-            recruitment_type=recruitment_data.recruitmentType,
-            instruments=recruitment_data.instruments,  # JSON 배열로 저장
-            schedule=recruitment_data.schedule,
-            location=recruitment_data.location,
+            event_type=recruitment_data.event_type,
             description=recruitment_data.description,
+            location=recruitment_data.location,
+            address=recruitment_data.address,
+            organizer=recruitment_data.organizer,
+            contact_method=recruitment_data.contact_method,
+            contact_info=recruitment_data.contact_info,
+            capacity=recruitment_data.capacity,
+            current_participants=0,
+            fee=recruitment_data.fee,
+            fee_description=recruitment_data.fee_description,
+            target_audience=recruitment_data.target_audience,
             requirements=recruitment_data.requirements,
-            compensation=recruitment_data.compensation,
-            contact_info=combined_contact_info,  # 조합된 연락처 정보
-            contact_phone=recruitment_data.contactPhone,
-            contact_email=recruitment_data.contactEmail,
-            status=recruitment_data.status or "open",
-            applications=recruitment_data.applications or 0,
-            user_id=current_user.id,
-            author_id=current_user.id,  # 중복 필드도 채움
+            includes=recruitment_data.includes,
+            status=recruitment_data.status or "active",
+            author_id=current_user.id,
             church_id=current_user.church_id or 9998,  # 커뮤니티 기본값
+            views=0,
+            likes=0
         )
         
         print(f"🔍 [MUSIC_RECRUITMENT] About to save music recruitment record...")
@@ -212,21 +212,24 @@ async def create_music_recruitment(
             "data": {
                 "id": event_record.id,
                 "title": event_record.title,
-                "churchName": event_record.church_name,
-                "recruitmentType": event_record.recruitment_type,
-                "instruments": event_record.instruments,
-                "schedule": event_record.schedule,
-                "location": event_record.location,
+                "eventType": event_record.event_type,
                 "description": event_record.description,
+                "location": event_record.location,
+                "address": event_record.address,
+                "organizer": event_record.organizer,
+                "contactMethod": event_record.contact_method,
+                "contactInfo": event_record.contact_info,
+                "capacity": event_record.capacity,
+                "currentParticipants": event_record.current_participants,
+                "fee": event_record.fee,
+                "feeDescription": event_record.fee_description,
+                "targetAudience": event_record.target_audience,
                 "requirements": event_record.requirements,
-                "compensation": event_record.compensation,
-                "contactPhone": event_record.contact_phone,
-                "contactEmail": event_record.contact_email,
-                "contact": combined_contact_info,  # 프론트엔드 호환성
-                "contactInfo": combined_contact_info,  # 프론트엔드 호환성
+                "includes": event_record.includes,
                 "status": event_record.status,
-                "applications": event_record.applications,
-                "user_id": event_record.user_id,
+                "views": event_record.views,
+                "likes": event_record.likes,
+                "author_id": event_record.author_id,
                 "user_name": current_user.full_name or "익명",
                 "church_id": event_record.church_id,
                 "created_at": event_record.created_at.isoformat() if event_record.created_at else None
@@ -275,19 +278,23 @@ def get_church_event_detail(
             "data": {
                 "id": event.id,
                 "title": event.title,
-                "churchName": event.church_name,
-                "recruitmentType": event.recruitment_type,
-                "instruments": event.instruments or [],
-                "schedule": event.schedule,
-                "location": event.location,
+                "eventType": event.event_type,
                 "description": event.description,
+                "location": event.location,
+                "address": event.address,
+                "organizer": event.organizer,
+                "contactMethod": event.contact_method,
+                "contactInfo": event.contact_info,
+                "capacity": event.capacity,
+                "currentParticipants": event.current_participants or 0,
+                "fee": event.fee,
+                "feeDescription": event.fee_description,
+                "targetAudience": event.target_audience,
                 "requirements": event.requirements,
-                "compensation": event.compensation,
-                "contactPhone": event.contact_phone,
-                "contactEmail": event.contact_email,
-                "contact": event.contact_info,
+                "includes": event.includes,
                 "status": event.status,
-                "applications": event.applications or 0
+                "views": event.views or 0,
+                "likes": event.likes or 0
             }
         }
         
@@ -314,7 +321,7 @@ def delete_church_event(
             }
         
         # 작성자만 삭제 가능
-        if event.user_id != current_user.id:
+        if event.author_id != current_user.id:
             return {
                 "success": False,
                 "message": "삭제 권한이 없습니다."
