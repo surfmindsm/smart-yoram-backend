@@ -182,6 +182,34 @@ async def create_request(
         }
 
 
+@router.post("/item-requests", response_model=dict)
+async def create_item_request(
+    request: Request,
+    request_data: RequestCreateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """물품 요청 등록 - 프론트엔드 호환성을 위한 별칭 엔드포인트"""
+    return await create_request(request, request_data, db, current_user)
+
+
+@router.get("/item-requests", response_model=dict)
+def get_item_requests_list(
+    category: Optional[str] = Query(None, description="카테고리 필터"),
+    urgency: Optional[str] = Query(None, description="긴급도 필터"),
+    status: Optional[str] = Query(None, description="상태 필터"),
+    location: Optional[str] = Query(None, description="지역 필터"),
+    search: Optional[str] = Query(None, description="제목/내용 검색"),
+    church_filter: Optional[int] = Query(None, description="교회 필터 (선택사항)"),
+    page: int = Query(1, ge=1, description="페이지 번호"),
+    limit: int = Query(20, ge=1, le=100, description="페이지당 항목 수"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """물품 요청 목록 조회 - 프론트엔드 호환성을 위한 별칭 엔드포인트"""
+    return get_requests_list(category, urgency, status, location, search, church_filter, page, limit, db, current_user)
+
+
 @router.get("/requests/{request_id}", response_model=dict)
 def get_request_detail(
     request_id: int,
