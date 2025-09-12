@@ -30,7 +30,7 @@ router = APIRouter()
 def get_item_request_list(
     status: Optional[str] = Query(None, description="상태 필터: active, fulfilled, cancelled"),
     category: Optional[str] = Query(None, description="카테고리 필터"),
-    urgency_level: Optional[str] = Query(None, description="긴급도 필터: 낮음, 보통, 높음"),
+    urgency: Optional[str] = Query(None, description="긴급도 필터: 낮음, 보통, 높음"),
     location: Optional[str] = Query(None, description="지역 필터"),
     search: Optional[str] = Query(None, description="제목/내용 검색"),
     church_filter: Optional[int] = Query(None, description="교회 필터 (선택사항)"),
@@ -41,19 +41,26 @@ def get_item_request_list(
 ):
     """물품 요청 목록 조회 - 실제 데이터베이스에서 조회"""
     try:
+        print(f"🔍 [LIST] 물품 요청 목록 조회 시작")
+        print(f"🔍 [LIST] 필터: status={status}, category={category}, urgency={urgency}, location={location}")
+        
         # 기본 쿼리 (커뮤니티는 모든 교회가 공유) - User 테이블과 LEFT JOIN
         query = db.query(CommunityRequest, User.full_name).outerjoin(
             User, CommunityRequest.user_id == User.id
         )
         # 커뮤니티는 교회 구분없이 모든 사용자가 볼 수 있음
         
+        # 먼저 필터링 없이 전체 데이터 개수 확인
+        total_without_filter = query.count()
+        print(f"🔍 [LIST] 필터링 전 전체 데이터 개수: {total_without_filter}")
+        
         # 필터링 적용
         if status:
             query = query.filter(CommunityRequest.status == status)
         if category:
             query = query.filter(CommunityRequest.category == category)
-        if urgency_level:
-            query = query.filter(CommunityRequest.urgency_level == urgency_level)
+        if urgency:
+            query = query.filter(CommunityRequest.urgency == urgency)
         if location:
             query = query.filter(CommunityRequest.location.ilike(f"%{location}%"))
         if search:
@@ -64,10 +71,12 @@ def get_item_request_list(
         
         # 전체 개수 계산
         total_count = query.count()
+        print(f"🔍 [LIST] 필터링 후 전체 데이터 개수: {total_count}")
         
         # 페이지네이션
         offset = (page - 1) * limit
         request_list = query.order_by(CommunityRequest.created_at.desc()).offset(offset).limit(limit).all()
+        print(f"🔍 [LIST] 조회된 데이터 개수: {len(request_list)}")
         
         # 응답 데이터 구성
         data_items = []
