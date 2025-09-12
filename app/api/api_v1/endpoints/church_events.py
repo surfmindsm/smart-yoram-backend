@@ -23,13 +23,32 @@ class ChurchEventCreateRequest(BaseModel):
     
     # 참가 관련
     max_participants: Optional[int] = None  # 최대 참가자
-    contact_info: Optional[str] = None  # 연락처 정보
+    
+    # 연락처 정보 (분리된 형태)
+    contact_phone: str  # 담당자 연락처 (필수) - 전화번호
+    contact_email: Optional[str] = None  # 이메일 (선택)
     
     # 상태
     status: Optional[str] = "upcoming"  # 기본값: 'upcoming'
 
 
 router = APIRouter()
+
+
+def parse_contact_info(contact_info: str) -> tuple[str, str]:
+    """연락처 정보를 전화번호와 이메일로 분리"""
+    phone = ""
+    email = ""
+    
+    if contact_info:
+        parts = contact_info.split(" | ")
+        for part in parts:
+            if part.startswith("전화: "):
+                phone = part.replace("전화: ", "")
+            elif part.startswith("이메일: "):
+                email = part.replace("이메일: ", "")
+    
+    return phone, email
 
 
 @router.get("/church-events", response_model=dict)
@@ -75,6 +94,9 @@ def get_church_events_list(
         # 응답 데이터 구성
         data_items = []
         for event, user_full_name in events_list:
+            # 연락처 정보를 전화번호와 이메일로 분리
+            contact_phone, contact_email = parse_contact_info(event.contact_info or "")
+            
             data_items.append({
                 "id": event.id,
                 "title": event.title,
@@ -82,7 +104,9 @@ def get_church_events_list(
                 "eventDate": event.event_date.isoformat() if event.event_date else None,
                 "location": event.location,
                 "maxParticipants": event.max_participants,
-                "contactInfo": event.contact_info,
+                "contactPhone": contact_phone,
+                "contactEmail": contact_email,
+                "contactInfo": event.contact_info,  # 백워드 호환성
                 "status": event.status,
                 "views": event.views or 0,
                 "likes": event.likes or 0,
@@ -149,13 +173,19 @@ async def create_church_event(
             except:
                 print(f"⚠️ [CHURCH_EVENT] Invalid date format: {event_data.event_date}")
         
+        # contact_info를 phone과 email 조합으로 생성
+        contact_parts = [f"전화: {event_data.contact_phone}"]
+        if event_data.contact_email:
+            contact_parts.append(f"이메일: {event_data.contact_email}")
+        combined_contact_info = " | ".join(contact_parts)
+        
         event_record = ChurchEvent(
             title=event_data.title,
             description=event_data.description,
             event_date=event_date_obj,
             location=event_data.location,
             max_participants=event_data.max_participants,
-            contact_info=event_data.contact_info,
+            contact_info=combined_contact_info,  # 조합된 연락처 정보
             status=event_data.status or "upcoming",
             author_id=current_user.id,
             church_id=current_user.church_id or 9998,  # 커뮤니티 기본값
@@ -178,7 +208,7 @@ async def create_church_event(
         
         return {
             "success": True,
-            "message": "행사팀 모집이 등록되었습니다.",
+            "message": "교회 행사가 등록되었습니다.",
             "data": {
                 "id": event_record.id,
                 "title": event_record.title,
@@ -186,7 +216,9 @@ async def create_church_event(
                 "eventDate": event_record.event_date.isoformat() if event_record.event_date else None,
                 "location": event_record.location,
                 "maxParticipants": event_record.max_participants,
-                "contactInfo": event_record.contact_info,
+                "contactPhone": event_data.contact_phone,
+                "contactEmail": event_data.contact_email,
+                "contactInfo": event_record.contact_info,  # 백워드 호환성
                 "status": event_record.status,
                 "views": event_record.views,
                 "likes": event_record.likes,
@@ -225,6 +257,9 @@ def get_church_event_detail(
                 "message": "행사팀 모집을 찾을 수 없습니다."
             }
         
+        # 연락처 정보를 전화번호와 이메일로 분리
+        contact_phone, contact_email = parse_contact_info(event.contact_info or "")
+        
         return {
             "success": True,
             "data": {
@@ -234,7 +269,9 @@ def get_church_event_detail(
                 "eventDate": event.event_date.isoformat() if event.event_date else None,
                 "location": event.location,
                 "maxParticipants": event.max_participants,
-                "contactInfo": event.contact_info,
+                "contactPhone": contact_phone,
+                "contactEmail": contact_email,
+                "contactInfo": event.contact_info,  # 백워드 호환성
                 "status": event.status,
                 "views": event.views or 0,
                 "likes": event.likes or 0
