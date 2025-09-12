@@ -25,6 +25,38 @@ class RequestCreateRequest(BaseModel):
 router = APIRouter()
 
 
+# 디버깅용 간단한 테스트 엔드포인트
+@router.get("/debug-requests", response_model=dict)
+def debug_requests(db: Session = Depends(get_db)):
+    """디버깅용: DB 데이터 직접 확인"""
+    try:
+        # 간단한 직접 쿼리
+        requests = db.query(CommunityRequest).all()
+        
+        result = []
+        for req in requests:
+            result.append({
+                "id": req.id,
+                "title": req.title,
+                "status": req.status,
+                "user_id": req.user_id,
+                "church_id": req.church_id,
+                "created_at": str(req.created_at)
+            })
+        
+        return {
+            "success": True,
+            "total_count": len(requests),
+            "data": result
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "data": []
+        }
+
+
 # 프론트엔드에서 호출하는 URL에 맞춰 추가
 @router.get("/item-request", response_model=dict)
 def get_item_request_list(
