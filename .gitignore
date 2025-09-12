@@ -79,4 +79,4 @@ supabase_schema.sql
 setup_supabase.py
 .encryption_key
 
-/Bootstrap5    
+/Bootstrap5    *.sql
