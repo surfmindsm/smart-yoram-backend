@@ -1,7 +1,7 @@
 """
 교회 행사 소식 관련 API 엔드포인트
 """
-from typing import Optional, List
+from typing import Optional, List, Literal
 from fastapi import APIRouter, Depends, Query, Request, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -21,7 +21,7 @@ class ChurchNewsCreateRequest(BaseModel):
     organizer: str
     
     # 선택 필드
-    priority: Optional[str] = "normal"
+    priority: Optional[Literal['urgent', 'important', 'normal']] = "normal"
     event_date: Optional[str] = None  # ISO 형식 날짜
     event_time: Optional[str] = None  # HH:MM 형식
     location: Optional[str] = None
@@ -32,7 +32,7 @@ class ChurchNewsCreateRequest(BaseModel):
     contact_person: Optional[str] = None
     contact_phone: Optional[str] = None
     contact_email: Optional[str] = None
-    status: Optional[str] = "active"
+    status: Optional[Literal['active', 'completed', 'cancelled']] = "active"
     tags: Optional[List[str]] = None
     images: Optional[List[str]] = None
 
@@ -43,7 +43,7 @@ class ChurchNewsUpdateRequest(BaseModel):
     content: Optional[str] = None
     category: Optional[str] = None
     organizer: Optional[str] = None
-    priority: Optional[str] = None
+    priority: Optional[Literal['urgent', 'important', 'normal']] = None
     event_date: Optional[str] = None
     event_time: Optional[str] = None
     location: Optional[str] = None
@@ -54,7 +54,7 @@ class ChurchNewsUpdateRequest(BaseModel):
     contact_person: Optional[str] = None
     contact_phone: Optional[str] = None
     contact_email: Optional[str] = None
-    status: Optional[str] = None
+    status: Optional[Literal['active', 'completed', 'cancelled']] = None
     tags: Optional[List[str]] = None
     images: Optional[List[str]] = None
 
@@ -220,6 +220,8 @@ async def create_church_news(
     """교회 행사 소식 등록"""
     try:
         print(f"🔍 [CHURCH_NEWS] 교회 소식 데이터 받음: {news_data}")
+        print(f"🔍 [CHURCH_NEWS] Priority: {news_data.priority} (type: {type(news_data.priority)})")
+        print(f"🔍 [CHURCH_NEWS] Status: {news_data.status} (type: {type(news_data.status)})")
         
         # 현재 시간 설정
         current_time = datetime.now(timezone.utc)
@@ -229,12 +231,12 @@ async def create_church_news(
         event_time_obj = parse_time(news_data.event_time)
         registration_deadline_obj = parse_date(news_data.registration_deadline)
         
-        # 데이터베이스에 저장
+        # 데이터베이스에 저장 (ENUM 값 안전하게 처리)
         news_record = ChurchNews(
             title=news_data.title,
             content=news_data.content,
             category=news_data.category,
-            priority=news_data.priority,
+            priority=news_data.priority.lower() if news_data.priority else "normal",
             event_date=event_date_obj,
             event_time=event_time_obj,
             location=news_data.location,
@@ -246,7 +248,7 @@ async def create_church_news(
             contact_person=news_data.contact_person,
             contact_phone=news_data.contact_phone,
             contact_email=news_data.contact_email,
-            status=news_data.status,
+            status=news_data.status.lower() if news_data.status else "active",
             view_count=0,
             likes=0,
             comments_count=0,
@@ -387,6 +389,10 @@ async def update_church_news(
                 setattr(news, field, parse_date(value))
             elif field in ['tags', 'images'] and value is not None:
                 setattr(news, field, value if value else [])
+            elif field == 'priority' and value:
+                setattr(news, field, value.lower())  # ENUM 값 소문자 변환
+            elif field == 'status' and value:
+                setattr(news, field, value.lower())  # ENUM 값 소문자 변환
             else:
                 setattr(news, field, value)
         
