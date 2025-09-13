@@ -67,8 +67,8 @@ class MusicTeamRecruitment(Base):
     views = Column(Integer, nullable=True, default=0, comment="조회수")
     likes = Column(Integer, nullable=True, default=0, comment="좋아요수")
     applicants_count = Column(Integer, nullable=True, default=0, comment="지원자 수")
-    created_at = Column(DateTime, nullable=True, comment="생성일")
-    updated_at = Column(DateTime, nullable=True, comment="수정일")
+    created_at = Column(DateTime(timezone=True), nullable=True, server_default=func.now(), comment="생성일")
+    updated_at = Column(DateTime(timezone=True), nullable=True, server_default=func.now(), onupdate=func.now(), comment="수정일")
     
     # Relationships
     author = relationship("User", foreign_keys=[author_id])

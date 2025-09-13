@@ -5,7 +5,7 @@ from typing import Optional, List
 from fastapi import APIRouter, Depends, Query, Request, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.api.deps import get_db, get_current_active_user
 from app.models.user import User
@@ -200,6 +200,9 @@ async def create_music_team_recruitment(
     try:
         print(f"🔍 [MUSIC_TEAM_RECRUIT] 음악팀 모집 데이터 받음: {recruitment_data}")
         
+        # 현재 시간 설정
+        current_time = datetime.now(timezone.utc)
+        
         # 데이터베이스에 저장
         recruitment_record = MusicTeamRecruitment(
             title=recruitment_data.title,
@@ -223,7 +226,9 @@ async def create_music_team_recruitment(
             church_id=current_user.church_id or 9998,
             views=0,
             likes=0,
-            applicants_count=0
+            applicants_count=0,
+            created_at=current_time,
+            updated_at=current_time
         )
         
         print(f"🔍 [MUSIC_TEAM_RECRUIT] 음악팀 모집 레코드 저장 중...")
@@ -335,6 +340,9 @@ async def update_music_team_recruitment(
         
         for field, value in update_data.items():
             setattr(recruitment, field, value)
+        
+        # updated_at 명시적으로 설정
+        recruitment.updated_at = datetime.now(timezone.utc)
         
         db.commit()
         db.refresh(recruitment)
