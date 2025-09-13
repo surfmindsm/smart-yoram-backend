@@ -175,15 +175,15 @@ async def create_music_team_seeker(
         # 현재 시간 설정
         current_time = datetime.now(timezone.utc)
         
-        # 데이터베이스에 저장
+        # 데이터베이스에 저장 - PostgreSQL text[] 타입과 호환되도록 배열 처리
         seeker_record = MusicTeamSeeker(
             title=seeker_data.title,
             team_name=seeker_data.team_name,
             instrument=seeker_data.instrument,
             experience=seeker_data.experience,
             portfolio=seeker_data.portfolio,
-            preferred_location=seeker_data.preferred_location,
-            available_days=seeker_data.available_days,
+            preferred_location=seeker_data.preferred_location if seeker_data.preferred_location else [],
+            available_days=seeker_data.available_days if seeker_data.available_days else [],
             available_time=seeker_data.available_time,
             contact_phone=seeker_data.contact_phone,
             contact_email=seeker_data.contact_email,
@@ -307,7 +307,11 @@ async def update_music_team_seeker(
         update_data = seeker_data.dict(exclude_unset=True)
         
         for field, value in update_data.items():
-            setattr(seeker, field, value)
+            # PostgreSQL text[] 타입과 호환되도록 배열 필드 처리
+            if field in ['preferred_location', 'available_days'] and value is not None:
+                setattr(seeker, field, value if value else [])
+            else:
+                setattr(seeker, field, value)
         
         # updated_at 명시적으로 설정
         seeker.updated_at = datetime.now(timezone.utc)
