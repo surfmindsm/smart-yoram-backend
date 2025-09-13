@@ -47,6 +47,7 @@ from app.api.api_v1.endpoints import (
     job_posts,
     music_requests,
     church_events,
+    music_team_recruit,
     community_images,
 )
 
@@ -167,6 +168,11 @@ api_router.include_router(
 # 교회 행사 라우터
 api_router.include_router(
     church_events.router, prefix="/community", tags=["church_events"]
+)
+
+# 음악팀 모집 라우터 (신규)
+api_router.include_router(
+    music_team_recruit.router, prefix="/community", tags=["music_team_recruit"]
 )
 
 # 커뮤니티 이미지 업로드 라우터
