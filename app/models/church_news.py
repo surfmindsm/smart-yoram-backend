@@ -30,7 +30,7 @@ class ChurchNews(Base):
     title = Column(String(255), nullable=False, index=True, comment="제목")
     content = Column(Text, nullable=False, comment="내용")
     category = Column(String(50), nullable=False, index=True, comment="카테고리")
-    priority = Column(Enum(NewsPriority), default=NewsPriority.NORMAL, index=True, comment="우선순위")
+    priority = Column(String(20), default="normal", index=True, comment="우선순위")
     
     # 행사 정보
     event_date = Column(Date, nullable=True, comment="행사일")
@@ -50,7 +50,7 @@ class ChurchNews(Base):
     contact_email = Column(String(100), nullable=True, comment="이메일")
     
     # 상태 관리
-    status = Column(Enum(NewsStatus), default=NewsStatus.ACTIVE, index=True, comment="상태")
+    status = Column(String(20), default="active", index=True, comment="상태")
     
     # 메타데이터 (다른 API와 일관성: view_count 사용)
     view_count = Column(Integer, default=0, comment="조회수")

@@ -220,8 +220,14 @@ async def create_church_news(
     """교회 행사 소식 등록"""
     try:
         print(f"🔍 [CHURCH_NEWS] 교회 소식 데이터 받음: {news_data}")
-        print(f"🔍 [CHURCH_NEWS] Priority: {news_data.priority} (type: {type(news_data.priority)})")
-        print(f"🔍 [CHURCH_NEWS] Status: {news_data.status} (type: {type(news_data.status)})")
+        print(f"🔍 [CHURCH_NEWS] 원본 Priority: {news_data.priority} (type: {type(news_data.priority)})")
+        print(f"🔍 [CHURCH_NEWS] 원본 Status: {news_data.status} (type: {type(news_data.status)})")
+        
+        # 변환된 값 확인
+        processed_priority = news_data.priority.lower() if news_data.priority else "normal"
+        processed_status = news_data.status.lower() if news_data.status else "active"
+        print(f"🔍 [CHURCH_NEWS] 변환된 Priority: {processed_priority}")
+        print(f"🔍 [CHURCH_NEWS] 변환된 Status: {processed_status}")
         
         # 현재 시간 설정
         current_time = datetime.now(timezone.utc)
@@ -282,10 +288,20 @@ async def create_church_news(
         db.rollback()
         print(f"❌ [CHURCH_NEWS] 등록 실패: {str(e)}")
         import traceback
-        print(f"❌ [CHURCH_NEWS] Traceback: {traceback.format_exc()}")
+        error_traceback = traceback.format_exc()
+        print(f"❌ [CHURCH_NEWS] Traceback: {error_traceback}")
+        
+        # 개발 환경에서는 더 자세한 에러 정보 제공
+        error_detail = {
+            "error_type": type(e).__name__,
+            "error_message": str(e),
+            "traceback": error_traceback.split('\n')[-3:-1] if error_traceback else None  # 마지막 2줄만
+        }
+        
         return {
             "success": False,
-            "message": f"교회 소식 등록 중 오류가 발생했습니다: {str(e)}"
+            "message": f"교회 소식 등록 중 오류가 발생했습니다: {str(e)}",
+            "error_detail": error_detail  # 프론트엔드에서 활용 가능한 상세 정보
         }
 
 
@@ -414,9 +430,19 @@ async def update_church_news(
         
     except Exception as e:
         db.rollback()
+        import traceback
+        error_traceback = traceback.format_exc()
+        print(f"❌ [CHURCH_NEWS] 수정 실패: {str(e)}")
+        print(f"❌ [CHURCH_NEWS] Traceback: {error_traceback}")
+        
         return {
             "success": False,
-            "message": f"교회 소식 수정 중 오류가 발생했습니다: {str(e)}"
+            "message": f"교회 소식 수정 중 오류가 발생했습니다: {str(e)}",
+            "error_detail": {
+                "error_type": type(e).__name__,
+                "error_message": str(e),
+                "traceback": error_traceback.split('\n')[-3:-1] if error_traceback else None
+            }
         }
 
 
