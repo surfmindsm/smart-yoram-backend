@@ -83,6 +83,9 @@ Smart Yoram is a church management system with AI agent capabilities built on Fa
 - `chat_histories` & `chat_messages` - Conversation management
 - `users` & `members` - User authentication and member profiles
 - `push_notifications` & `user_devices` - Notification system
+- `community_*` - Community features (sharing, requests, job posts, music teams)
+- `church_events` - Church event management and announcements
+- `music_team_recruitment` - Music team recruitment with relationship to users
 
 ## Project Structure
 
@@ -102,6 +105,7 @@ app/
 - `openai_service.py` - GPT API integration with church context
 - `church_data_service.py` - External database query management
 - `push_notification.py` - Firebase messaging service
+- `smart_assistant_service.py` - AI assistant integration for church operations
 
 ## Important Configuration
 
@@ -152,6 +156,15 @@ The system can query external church databases for:
 - Event schedules
 - Member contact information
 
+### Community Features
+Recent additions include comprehensive community management:
+- **Music Team Recruitment** - Team formation with instrument needs and scheduling
+- **Church Events** - Event announcements with contact field separation
+- **Job Posts** - Employment opportunities with detailed requirements
+- **Community Sharing** - Resource sharing between church members
+- **Community Requests** - Member assistance requests
+- **Item Sales** - Church marketplace functionality
+
 ## Common Development Tasks
 
 ### Adding New API Endpoints
@@ -159,12 +172,19 @@ The system can query external church databases for:
 2. Add Pydantic schemas in `app/schemas/`
 3. Include router in `app/api/api_v1/api.py`
 4. Update CRUD operations if needed in `app/crud/`
+5. For community features, use `/community` prefix pattern
 
 ### Database Schema Changes
 1. Modify models in `app/models/`
 2. Generate migration: `alembic revision --autogenerate -m "description"`
 3. Review and edit migration file
 4. Apply: `alembic upgrade head`
+
+**Important Notes:**
+- Always use `ForeignKey` and `relationship` for user associations (see `music_team_recruitment.py`)
+- Include `created_at` and `updated_at` with explicit timezone support: `DateTime(timezone=True)`
+- For timestamp fields, set them explicitly in API endpoints to avoid NULL values
+- Use JSON column type for array data (e.g., instruments, skills)
 
 ### Adding AI Agent Templates
 1. Insert template data in `official_agent_templates` table
@@ -175,6 +195,15 @@ The system can query external church databases for:
 1. Update `app/models/push_notification.py` for new notification types
 2. Modify `app/services/push_notification.py` for delivery logic
 3. Add endpoints in `app/api/api_v1/endpoints/push_notifications.py`
+
+### Community Features Development Pattern
+When adding new community features, follow this established pattern:
+1. **Model**: Create with `author_id` as `ForeignKey("users.id")` and `author` relationship
+2. **API Response**: Always include `author_name` field using `recruitment.author.full_name if recruitment.author else "익명"`
+3. **Timestamps**: Set `created_at` and `updated_at` explicitly in POST/PUT endpoints
+4. **Router**: Register under `/community` prefix in `app/api/api_v1/api.py`
+5. **Filtering**: Support standard filters (status, search, pagination)
+6. **Data Validation**: Use Pydantic models with required/optional field separation
 
 ## Deployment
 
