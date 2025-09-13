@@ -124,7 +124,7 @@ def get_music_team_recruitments_list(
         recruitments_list = query.order_by(MusicTeamRecruitment.created_at.desc()).offset(offset).limit(limit).all()
         print(f"🔍 [MUSIC_TEAM_RECRUIT] 조회된 데이터 개수: {len(recruitments_list)}")
         
-        # 응답 데이터 구성
+        # 응답 데이터 구성 (작성자 정보 포함)
         data_items = []
         for recruitment in recruitments_list:
             data_items.append({
@@ -147,6 +147,7 @@ def get_music_team_recruitments_list(
                 "current_members": recruitment.current_members,
                 "target_members": recruitment.target_members,
                 "author_id": recruitment.author_id,
+                "author_name": recruitment.author.full_name if recruitment.author else "익명",
                 "church_id": recruitment.church_id,
                 "views": recruitment.views or 0,
                 "likes": recruitment.likes or 0,
@@ -296,6 +297,7 @@ def get_music_team_recruitment_detail(
                 "current_members": recruitment.current_members,
                 "target_members": recruitment.target_members,
                 "author_id": recruitment.author_id,
+                "author_name": recruitment.author.full_name if recruitment.author else "익명",
                 "church_id": recruitment.church_id,
                 "views": recruitment.views or 0,
                 "likes": recruitment.likes or 0,

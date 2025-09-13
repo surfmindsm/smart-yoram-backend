@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, JSON, Boolean
+from sqlalchemy import Column, Integer, String, Text, DateTime, JSON, Boolean, ForeignKey
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 import enum
@@ -62,10 +62,13 @@ class MusicTeamRecruitment(Base):
     status = Column(String(10), nullable=False, comment="모집 상태")
     current_members = Column(Integer, nullable=True, comment="현재 인원")
     target_members = Column(Integer, nullable=True, comment="목표 인원")
-    author_id = Column(Integer, nullable=False, comment="작성자 ID")
+    author_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="작성자 ID")
     church_id = Column(Integer, nullable=False, comment="교회 ID")
     views = Column(Integer, nullable=True, default=0, comment="조회수")
     likes = Column(Integer, nullable=True, default=0, comment="좋아요수")
     applicants_count = Column(Integer, nullable=True, default=0, comment="지원자 수")
     created_at = Column(DateTime, nullable=True, comment="생성일")
     updated_at = Column(DateTime, nullable=True, comment="수정일")
+    
+    # Relationships
+    author = relationship("User", foreign_keys=[author_id])
