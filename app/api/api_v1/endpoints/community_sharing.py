@@ -81,7 +81,7 @@ def get_sharing_list(
                 cs.author_id,
                 cs.church_id,
                 u.full_name,
-                COALESCE(c.name, c.full_name) as church_name
+                c.name as church_name
             FROM community_sharing cs
             LEFT JOIN users u ON cs.author_id = u.id
             LEFT JOIN churches c ON cs.church_id = c.id
