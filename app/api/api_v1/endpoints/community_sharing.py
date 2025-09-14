@@ -277,6 +277,47 @@ async def create_sharing_offer(
     return await create_sharing(request, sharing_data, db, current_user)
 
 
+@router.post("/fix-author-ids", response_model=dict)
+def fix_author_ids(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """author_id가 null인 데이터를 현재 사용자로 업데이트"""
+    try:
+        from sqlalchemy import text
+        
+        # church_id가 현재 사용자와 같은 데이터의 author_id를 업데이트
+        update_sql = """
+            UPDATE community_sharing 
+            SET author_id = :user_id 
+            WHERE author_id IS NULL AND church_id = :church_id
+        """
+        
+        result = db.execute(text(update_sql), {
+            "user_id": current_user.id,
+            "church_id": current_user.church_id
+        })
+        
+        db.commit()
+        updated_count = result.rowcount
+        
+        return {
+            "success": True,
+            "message": f"{updated_count}개 레코드의 author_id를 업데이트했습니다.",
+            "updated_count": updated_count,
+            "user_id": current_user.id,
+            "user_name": current_user.full_name,
+            "church_id": current_user.church_id
+        }
+        
+    except Exception as e:
+        db.rollback()
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
 @router.get("/debug-sharing-table", response_model=dict)
 def debug_sharing_table(
     db: Session = Depends(get_db),
