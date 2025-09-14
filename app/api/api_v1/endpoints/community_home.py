@@ -226,14 +226,14 @@ def get_my_posts(
         
         for table_name, type_label, author_field in tables_config:
             try:
-                # 안전한 SQL 쿼리 (기본 필드만 조회)
+                # 더 안전한 SQL 쿼리 (필수 필드만 조회)
                 query = text(f"""
                     SELECT 
                         id,
                         title,
-                        COALESCE(status, 'active') as status,
-                        COALESCE(view_count, views, 0) as views,
-                        COALESCE(likes, 0) as likes,
+                        'active' as status,
+                        0 as views,
+                        0 as likes,
                         created_at
                     FROM {table_name} 
                     WHERE {author_field} = :user_id
