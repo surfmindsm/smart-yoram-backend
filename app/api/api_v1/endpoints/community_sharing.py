@@ -89,7 +89,7 @@ def get_sharing_list(
         """
         params = {}
         
-        print(f"🚀 [DEBUG] Raw SQL로 community_sharing 조회 시작")
+        print(f"🚀 [DEBUG] Raw SQL로 community_sharing 조회 시작 - v2")
         
         # 필터링 적용
         if status:
