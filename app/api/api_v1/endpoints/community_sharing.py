@@ -406,6 +406,39 @@ def debug_sharing_table(
         }
 
 
+@router.get("/check-church-data", response_model=dict)
+def check_church_data(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Churches 테이블 데이터 직접 확인"""
+    try:
+        from sqlalchemy import text
+        db.rollback()
+        
+        # church_id 6번 데이터 확인
+        result = db.execute(text("SELECT id, name, full_name, created_at FROM churches WHERE id = 6"))
+        church_data = result.fetchall()
+        
+        # 전체 churches 테이블에서 샘플 데이터
+        result2 = db.execute(text("SELECT id, name, full_name FROM churches LIMIT 5"))
+        all_churches = result2.fetchall()
+        
+        return {
+            "success": True,
+            "data": {
+                "church_6": [{"id": row[0], "name": row[1], "full_name": row[2], "created_at": row[3].isoformat() if row[3] else None} for row in church_data],
+                "sample_churches": [{"id": row[0], "name": row[1], "full_name": row[2]} for row in all_churches]
+            }
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Church data 확인 중 오류: {str(e)}"
+        }
+
+
 @router.get("/sharing/{sharing_id}", response_model=dict)
 def get_sharing_detail(
     sharing_id: int,
