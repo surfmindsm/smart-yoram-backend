@@ -78,11 +78,11 @@ def get_sharing_list(
                 cs.view_count,
                 cs.created_at,
                 cs.updated_at,
-                cs.user_id,
+                cs.author_id,
                 cs.church_id,
                 u.full_name
             FROM community_sharing cs
-            LEFT JOIN users u ON cs.user_id = u.id
+            LEFT JOIN users u ON cs.author_id = u.id
             WHERE 1=1
         """
         params = {}
@@ -161,7 +161,7 @@ def get_sharing_list(
                 "created_at": row[12].isoformat() if row[12] else None,  # cs.created_at
                 "updated_at": row[13].isoformat() if row[13] else None,  # cs.updated_at
                 "view_count": row[11] or 0,      # cs.view_count
-                "user_id": row[14],              # cs.user_id
+                "user_id": row[14],              # cs.author_id (응답에서는 user_id로 유지)
                 "user_name": row[16] or "익명",    # u.full_name
                 "church_id": row[15]             # cs.church_id
             })
