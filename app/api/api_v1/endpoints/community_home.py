@@ -162,12 +162,14 @@ def get_my_posts(
     """내가 올린 글 목록 조회 - Raw SQL로 안전하게 조회"""
     try:
         print(f"🔍 [MY_POSTS] 사용자 {current_user.id}의 게시글 조회 시작")
+        print(f"🔍 [MY_POSTS] current_user 정보 - ID: {current_user.id}, 이름: {getattr(current_user, 'full_name', 'N/A')}, 이메일: {getattr(current_user, 'email', 'N/A')}")
+        print(f"🔍 [MY_POSTS] Raw SQL 방식 시작 - 스키마 불일치 문제 해결 시도")
         
         all_posts = []
         
         # Raw SQL로 각 테이블에서 기본 정보만 조회
         tables_config = [
-            ("community_sharing", "무료 나눔", "author_id"),  # author_id 사용
+            ("community_sharing", "무료 나눔", "user_id"),  # user_id 사용 (특별 케이스)
             ("community_requests", "물품 요청", "author_id"), 
             ("job_posts", "구인 공고", "author_id"),
             ("job_seekers", "구직 신청", "author_id"),
@@ -197,6 +199,8 @@ def get_my_posts(
                 rows = result.fetchall()
                 
                 print(f"🔍 [MY_POSTS] {table_name}: {len(rows)}개")
+                if len(rows) > 0:
+                    print(f"    첫 번째 게시글: ID={rows[0][0]}, 제목='{rows[0][1]}'")  
                 
                 for row in rows:
                     all_posts.append({
@@ -213,6 +217,7 @@ def get_my_posts(
                     
             except Exception as e:
                 print(f"❌ [MY_POSTS] {table_name} 조회 오류: {e}")
+                print(f"    SQL: SELECT id, title, COALESCE(status, 'active'), COALESCE(view_count, views, 0), COALESCE(likes, 0), created_at FROM {table_name} WHERE {author_field} = {current_user.id}")
                 continue
         
         # 타입 필터링
