@@ -215,7 +215,7 @@ def get_my_posts(
         
         # Raw SQL로 각 테이블에서 기본 정보만 조회
         tables_config = [
-            ("community_sharing", "무료 나눔", "user_id"),  # user_id 사용 (특별 케이스)
+            ("community_sharing", "무료 나눔", "author_id"),  # author_id 사용
             ("community_requests", "물품 요청", "author_id"), 
             ("job_posts", "구인 공고", "author_id"),
             ("job_seekers", "구직 신청", "author_id"),
@@ -227,6 +227,9 @@ def get_my_posts(
         
         for table_name, type_label, author_field in tables_config:
             try:
+                # 각 테이블마다 새로운 트랜잭션 시작 (rollback 방지)
+                db.rollback()
+                
                 # 더 안전한 SQL 쿼리 (필수 필드만 조회)
                 query = text(f"""
                     SELECT 
