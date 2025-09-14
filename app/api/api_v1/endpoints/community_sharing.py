@@ -80,9 +80,11 @@ def get_sharing_list(
                 cs.updated_at,
                 cs.author_id,
                 cs.church_id,
-                u.full_name
+                u.full_name,
+                c.name as church_name
             FROM community_sharing cs
             LEFT JOIN users u ON cs.author_id = u.id
+            LEFT JOIN churches c ON cs.church_id = c.id
             WHERE 1=1
         """
         params = {}
@@ -163,7 +165,8 @@ def get_sharing_list(
                 "view_count": row[11] or 0,      # cs.view_count
                 "user_id": row[14],              # cs.author_id (응답에서는 user_id로 유지)
                 "user_name": row[16] or "익명",    # u.full_name
-                "church_id": row[15]             # cs.church_id
+                "church_id": row[15],            # cs.church_id
+                "church_name": row[17] or f"교회 {row[15]}"  # c.name (교회명)
             })
         
         total_pages = (total_count + limit - 1) // limit
