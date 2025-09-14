@@ -162,6 +162,7 @@ def get_sharing_list(
             if sharing_list:
                 print(f"🔍 [DEBUG] First row data: {sharing_list[0]}")
                 print(f"🔍 [DEBUG] First row length: {len(sharing_list[0])}")
+                print(f"🔍 [DEBUG] Church ID: {sharing_list[0][15]}, Church Name: {sharing_list[0][17]}")
             else:
                 print(f"❌ [DEBUG] No data returned from query!")
                 
@@ -208,7 +209,7 @@ def get_sharing_list(
                 "user_id": row[14],              # cs.author_id (응답에서는 user_id로 유지)
                 "user_name": row[16] or "익명",    # u.full_name
                 "church_id": row[15],            # cs.church_id
-                "church_name": row[17] or ("성광교회" if row[15] == 6 else f"교회 {row[15]}")  # c.name (교회명)
+                "church_name": row[17] or f"교회 {row[15]}"  # c.name (교회명)
             })
         
         total_pages = (total_count + limit - 1) // limit
