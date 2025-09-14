@@ -211,6 +211,7 @@ def get_my_posts(
         print(f"🔍 [MY_POSTS] Raw SQL 방식 시작 - 스키마 불일치 문제 해결 시도")
         
         all_posts = []
+        table_debug_results = {}
         
         # Raw SQL로 각 테이블에서 기본 정보만 조회
         tables_config = [
@@ -244,8 +245,10 @@ def get_my_posts(
                 rows = result.fetchall()
                 
                 print(f"🔍 [MY_POSTS] {table_name}: {len(rows)}개")
+                table_debug_results[table_name] = {"status": "success", "count": len(rows)}
                 if len(rows) > 0:
-                    print(f"    첫 번째 게시글: ID={rows[0][0]}, 제목='{rows[0][1]}'")  
+                    print(f"    첫 번째 게시글: ID={rows[0][0]}, 제목='{rows[0][1]}'")
+                    table_debug_results[table_name]["first_post"] = {"id": rows[0][0], "title": rows[0][1]}
                 
                 for row in rows:
                     all_posts.append({
@@ -262,7 +265,8 @@ def get_my_posts(
                     
             except Exception as e:
                 print(f"❌ [MY_POSTS] {table_name} 조회 오류: {e}")
-                print(f"    SQL: SELECT id, title, COALESCE(status, 'active'), COALESCE(view_count, views, 0), COALESCE(likes, 0), created_at FROM {table_name} WHERE {author_field} = {current_user.id}")
+                print(f"    SQL: SELECT id, title, 'active', 0, 0, created_at FROM {table_name} WHERE {author_field} = {current_user.id}")
+                table_debug_results[table_name] = {"status": "error", "error": str(e)}
                 continue
         
         # 타입 필터링
@@ -306,7 +310,8 @@ def get_my_posts(
                 "user_email": getattr(current_user, 'email', 'N/A'),
                 "total_posts_found": total_count,
                 "api_version": "raw_sql_v2",
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
+                "table_results": table_debug_results
             }
         }
         
