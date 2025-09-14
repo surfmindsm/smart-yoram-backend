@@ -216,6 +216,12 @@ def get_sharing_list(
         
         print(f"🔍 나눔 목록 조회: 총 {total_count}개, 페이지 {page}/{total_pages}")
         
+        # 응답 데이터 구조 확인
+        if data_items:
+            print(f"🔍 [DEBUG] First item keys: {list(data_items[0].keys())}")
+            print(f"🔍 [DEBUG] First item church_id: {data_items[0].get('church_id')}")
+            print(f"🔍 [DEBUG] First item church_name: {data_items[0].get('church_name')}")
+        
         return {
             "success": True,
             "data": data_items,
