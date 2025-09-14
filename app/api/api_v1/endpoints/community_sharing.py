@@ -61,7 +61,7 @@ def get_sharing_list(
         # 기본 쿼리 (커뮤니티는 모든 교회가 공유) - User 테이블과 LEFT JOIN
         from app.models.user import User
         query = db.query(CommunitySharing, User.full_name).outerjoin(
-            User, CommunitySharing.user_id == User.id
+            User, CommunitySharing.author_id == User.id
         )
         # 커뮤니티는 교회 구분없이 모든 사용자가 볼 수 있음
         print(f"🚀 [DEBUG] 교회 필터링 제거됨 - 모든 교회 데이터 조회")

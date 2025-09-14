@@ -78,7 +78,7 @@ def get_item_request_list(
         
         # 기본 쿼리 (커뮤니티는 모든 교회가 공유) - User 테이블과 LEFT JOIN
         query = db.query(CommunityRequest, User.full_name).outerjoin(
-            User, CommunityRequest.user_id == User.id
+            User, CommunityRequest.author_id == User.id
         )
         # 커뮤니티는 교회 구분없이 모든 사용자가 볼 수 있음
         
