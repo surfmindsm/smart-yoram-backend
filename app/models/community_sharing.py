@@ -36,7 +36,7 @@ class CommunitySharing(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     church_id = Column(Integer, nullable=False, default=9998, comment="교회 ID (9998=커뮤니티)")
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="작성자 ID")  # 실제 컬럼명
+    author_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="작성자 ID")  # 실제 컬럼명
     title = Column(String, nullable=False, comment="제목")
     description = Column(Text, nullable=True, comment="상세 설명")
     category = Column(String, nullable=True, comment="카테고리")
@@ -55,4 +55,4 @@ class CommunitySharing(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     # Relationships
-    author = relationship("User", foreign_keys=[user_id])  # 실제 컬럼명 사용
+    author = relationship("User", foreign_keys=[author_id])  # 실제 컬럼명 사용

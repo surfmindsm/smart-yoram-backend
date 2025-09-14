@@ -268,7 +268,7 @@ async def create_sharing(
         # 실제 데이터베이스에 저장 (실제 테이블 컬럼명에 맞춤)
         sharing_record = CommunitySharing(
             church_id=current_user.church_id,  # 사용자의 교회 ID 사용
-            user_id=current_user.id,  # 실제 컬럼명: user_id
+            author_id=current_user.id,  # 실제 컬럼명: author_id
             title=sharing_data.title,
             description=sharing_data.description,
             category=sharing_data.category,
@@ -302,7 +302,7 @@ async def create_sharing(
                 "contact_info": sharing_record.contact_info,
                 "status": sharing_record.status,
                 "images": sharing_record.images or [],  # 실제로 DB에 저장된 이미지들
-                "user_id": sharing_record.user_id,  # 실제 컬럼명
+                "user_id": sharing_record.author_id,  # 실제 컬럼명
                 "user_name": current_user.full_name or "익명",  # 현재 사용자 이름
                 "church_id": sharing_record.church_id,
                 "created_at": sharing_record.created_at.isoformat() if sharing_record.created_at else None
