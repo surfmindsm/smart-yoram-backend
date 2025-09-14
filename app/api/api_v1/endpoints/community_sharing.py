@@ -311,10 +311,10 @@ def debug_sharing_table(
         columns_result = db.execute(text(columns_sql))
         columns_info = [{"name": row[0], "type": row[1]} for row in columns_result.fetchall()]
         
-        # 샘플 데이터 몇 개 조회 (안전한 컬럼만)
-        sample_sql = "SELECT id, title, church_id FROM community_sharing LIMIT 3"
+        # 샘플 데이터 몇 개 조회 (author_id 포함)
+        sample_sql = "SELECT id, title, church_id, author_id FROM community_sharing LIMIT 3"
         sample_result = db.execute(text(sample_sql))
-        sample_data = [{"id": row[0], "title": row[1], "church_id": row[2]} for row in sample_result.fetchall()]
+        sample_data = [{"id": row[0], "title": row[1], "church_id": row[2], "author_id": row[3]} for row in sample_result.fetchall()]
         
         return {
             "success": True,
