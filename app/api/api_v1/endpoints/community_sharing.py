@@ -301,16 +301,27 @@ def debug_sharing_table(
         count_result = db.execute(text(count_sql))
         total_count = count_result.scalar()
         
-        # 샘플 데이터 몇 개 조회
-        sample_sql = "SELECT id, title, church_id, user_id FROM community_sharing LIMIT 3"
+        # 컬럼 정보 확인
+        columns_sql = """
+            SELECT column_name, data_type 
+            FROM information_schema.columns 
+            WHERE table_name = 'community_sharing'
+            ORDER BY ordinal_position
+        """
+        columns_result = db.execute(text(columns_sql))
+        columns_info = [{"name": row[0], "type": row[1]} for row in columns_result.fetchall()]
+        
+        # 샘플 데이터 몇 개 조회 (안전한 컬럼만)
+        sample_sql = "SELECT id, title, church_id FROM community_sharing LIMIT 3"
         sample_result = db.execute(text(sample_sql))
-        sample_data = [{"id": row[0], "title": row[1], "church_id": row[2], "user_id": row[3]} for row in sample_result.fetchall()]
+        sample_data = [{"id": row[0], "title": row[1], "church_id": row[2]} for row in sample_result.fetchall()]
         
         return {
             "success": True,
             "debug_info": {
                 "table_exists": table_exists,
                 "total_count": total_count,
+                "columns_info": columns_info,
                 "sample_data": sample_data,
                 "current_user_id": current_user.id,
                 "current_user_church_id": current_user.church_id
