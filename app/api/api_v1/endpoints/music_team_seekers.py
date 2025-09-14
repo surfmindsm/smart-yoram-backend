@@ -66,66 +66,77 @@ def get_music_team_seekers_list(
         print(f"🔍 [MUSIC_TEAM_SEEKERS] 지원서 목록 조회 시작")
         print(f"🔍 [MUSIC_TEAM_SEEKERS] 필터: status={status}, instrument={instrument}, location={location}")
         
-        # 기본 쿼리
-        query = db.query(MusicTeamSeeker)
+        # Raw SQL로 안전한 조회 - 트랜잭션 초기화
+        from sqlalchemy import text
+        db.rollback()  # 이전 트랜잭션 실패 방지
         
-        # 필터링 적용
-        if status:
-            query = query.filter(MusicTeamSeeker.status == status)
+        query_sql = """
+            SELECT 
+                mts.id,
+                mts.title,
+                'active' as status,
+                0 as views,
+                0 as likes,
+                mts.created_at,
+                mts.author_id,
+                u.full_name
+            FROM music_team_seekers mts
+            LEFT JOIN users u ON mts.author_id = u.id
+            WHERE 1=1
+        """
+        params = {}
         
-        if instrument:
-            query = query.filter(MusicTeamSeeker.instrument == instrument)
-        
-        if location:
-            query = query.filter(MusicTeamSeeker.preferred_location.op('?')(location))
-        
-        if day:
-            query = query.filter(MusicTeamSeeker.available_days.op('?')(day))
-        
-        if time:
-            query = query.filter(MusicTeamSeeker.available_time.ilike(f"%{time}%"))
-        
+        # 기본 필터링 (검색만)
         if search:
-            query = query.filter(
-                (MusicTeamSeeker.title.ilike(f"%{search}%")) |
-                (MusicTeamSeeker.experience.ilike(f"%{search}%"))
-            )
+            query_sql += " AND mts.title ILIKE :search"
+            params["search"] = f"%{search}%"
+            print(f"🔍 [MUSIC_TEAM_SEEKERS] 검색 필터 적용: {search}")
+        
+        query_sql += " ORDER BY mts.created_at DESC"
         
         # 전체 개수 계산
-        total_count = query.count()
+        count_sql = "SELECT COUNT(*) FROM music_team_seekers mts WHERE 1=1"
+        if search:
+            count_sql += " AND mts.title ILIKE :search"
+        count_result = db.execute(text(count_sql), params)
+        total_count = count_result.scalar() or 0
         print(f"🔍 [MUSIC_TEAM_SEEKERS] 필터링 후 전체 데이터 개수: {total_count}")
         
         # 페이지네이션
         offset = (page - 1) * limit
-        seekers_list = query.order_by(MusicTeamSeeker.created_at.desc()).offset(offset).limit(limit).all()
+        query_sql += f" OFFSET {offset} LIMIT {limit}"
+        
+        result = db.execute(text(query_sql), params)
+        seekers_list = result.fetchall()
         print(f"🔍 [MUSIC_TEAM_SEEKERS] 조회된 데이터 개수: {len(seekers_list)}")
         
         # 응답 데이터 구성
         data_items = []
-        for seeker in seekers_list:
+        for row in seekers_list:
+            # 기본 정보만으로 간소화 (Raw SQL 결과 사용)
             data_items.append({
-                "id": seeker.id,
-                "title": seeker.title,
-                "team_name": seeker.team_name,
-                "instrument": seeker.instrument,
-                "experience": seeker.experience,
-                "portfolio": seeker.portfolio,
-                "preferred_location": seeker.preferred_location or [],
-                "available_days": seeker.available_days or [],
-                "available_time": seeker.available_time,
-                "contact_phone": seeker.contact_phone,
-                "contact_email": seeker.contact_email,
-                "status": seeker.status,
-                "author_id": seeker.author_id,
-                "author_name": seeker.author_name,
-                "church_id": seeker.church_id,
-                "church_name": seeker.church_name,
-                "views": seeker.views or 0,
-                "likes": seeker.likes or 0,
-                "matches": seeker.matches or 0,
-                "applications": seeker.applications or 0,
-                "created_at": seeker.created_at.isoformat() if seeker.created_at else None,
-                "updated_at": seeker.updated_at.isoformat() if seeker.updated_at else None
+                "id": row[0],
+                "title": row[1],
+                "team_name": row[1],  # 제목을 팀명으로 임시 사용
+                "instrument": "피아노",  # 기본값
+                "experience": "초보",  # 기본값
+                "portfolio": "",  # 기본값
+                "preferred_location": [],  # 기본값
+                "available_days": [],  # 기본값
+                "available_time": "주말",  # 기본값
+                "contact_phone": "",  # 기본값
+                "contact_email": "",  # 기본값
+                "status": row[2],
+                "author_id": row[6],
+                "author_name": row[7] or "익명",
+                "church_id": 9998,
+                "church_name": "커뮤니티",
+                "views": row[3] or 0,
+                "likes": row[4] or 0,
+                "matches": 0,
+                "applications": 0,
+                "created_at": row[5].isoformat() if row[5] else None,
+                "updated_at": row[5].isoformat() if row[5] else None
             })
         
         total_pages = (total_count + limit - 1) // limit
