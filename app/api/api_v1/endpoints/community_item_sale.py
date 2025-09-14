@@ -41,57 +41,121 @@ def get_item_sale_list(
         print(f"🚀 [DEBUG] 커뮤니티 물건 판매 API 호출됨")
         print(f"🚀 [DEBUG] 현재 사용자: church_id={current_user.church_id}, user_id={current_user.id}")
         
-        # 기본 쿼리 - 유료 판매만 (is_free=False)
-        from app.models.user import User
-        query = db.query(CommunitySharing, User.full_name).outerjoin(
-            User, CommunitySharing.user_id == User.id
-        ).filter(CommunitySharing.is_free == False)  # 유료 판매만
+        # Raw SQL로 안전한 조회 - 실제 컬럼명 사용 (author_id)
+        from sqlalchemy import text
+        db.rollback()  # 이전 트랜잭션 실패 방지
+        
+        query_sql = """
+            SELECT 
+                cs.id,
+                cs.title,
+                cs.description,
+                cs.category,
+                cs.condition,
+                cs.price,
+                cs.is_free,
+                cs.location,
+                cs.contact_info,
+                cs.images,
+                cs.status,
+                cs.view_count,
+                cs.created_at,
+                cs.updated_at,
+                cs.author_id,
+                cs.church_id,
+                u.full_name,
+                c.name as church_name
+            FROM community_sharing cs
+            LEFT JOIN users u ON cs.author_id = u.id
+            LEFT JOIN churches c ON cs.church_id = c.id
+            WHERE cs.is_free = false
+        """
+        params = {}
+        
+        print(f"🚀 [DEBUG] Raw SQL로 물품 판매 조회 시작")
         
         # 필터링 적용
         if category:
-            query = query.filter(CommunitySharing.category == category)
+            query_sql += " AND cs.category = :category"
+            params["category"] = category
         if min_price:
-            query = query.filter(CommunitySharing.price >= min_price)
+            query_sql += " AND cs.price >= :min_price"
+            params["min_price"] = min_price
         if max_price:
-            query = query.filter(CommunitySharing.price <= max_price)
+            query_sql += " AND cs.price <= :max_price"
+            params["max_price"] = max_price
         if location:
-            query = query.filter(CommunitySharing.location.ilike(f"%{location}%"))
+            query_sql += " AND cs.location ILIKE :location"
+            params["location"] = f"%{location}%"
         if search:
-            query = query.filter(
-                (CommunitySharing.title.ilike(f"%{search}%")) |
-                (CommunitySharing.description.ilike(f"%{search}%"))
-            )
+            query_sql += " AND (cs.title ILIKE :search OR cs.description ILIKE :search)"
+            params["search"] = f"%{search}%"
+        
+        query_sql += " ORDER BY cs.created_at DESC"
         
         # 전체 개수 계산
-        total_count = query.count()
+        count_sql = "SELECT COUNT(*) FROM community_sharing cs WHERE cs.is_free = false"
+        count_params = {}
+        if category:
+            count_sql += " AND cs.category = :category"
+            count_params["category"] = category
+        if min_price:
+            count_sql += " AND cs.price >= :min_price"
+            count_params["min_price"] = min_price
+        if max_price:
+            count_sql += " AND cs.price <= :max_price"
+            count_params["max_price"] = max_price
+        if location:
+            count_sql += " AND cs.location ILIKE :location"
+            count_params["location"] = f"%{location}%"
+        if search:
+            count_sql += " AND (cs.title ILIKE :search OR cs.description ILIKE :search)"
+            count_params["search"] = f"%{search}%"
+            
+        count_result = db.execute(text(count_sql), count_params)
+        total_count = count_result.scalar() or 0
         print(f"🚀 [DEBUG] 총 판매 데이터 개수: {total_count}")
         
         # 페이지네이션
         offset = (page - 1) * limit
-        sale_list = query.order_by(CommunitySharing.created_at.desc()).offset(offset).limit(limit).all()
+        query_sql += f" OFFSET {offset} LIMIT {limit}"
+        
+        result = db.execute(text(query_sql), params)
+        sale_list = result.fetchall()
         print(f"🚀 [DEBUG] 조회된 판매 데이터 개수: {len(sale_list)}")
         
         # 응답 데이터 구성
         data_items = []
-        for sale_item, user_full_name in sale_list:
+        for row in sale_list:
+            # Raw SQL 결과를 인덱스로 접근 (실제 컬럼 순서대로)
+            images_data = row[9] if row[9] else []  # JSON 컬럼
+            # JSON 문자열인 경우 파싱
+            if isinstance(images_data, str):
+                try:
+                    import json
+                    images_data = json.loads(images_data)
+                except:
+                    images_data = []
+            
             data_items.append({
-                "id": sale_item.id,
-                "title": sale_item.title,
-                "description": sale_item.description,
-                "category": sale_item.category,
-                "condition": sale_item.condition,
-                "price": sale_item.price,
-                "is_free": sale_item.is_free,
-                "status": sale_item.status,
-                "location": sale_item.location,
-                "contact_info": sale_item.contact_info,
-                "images": sale_item.images or [],
-                "created_at": sale_item.created_at.isoformat() if sale_item.created_at else None,
-                "updated_at": sale_item.updated_at.isoformat() if sale_item.updated_at else None,
-                "view_count": sale_item.view_count or 0,
-                "user_id": sale_item.user_id,
-                "user_name": user_full_name or "익명",
-                "church_id": sale_item.church_id
+                "id": row[0],                    # cs.id
+                "title": row[1],                 # cs.title  
+                "description": row[2],           # cs.description
+                "category": row[3],              # cs.category
+                "condition": row[4],             # cs.condition
+                "price": float(row[5]) if row[5] else 0,  # cs.price
+                "is_free": row[6],               # cs.is_free
+                "status": row[10],               # cs.status
+                "location": row[7],              # cs.location
+                "contact_info": row[8],          # cs.contact_info
+                "images": images_data,           # cs.images (JSON)
+                "created_at": row[12].isoformat() if row[12] else None,  # cs.created_at
+                "updated_at": row[13].isoformat() if row[13] else None,  # cs.updated_at
+                "view_count": row[11] or 0,      # cs.view_count
+                "user_id": row[14],              # cs.author_id (응답에서는 user_id로 유지)
+                "user_name": row[16] or "익명",    # u.full_name
+                "church_id": row[15],            # cs.church_id
+                "church_name": row[17] or f"교회 {row[15]}"  # c.name (교회명)
             })
         
         total_pages = (total_count + limit - 1) // limit
