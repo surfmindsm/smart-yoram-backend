@@ -213,7 +213,7 @@ async def create_item_sale(
         # 실제 데이터베이스에 저장 (유료 판매)
         sale_record = CommunitySharing(
             church_id=current_user.church_id,
-            user_id=current_user.id,
+            author_id=current_user.id,
             title=sale_data.title,
             description=sale_data.description,
             category=sale_data.category,
@@ -247,7 +247,7 @@ async def create_item_sale(
                 "contact_info": sale_record.contact_info,
                 "status": sale_record.status,
                 "images": sale_record.images or [],
-                "user_id": sale_record.user_id,
+                "user_id": sale_record.author_id,
                 "user_name": current_user.full_name or "익명",
                 "church_id": sale_record.church_id,
                 "created_at": sale_record.created_at.isoformat() if sale_record.created_at else None
