@@ -149,6 +149,51 @@ def get_recent_posts(
         }
 
 
+@router.get("/debug-user")
+def debug_current_user(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """현재 사용자 정보 및 간단한 데이터베이스 테스트"""
+    try:
+        print(f"🔍 [DEBUG] 사용자 디버깅 - ID: {current_user.id}")
+        
+        # 간단한 테이블 존재 확인
+        test_results = {}
+        tables_to_test = [
+            "community_music_teams", "church_events", "job_posts", 
+            "music_team_seekers", "church_news"
+        ]
+        
+        for table_name in tables_to_test:
+            try:
+                result = db.execute(text(f"SELECT COUNT(*) FROM {table_name} WHERE author_id = :user_id"), 
+                                  {"user_id": current_user.id})
+                count = result.scalar()
+                test_results[table_name] = {"status": "ok", "count": count}
+            except Exception as e:
+                test_results[table_name] = {"status": "error", "error": str(e)}
+        
+        return {
+            "success": True,
+            "current_user": {
+                "id": current_user.id,
+                "full_name": getattr(current_user, 'full_name', None),
+                "email": getattr(current_user, 'email', None),
+                "church_id": getattr(current_user, 'church_id', None),
+            },
+            "table_tests": test_results,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
+
 @router.get("/my-posts")
 def get_my_posts(
     post_type: Optional[str] = Query(None, description="게시글 타입 필터"),
@@ -254,11 +299,21 @@ def get_my_posts(
                 "per_page": limit,
                 "has_next": page < total_pages,
                 "has_prev": page > 1
+            },
+            "_debug_info": {
+                "user_id": current_user.id,
+                "user_name": getattr(current_user, 'full_name', 'N/A'),
+                "user_email": getattr(current_user, 'email', 'N/A'),
+                "total_posts_found": total_count,
+                "api_version": "raw_sql_v2",
+                "timestamp": datetime.now().isoformat()
             }
         }
         
     except Exception as e:
         print(f"❌ [MY_POSTS] 전체 조회 오류: {str(e)}")
+        import traceback
+        print(f"❌ [MY_POSTS] Traceback: {traceback.format_exc()}")
         return {
             "success": True,
             "data": [],
@@ -269,5 +324,11 @@ def get_my_posts(
                 "per_page": limit,
                 "has_next": False,
                 "has_prev": False
+            },
+            "_debug_info": {
+                "user_id": getattr(current_user, 'id', 'unknown'),
+                "error": str(e),
+                "api_version": "raw_sql_v2_error",
+                "timestamp": datetime.now().isoformat()
             }
         }
