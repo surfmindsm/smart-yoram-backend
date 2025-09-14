@@ -58,57 +58,112 @@ def get_sharing_list(
         print(f"🚀 [DEBUG] 커뮤니티 나눔 API 호출됨 - 배포 버전 2024-09-11")
         print(f"🚀 [DEBUG] 현재 사용자: church_id={current_user.church_id}, user_id={current_user.id}")
         
-        # 기본 쿼리 (커뮤니티는 모든 교회가 공유) - User 테이블과 LEFT JOIN
-        from app.models.user import User
-        query = db.query(CommunitySharing, User.full_name).outerjoin(
-            User, CommunitySharing.author_id == User.id
-        )
-        # 커뮤니티는 교회 구분없이 모든 사용자가 볼 수 있음
-        print(f"🚀 [DEBUG] 교회 필터링 제거됨 - 모든 교회 데이터 조회")
+        # Raw SQL로 안전한 조회 - 트랜잭션 초기화 및 실제 컬럼명 사용
+        from sqlalchemy import text
+        db.rollback()  # 이전 트랜잭션 실패 방지
+        
+        query_sql = """
+            SELECT 
+                cs.id,
+                cs.title,
+                cs.description,
+                cs.category,
+                cs.condition,
+                cs.price,
+                cs.is_free,
+                cs.location,
+                cs.contact_info,
+                cs.images,
+                cs.status,
+                cs.view_count,
+                cs.created_at,
+                cs.updated_at,
+                cs.user_id,
+                cs.church_id,
+                u.full_name
+            FROM community_sharing cs
+            LEFT JOIN users u ON cs.user_id = u.id
+            WHERE 1=1
+        """
+        params = {}
+        
+        print(f"🚀 [DEBUG] Raw SQL로 community_sharing 조회 시작")
         
         # 필터링 적용
         if status:
-            query = query.filter(CommunitySharing.status == status)
+            query_sql += " AND cs.status = :status"
+            params["status"] = status
         if category:
-            query = query.filter(CommunitySharing.category == category)
+            query_sql += " AND cs.category = :category"  
+            params["category"] = category
         if location:
-            query = query.filter(CommunitySharing.location.ilike(f"%{location}%"))
+            query_sql += " AND cs.location ILIKE :location"
+            params["location"] = f"%{location}%"
         if search:
-            query = query.filter(
-                (CommunitySharing.title.ilike(f"%{search}%")) |
-                (CommunitySharing.description.ilike(f"%{search}%"))
-            )
+            query_sql += " AND (cs.title ILIKE :search OR cs.description ILIKE :search)"
+            params["search"] = f"%{search}%"
+        
+        query_sql += " ORDER BY cs.created_at DESC"
         
         # 전체 개수 계산
-        total_count = query.count()
+        count_sql = "SELECT COUNT(*) FROM community_sharing cs WHERE 1=1"
+        count_params = {}
+        if status:
+            count_sql += " AND cs.status = :status"
+            count_params["status"] = status
+        if category:
+            count_sql += " AND cs.category = :category"
+            count_params["category"] = category
+        if location:
+            count_sql += " AND cs.location ILIKE :location"
+            count_params["location"] = f"%{location}%"
+        if search:
+            count_sql += " AND (cs.title ILIKE :search OR cs.description ILIKE :search)"
+            count_params["search"] = f"%{search}%"
+            
+        count_result = db.execute(text(count_sql), count_params)
+        total_count = count_result.scalar() or 0
         print(f"🚀 [DEBUG] 총 데이터 개수: {total_count}")
         
         # 페이지네이션
         offset = (page - 1) * limit
-        sharing_list = query.order_by(CommunitySharing.created_at.desc()).offset(offset).limit(limit).all()
+        query_sql += f" OFFSET {offset} LIMIT {limit}"
+        
+        result = db.execute(text(query_sql), params)
+        sharing_list = result.fetchall()
         print(f"🚀 [DEBUG] 조회된 데이터 개수: {len(sharing_list)}")
         
         # 응답 데이터 구성
         data_items = []
-        for sharing, user_full_name in sharing_list:
+        for row in sharing_list:
+            # Raw SQL 결과를 인덱스로 접근 (실제 컬럼 순서대로)
+            images_data = row[9] if row[9] else []  # JSON 컬럼
+            # JSON 문자열인 경우 파싱
+            if isinstance(images_data, str):
+                try:
+                    import json
+                    images_data = json.loads(images_data)
+                except:
+                    images_data = []
+            
             data_items.append({
-                "id": sharing.id,
-                "title": sharing.title,
-                "description": sharing.description,
-                "category": sharing.category,
-                "condition": sharing.condition,
-                "price": sharing.price or 0,  # 실제 컬럼
-                "is_free": sharing.is_free,  # 실제 컬럼
-                "status": sharing.status,
-                "location": sharing.location,
-                "contact_info": sharing.contact_info,
-                "images": sharing.images or [],  # JSON 컬럼으로 실제 존재함!
-                "created_at": sharing.created_at.isoformat() if sharing.created_at else None,
-                "updated_at": sharing.updated_at.isoformat() if sharing.updated_at else None,
-                "view_count": sharing.view_count or 0,  # 실제 컬럼명
-                "user_id": sharing.user_id,  # 실제 컬럼명
-                "user_name": user_full_name or "익명",  # 사용자 이름 추가
-                "church_id": sharing.church_id
+                "id": row[0],                    # cs.id
+                "title": row[1],                 # cs.title  
+                "description": row[2],           # cs.description
+                "category": row[3],              # cs.category
+                "condition": row[4],             # cs.condition
+                "price": float(row[5]) if row[5] else 0,  # cs.price
+                "is_free": row[6],               # cs.is_free
+                "status": row[10],               # cs.status
+                "location": row[7],              # cs.location
+                "contact_info": row[8],          # cs.contact_info
+                "images": images_data,           # cs.images (JSON)
+                "created_at": row[12].isoformat() if row[12] else None,  # cs.created_at
+                "updated_at": row[13].isoformat() if row[13] else None,  # cs.updated_at
+                "view_count": row[11] or 0,      # cs.view_count
+                "user_id": row[14],              # cs.user_id
+                "user_name": row[16] or "익명",    # u.full_name
+                "church_id": row[15]             # cs.church_id
             })
         
         total_pages = (total_count + limit - 1) // limit
