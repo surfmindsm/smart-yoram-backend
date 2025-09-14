@@ -162,13 +162,21 @@ def get_my_posts(
     """내가 올린 글 목록 조회 - 모든 커뮤니티 테이블에서 조회"""
     try:
         print(f"🔍 [MY_POSTS] 사용자 {current_user.id}의 게시글 조회 시작")
+        print(f"🔍 [MY_POSTS] current_user 정보 - ID: {current_user.id}, 이름: {getattr(current_user, 'full_name', 'N/A')}, 이메일: {getattr(current_user, 'email', 'N/A')}")
         all_posts = []
         
         # 1. 무료 나눔 (community_sharing)
         try:
-            sharing_posts = db.query(CommunitySharing).filter(
-                CommunitySharing.author_id == current_user.id
-            ).all()
+            # community_sharing 테이블 필드 확인 후 적절히 조회
+            try:
+                sharing_posts = db.query(CommunitySharing).filter(
+                    CommunitySharing.author_id == current_user.id
+                ).all()
+            except AttributeError:
+                # author_id가 없으면 user_id 사용
+                sharing_posts = db.query(CommunitySharing).filter(
+                    CommunitySharing.user_id == current_user.id
+                ).all()
             print(f"🔍 [MY_POSTS] 무료 나눔: {len(sharing_posts)}개")
             
             for post in sharing_posts:
