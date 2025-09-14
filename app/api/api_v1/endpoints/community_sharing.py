@@ -277,6 +277,57 @@ async def create_sharing_offer(
     return await create_sharing(request, sharing_data, db, current_user)
 
 
+@router.get("/debug-sharing-table", response_model=dict)
+def debug_sharing_table(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """디버깅용: community_sharing 테이블 상태 확인"""
+    try:
+        from sqlalchemy import text
+        
+        # 테이블 존재 확인
+        table_exists_sql = """
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_name = 'community_sharing'
+            )
+        """
+        exists_result = db.execute(text(table_exists_sql))
+        table_exists = exists_result.scalar()
+        
+        # 전체 레코드 수 확인
+        count_sql = "SELECT COUNT(*) FROM community_sharing"
+        count_result = db.execute(text(count_sql))
+        total_count = count_result.scalar()
+        
+        # 샘플 데이터 몇 개 조회
+        sample_sql = "SELECT id, title, church_id, user_id FROM community_sharing LIMIT 3"
+        sample_result = db.execute(text(sample_sql))
+        sample_data = [{"id": row[0], "title": row[1], "church_id": row[2], "user_id": row[3]} for row in sample_result.fetchall()]
+        
+        return {
+            "success": True,
+            "debug_info": {
+                "table_exists": table_exists,
+                "total_count": total_count,
+                "sample_data": sample_data,
+                "current_user_id": current_user.id,
+                "current_user_church_id": current_user.church_id
+            }
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "debug_info": {
+                "current_user_id": getattr(current_user, 'id', 'unknown'),
+                "current_user_church_id": getattr(current_user, 'church_id', 'unknown')
+            }
+        }
+
+
 @router.get("/sharing/{sharing_id}", response_model=dict)
 def get_sharing_detail(
     sharing_id: int,
