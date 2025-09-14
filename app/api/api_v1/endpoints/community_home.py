@@ -17,6 +17,33 @@ from app.models.church_events import ChurchEvent
 router = APIRouter()
 
 
+def get_views_count(post):
+    """조회수를 안전하게 가져오는 헬퍼 함수"""
+    return getattr(post, 'view_count', 0) or getattr(post, 'views', 0) or 0
+
+
+def get_author_name(post):
+    """작성자 이름을 안전하게 가져오는 헬퍼 함수"""
+    if hasattr(post, 'author') and post.author:
+        return post.author.full_name if hasattr(post.author, 'full_name') else "익명"
+    return "익명"
+
+
+def format_post_response(post, post_type, type_label):
+    """게시글 응답을 표준화하는 헬퍼 함수"""
+    return {
+        "id": post.id,
+        "type": post_type,
+        "type_label": type_label,
+        "title": post.title,
+        "status": post.status,
+        "created_at": post.created_at.isoformat() if post.created_at else None,
+        "views": get_views_count(post),
+        "likes": post.likes or 0,
+        "author_name": get_author_name(post)
+    }
+
+
 @router.get("/stats", response_model=Dict[str, Any])
 def get_community_stats(
     db: Session = Depends(get_db),
@@ -145,16 +172,7 @@ def get_my_posts(
             print(f"🔍 [MY_POSTS] 무료 나눔: {len(sharing_posts)}개")
             
             for post in sharing_posts:
-                all_posts.append({
-                    "id": post.id,
-                    "type": "community-sharing",
-                    "type_label": "무료 나눔",
-                    "title": post.title,
-                    "status": post.status,
-                    "created_at": post.created_at.isoformat() if post.created_at else None,
-                    "views": getattr(post, 'view_count', 0) or getattr(post, 'views', 0) or 0,
-                    "likes": post.likes or 0,
-                })
+                all_posts.append(format_post_response(post, "community-sharing", "무료 나눔"))
         except Exception as e:
             print(f"❌ [MY_POSTS] 무료 나눔 조회 오류: {e}")
         
@@ -166,16 +184,7 @@ def get_my_posts(
             print(f"🔍 [MY_POSTS] 물품 요청: {len(request_posts)}개")
             
             for post in request_posts:
-                all_posts.append({
-                    "id": post.id,
-                    "type": "community-request",
-                    "type_label": "물품 요청", 
-                    "title": post.title,
-                    "status": post.status,
-                    "created_at": post.created_at.isoformat() if post.created_at else None,
-                    "views": getattr(post, 'view_count', 0) or getattr(post, 'views', 0) or 0,
-                    "likes": post.likes or 0,
-                })
+                all_posts.append(format_post_response(post, "community-request", "물품 요청"))
         except Exception as e:
             print(f"❌ [MY_POSTS] 물품 요청 조회 오류: {e}")
         
@@ -187,16 +196,7 @@ def get_my_posts(
             print(f"🔍 [MY_POSTS] 구인 공고: {len(job_posts)}개")
             
             for post in job_posts:
-                all_posts.append({
-                    "id": post.id,
-                    "type": "job-posts",
-                    "type_label": "구인 공고",
-                    "title": post.title,
-                    "status": post.status,
-                    "created_at": post.created_at.isoformat() if post.created_at else None,
-                    "views": getattr(post, 'view_count', 0) or getattr(post, 'views', 0) or 0,
-                    "likes": post.likes or 0,
-                })
+                all_posts.append(format_post_response(post, "job-posts", "구인 공고"))
         except Exception as e:
             print(f"❌ [MY_POSTS] 구인 공고 조회 오류: {e}")
         
@@ -208,16 +208,7 @@ def get_my_posts(
             print(f"🔍 [MY_POSTS] 구직 신청: {len(job_seekers)}개")
             
             for post in job_seekers:
-                all_posts.append({
-                    "id": post.id,
-                    "type": "job-seekers",
-                    "type_label": "구직 신청",
-                    "title": post.title,
-                    "status": post.status,
-                    "created_at": post.created_at.isoformat() if post.created_at else None,
-                    "views": getattr(post, 'view_count', 0) or getattr(post, 'views', 0) or 0,
-                    "likes": post.likes or 0,
-                })
+                all_posts.append(format_post_response(post, "job-seekers", "구직 신청"))
         except Exception as e:
             print(f"❌ [MY_POSTS] 구직 신청 조회 오류: {e}")
         
@@ -229,16 +220,7 @@ def get_my_posts(
             print(f"🔍 [MY_POSTS] 음악팀 모집: {len(music_recruits)}개")
             
             for post in music_recruits:
-                all_posts.append({
-                    "id": post.id,
-                    "type": "music-team-recruitment",
-                    "type_label": "음악팀 모집",
-                    "title": post.title,
-                    "status": post.status,
-                    "created_at": post.created_at.isoformat() if post.created_at else None,
-                    "views": getattr(post, 'view_count', 0) or getattr(post, 'views', 0) or 0,
-                    "likes": post.likes or 0,
-                })
+                all_posts.append(format_post_response(post, "music-team-recruitment", "음악팀 모집"))
         except Exception as e:
             print(f"❌ [MY_POSTS] 음악팀 모집 조회 오류: {e}")
         
@@ -250,16 +232,7 @@ def get_my_posts(
             print(f"🔍 [MY_POSTS] 음악팀 참여: {len(music_seekers)}개")
             
             for post in music_seekers:
-                all_posts.append({
-                    "id": post.id,
-                    "type": "music-team-seekers",
-                    "type_label": "음악팀 참여",
-                    "title": post.title,
-                    "status": post.status,
-                    "created_at": post.created_at.isoformat() if post.created_at else None,
-                    "views": getattr(post, 'view_count', 0) or getattr(post, 'views', 0) or 0,
-                    "likes": post.likes or 0,
-                })
+                all_posts.append(format_post_response(post, "music-team-seekers", "음악팀 참여"))
         except Exception as e:
             print(f"❌ [MY_POSTS] 음악팀 참여 조회 오류: {e}")
         
@@ -271,16 +244,7 @@ def get_my_posts(
             print(f"🔍 [MY_POSTS] 교회 소식: {len(church_news)}개")
             
             for post in church_news:
-                all_posts.append({
-                    "id": post.id,
-                    "type": "church-news",
-                    "type_label": "교회 소식",
-                    "title": post.title,
-                    "status": post.status,
-                    "created_at": post.created_at.isoformat() if post.created_at else None,
-                    "views": getattr(post, 'view_count', 0) or getattr(post, 'views', 0) or 0,
-                    "likes": post.likes or 0,
-                })
+                all_posts.append(format_post_response(post, "church-news", "교회 소식"))
         except Exception as e:
             print(f"❌ [MY_POSTS] 교회 소식 조회 오류: {e}")
         
@@ -292,16 +256,7 @@ def get_my_posts(
             print(f"🔍 [MY_POSTS] 교회 행사: {len(church_events)}개")
             
             for post in church_events:
-                all_posts.append({
-                    "id": post.id,
-                    "type": "church-events",
-                    "type_label": "교회 행사",
-                    "title": post.title,
-                    "status": post.status,
-                    "created_at": post.created_at.isoformat() if post.created_at else None,
-                    "views": getattr(post, 'view_count', 0) or getattr(post, 'views', 0) or 0,
-                    "likes": post.likes or 0,
-                })
+                all_posts.append(format_post_response(post, "church-events", "교회 행사"))
         except Exception as e:
             print(f"❌ [MY_POSTS] 교회 행사 조회 오류: {e}")
         

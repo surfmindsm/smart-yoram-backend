@@ -29,8 +29,7 @@ class JobPost(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     church_id = Column(Integer, nullable=False, default=9998, comment="교회 ID (9998=커뮤니티)")
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="작성자 ID")
-    author_id = Column(Integer, nullable=True, comment="작성자 ID (중복)")
+    author_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="작성자 ID")
     
     # 기본 정보
     title = Column(String, nullable=False, comment="제목")
@@ -49,7 +48,6 @@ class JobPost(Base):
     
     # 통계 (실제 테이블에 both view_count, views 존재)
     view_count = Column(Integer, default=0, comment="조회수")
-    views = Column(Integer, default=0, comment="조회수 (중복)")
     likes = Column(Integer, default=0, comment="좋아요수")
     
     # 시간 정보
@@ -57,7 +55,7 @@ class JobPost(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     # Relationships
-    author = relationship("User", foreign_keys=[user_id])
+    author = relationship("User", foreign_keys=[author_id])
 
 
 class JobSeeker(Base):
@@ -67,8 +65,7 @@ class JobSeeker(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     church_id = Column(Integer, nullable=False, default=9998, comment="교회 ID (9998=커뮤니티)")
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="작성자 ID")
-    author_id = Column(Integer, nullable=True, comment="작성자 ID (중복)")
+    author_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="작성자 ID")
     
     # 기본 정보
     title = Column(String, nullable=False, comment="제목")
@@ -88,7 +85,6 @@ class JobSeeker(Base):
     
     # 통계
     view_count = Column(Integer, default=0, comment="조회수")
-    views = Column(Integer, default=0, comment="조회수 (중복)")
     likes = Column(Integer, default=0, comment="좋아요수")
     
     # 시간 정보
@@ -96,4 +92,4 @@ class JobSeeker(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     # Relationships
-    author = relationship("User", foreign_keys=[user_id])
+    author = relationship("User", foreign_keys=[author_id])

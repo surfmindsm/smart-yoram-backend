@@ -48,9 +48,7 @@ class CommunitySharing(Base):
     images = Column(JSON, nullable=True, comment="이미지 URL 배열")  # 실제로 존재함!
     status = Column(String, nullable=True, default="available", comment="상태")
     view_count = Column(Integer, nullable=True, default=0, comment="조회수")  # 실제 컬럼명
-    views = Column(Integer, nullable=True, default=0, comment="조회수2")  # 중복 컬럼
     likes = Column(Integer, nullable=True, default=0, comment="좋아요 수")
-    author_id = Column(Integer, nullable=True, comment="작성자 ID2")  # 중복 컬럼
     
     # 시간 정보
     created_at = Column(DateTime(timezone=True), server_default=func.now())
