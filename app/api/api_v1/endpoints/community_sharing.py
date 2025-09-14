@@ -90,6 +90,26 @@ def get_sharing_list(
         params = {}
         
         print(f"🚀 [DEBUG] Raw SQL로 community_sharing 조회 시작 - v2")
+        print(f"🔍 [DEBUG] Database connection status: {db}")
+        print(f"🔍 [DEBUG] Current user: {current_user.id}, Church: {current_user.church_id}")
+        
+        # 먼저 테이블 존재 확인
+        test_sql = "SELECT COUNT(*) FROM community_sharing"
+        try:
+            test_result = db.execute(text(test_sql))
+            total_records = test_result.scalar()
+            print(f"🔍 [DEBUG] Total records in community_sharing: {total_records}")
+        except Exception as test_e:
+            print(f"❌ [DEBUG] Error testing table: {test_e}")
+            
+        # 테이블 구조 확인
+        try:
+            structure_sql = "SELECT column_name FROM information_schema.columns WHERE table_name = 'community_sharing' ORDER BY ordinal_position"
+            structure_result = db.execute(text(structure_sql))
+            columns = [row[0] for row in structure_result.fetchall()]
+            print(f"🔍 [DEBUG] Table columns: {columns}")
+        except Exception as struct_e:
+            print(f"❌ [DEBUG] Error checking structure: {struct_e}")
         
         # 필터링 적용
         if status:
@@ -131,9 +151,31 @@ def get_sharing_list(
         offset = (page - 1) * limit
         query_sql += f" OFFSET {offset} LIMIT {limit}"
         
-        result = db.execute(text(query_sql), params)
-        sharing_list = result.fetchall()
-        print(f"🚀 [DEBUG] 조회된 데이터 개수: {len(sharing_list)}")
+        print(f"🔍 [DEBUG] Final SQL query: {query_sql}")
+        print(f"🔍 [DEBUG] Query params: {params}")
+        
+        try:
+            result = db.execute(text(query_sql), params)
+            sharing_list = result.fetchall()
+            print(f"🚀 [DEBUG] 조회된 데이터 개수: {len(sharing_list)}")
+            
+            if sharing_list:
+                print(f"🔍 [DEBUG] First row data: {sharing_list[0]}")
+                print(f"🔍 [DEBUG] First row length: {len(sharing_list[0])}")
+            else:
+                print(f"❌ [DEBUG] No data returned from query!")
+                
+                # 데이터가 없을 때 추가 확인
+                simple_check = "SELECT id, title, author_id FROM community_sharing LIMIT 5"
+                simple_result = db.execute(text(simple_check))
+                simple_data = simple_result.fetchall()
+                print(f"🔍 [DEBUG] Simple check result: {len(simple_data)} records")
+                if simple_data:
+                    for i, row in enumerate(simple_data):
+                        print(f"🔍 [DEBUG] Row {i}: id={row[0]}, title={row[1]}, author_id={row[2]}")
+        except Exception as query_e:
+            print(f"❌ [DEBUG] Query execution error: {query_e}")
+            sharing_list = []
         
         # 응답 데이터 구성
         data_items = []
