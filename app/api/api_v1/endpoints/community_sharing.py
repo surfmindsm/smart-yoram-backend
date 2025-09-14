@@ -360,6 +360,27 @@ def debug_sharing_table(
         sample_result = db.execute(text(sample_sql))
         sample_data = [{"id": row[0], "title": row[1], "church_id": row[2], "author_id": row[3]} for row in sample_result.fetchall()]
         
+        # churches 테이블 데이터 확인 (특히 church_id 6번)
+        church_sql = "SELECT id, name, full_name FROM churches WHERE id = 6"
+        church_result = db.execute(text(church_sql))
+        church_data = [{"id": row[0], "name": row[1], "full_name": row[2]} for row in church_result.fetchall()]
+        
+        # JOIN 쿼리 테스트
+        join_test_sql = """
+            SELECT 
+                cs.id,
+                cs.title,
+                cs.church_id,
+                c.name as church_name,
+                c.full_name as church_full_name
+            FROM community_sharing cs
+            LEFT JOIN churches c ON cs.church_id = c.id
+            WHERE cs.church_id = 6
+            LIMIT 2
+        """
+        join_result = db.execute(text(join_test_sql))
+        join_data = [{"id": row[0], "title": row[1], "church_id": row[2], "church_name": row[3], "church_full_name": row[4]} for row in join_result.fetchall()]
+        
         return {
             "success": True,
             "debug_info": {
@@ -367,6 +388,8 @@ def debug_sharing_table(
                 "total_count": total_count,
                 "columns_info": columns_info,
                 "sample_data": sample_data,
+                "church_data": church_data,
+                "join_test": join_data,
                 "current_user_id": current_user.id,
                 "current_user_church_id": current_user.church_id
             }
