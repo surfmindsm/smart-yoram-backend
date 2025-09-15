@@ -72,14 +72,12 @@ def get_music_team_seekers_list(
         
         query_sql = """
             SELECT 
-                mts.id,
-                mts.title,
-                'active' as status,
-                0 as views,
-                0 as likes,
-                mts.created_at,
-                mts.author_id,
-                u.full_name
+                mts.id, mts.title, mts.team_name, mts.instrument, mts.experience,
+                mts.portfolio, mts.preferred_location, mts.available_days,
+                mts.available_time, mts.contact_phone, mts.contact_email,
+                mts.status, mts.author_id, mts.church_id, mts.church_name,
+                mts.view_count, mts.likes, mts.matches, mts.applications,
+                mts.created_at, mts.updated_at, u.full_name
             FROM music_team_seekers mts
             LEFT JOIN users u ON mts.author_id = u.id
             WHERE 1=1
@@ -110,33 +108,36 @@ def get_music_team_seekers_list(
         seekers_list = result.fetchall()
         print(f"🔍 [MUSIC_TEAM_SEEKERS] 조회된 데이터 개수: {len(seekers_list)}")
         
-        # 응답 데이터 구성
+        # 응답 데이터 구성 (실제 조회된 데이터 사용)
         data_items = []
         for row in seekers_list:
-            # 기본 정보만으로 간소화 (Raw SQL 결과 사용)
+            # 배열 필드 처리 (PostgreSQL 배열을 Python 리스트로 변환)
+            preferred_location = row[6] if row[6] else []
+            available_days = row[7] if row[7] else []
+            
             data_items.append({
-                "id": row[0],
-                "title": row[1],
-                "team_name": row[1],  # 제목을 팀명으로 임시 사용
-                "instrument": "피아노",  # 기본값
-                "experience": "초보",  # 기본값
-                "portfolio": "",  # 기본값
-                "preferred_location": [],  # 기본값
-                "available_days": [],  # 기본값
-                "available_time": "주말",  # 기본값
-                "contact_phone": "",  # 기본값
-                "contact_email": "",  # 기본값
-                "status": row[2],
-                "author_id": row[6],
-                "author_name": row[7] or "익명",
-                "church_id": 9998,
-                "church_name": "커뮤니티",
-                "views": row[3] or 0,
-                "likes": row[4] or 0,
-                "matches": 0,
-                "applications": 0,
-                "created_at": row[5].isoformat() if row[5] else None,
-                "updated_at": row[5].isoformat() if row[5] else None
+                "id": row[0],                              # id
+                "title": row[1],                           # title
+                "team_name": row[2] or "",                 # team_name (실제 데이터)
+                "instrument": row[3] or "",                # instrument (실제 데이터)
+                "experience": row[4] or "",                # experience (실제 데이터)
+                "portfolio": row[5] or "",                 # portfolio (실제 데이터)
+                "preferred_location": preferred_location,   # preferred_location (실제 데이터)
+                "available_days": available_days,          # available_days (실제 데이터)
+                "available_time": row[8] or "",            # available_time (실제 데이터)
+                "contact_phone": row[9] or "",             # contact_phone (실제 데이터)
+                "contact_email": row[10] or "",            # contact_email (실제 데이터)
+                "status": row[11] or "available",          # status (실제 데이터)
+                "author_id": row[12],                      # author_id
+                "author_name": row[21] or "익명",          # full_name from users table
+                "church_id": row[13] or 9998,              # church_id (실제 데이터)
+                "church_name": row[14] or "커뮤니티",       # church_name (실제 데이터)
+                "views": row[15] or 0,                     # view_count (실제 데이터)
+                "likes": row[16] or 0,                     # likes (실제 데이터)
+                "matches": row[17] or 0,                   # matches (실제 데이터)
+                "applications": row[18] or 0,              # applications (실제 데이터)
+                "created_at": row[19].isoformat() if row[19] else None,  # created_at
+                "updated_at": row[20].isoformat() if row[20] else None   # updated_at
             })
         
         total_pages = (total_count + limit - 1) // limit
