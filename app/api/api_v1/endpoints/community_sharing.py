@@ -8,17 +8,30 @@ import json
 from app.api.deps import get_db, get_current_active_user
 from app.models.user import User
 from app.models.community_sharing import CommunitySharing
+from app.schemas.community_common import (
+    CommunityBaseRequest, 
+    StandardListResponse, 
+    StandardDetailResponse,
+    StandardContactInfo,
+    format_contact_info
+)
+from app.enums.community import CommunityStatus, CommunityCategory, map_sharing_status
+from app.utils.community_helpers import (
+    format_community_response,
+    apply_pagination,
+    create_standard_list_response,
+    create_standard_detail_response,
+    standardize_status_response
+)
 
 
-class SharingCreateRequest(BaseModel):
-    title: str
-    description: str
+class SharingCreateRequest(CommunityBaseRequest):
+    """무료 나눔 생성 요청 (공통 스키마 기반)"""
     category: str
-    condition: Optional[str] = None
-    location: str
-    contact_info: str
+    condition: Optional[str] = "good"
     images: Optional[List[str]] = []
-    status: Optional[str] = "available"
+    price: int = 0  # 무료 나눔은 항상 0원
+    is_free: bool = True  # 무료 나눔은 항상 True
 
 router = APIRouter()
 
