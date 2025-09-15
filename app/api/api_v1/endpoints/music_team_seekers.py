@@ -311,42 +311,67 @@ def get_music_team_seeker_detail(
 ):
     """음악팀 지원서 상세 조회"""
     try:
-        seeker = db.query(MusicTeamSeeker).filter(MusicTeamSeeker.id == seeker_id).first()
-        if not seeker:
+        # Raw SQL로 안전한 조회
+        from sqlalchemy import text
+        db.rollback()  # 이전 트랜잭션 실패 방지
+        
+        query_sql = """
+            SELECT 
+                mts.id, mts.title, mts.team_name, mts.instrument, mts.experience,
+                mts.portfolio, mts.preferred_location, mts.available_days,
+                mts.available_time, mts.contact_phone, mts.contact_email,
+                mts.status, mts.author_id, mts.author_name, mts.church_id, mts.church_name,
+                mts.view_count, mts.likes, mts.matches, mts.applications,
+                mts.created_at, mts.updated_at
+            FROM music_team_seekers mts
+            WHERE mts.id = :seeker_id
+        """
+        
+        result = db.execute(text(query_sql), {"seeker_id": seeker_id})
+        seeker_data = result.fetchone()
+        if not seeker_data:
             return {
                 "success": False,
                 "message": "지원서를 찾을 수 없습니다."
             }
         
         # 조회수 증가
-        seeker.views = (seeker.views or 0) + 1
+        db.execute(text("""
+            UPDATE music_team_seekers 
+            SET view_count = COALESCE(view_count, 0) + 1 
+            WHERE id = :seeker_id
+        """), {"seeker_id": seeker_id})
         db.commit()
+        
+        # 배열 필드 처리
+        preferred_location = seeker_data[6] if seeker_data[6] else []
+        available_days = seeker_data[7] if seeker_data[7] else []
         
         return {
             "success": True,
             "data": {
-                "id": seeker.id,
-                "title": seeker.title,
-                "team_name": seeker.team_name,
-                "instrument": seeker.instrument,
-                "experience": seeker.experience,
-                "portfolio": seeker.portfolio,
-                "preferred_location": seeker.preferred_location or [],
-                "available_days": seeker.available_days or [],
-                "available_time": seeker.available_time,
-                "contact_phone": seeker.contact_phone,
-                "contact_email": seeker.contact_email,
-                "status": seeker.status,
-                "author_id": seeker.author_id,
-                "author_name": seeker.author_name,
-                "church_id": seeker.church_id,
-                "church_name": seeker.church_name,
-                "views": seeker.views or 0,
-                "likes": seeker.likes or 0,
-                "matches": seeker.matches or 0,
-                "applications": seeker.applications or 0,
-                "created_at": seeker.created_at.isoformat() if seeker.created_at else None,
-                "updated_at": seeker.updated_at.isoformat() if seeker.updated_at else None
+                "id": seeker_data[0],
+                "title": seeker_data[1],
+                "team_name": seeker_data[2] or "",
+                "instrument": seeker_data[3] or "",
+                "experience": seeker_data[4] or "",
+                "portfolio": seeker_data[5] or "",
+                "preferred_location": preferred_location,
+                "available_days": available_days,
+                "available_time": seeker_data[8] or "",
+                "contact_phone": seeker_data[9] or "",
+                "contact_email": seeker_data[10] or "",
+                "status": seeker_data[11] or "available",
+                "author_id": seeker_data[12],
+                "author_name": seeker_data[13] or "익명",
+                "church_id": seeker_data[14] or 9998,
+                "church_name": seeker_data[15] or "커뮤니티",
+                "views": (seeker_data[16] or 0) + 1,  # 조회수 증가 반영
+                "likes": seeker_data[17] or 0,
+                "matches": seeker_data[18] or 0,
+                "applications": seeker_data[19] or 0,
+                "created_at": seeker_data[20].isoformat() if seeker_data[20] else None,
+                "updated_at": seeker_data[21].isoformat() if seeker_data[21] else None
             }
         }
         
@@ -366,15 +391,26 @@ async def update_music_team_seeker(
 ):
     """음악팀 지원서 수정"""
     try:
-        seeker = db.query(MusicTeamSeeker).filter(MusicTeamSeeker.id == seeker_id).first()
-        if not seeker:
+        # Raw SQL로 안전한 조회 및 권한 확인
+        from sqlalchemy import text
+        db.rollback()
+        
+        # 작성자 확인 및 데이터 조회
+        check_sql = """
+            SELECT author_id, title 
+            FROM music_team_seekers 
+            WHERE id = :seeker_id
+        """
+        result = db.execute(text(check_sql), {"seeker_id": seeker_id})
+        seeker_check = result.fetchone()
+        if not seeker_check:
             return {
                 "success": False,
                 "message": "지원서를 찾을 수 없습니다."
             }
         
         # 작성자 권한 확인
-        if seeker.author_id != current_user.id:
+        if seeker_check[0] != current_user.id:
             return {
                 "success": False,
                 "message": "본인이 작성한 지원서만 수정할 수 있습니다."
@@ -382,29 +418,51 @@ async def update_music_team_seeker(
         
         # 수정 가능한 필드 업데이트 (None이 아닌 값만)
         update_data = seeker_data.dict(exclude_unset=True)
+        current_time = datetime.now(timezone.utc)
+        
+        # Raw SQL UPDATE 문 생성
+        update_fields = []
+        update_params = {"seeker_id": seeker_id, "updated_at": current_time}
         
         for field, value in update_data.items():
-            # PostgreSQL text[] 타입과 호환되도록 배열 필드 처리
             if field in ['preferred_location', 'available_days'] and value is not None:
-                setattr(seeker, field, value if value else [])
-            else:
-                setattr(seeker, field, value)
+                update_fields.append(f"{field} = :{field}")
+                update_params[field] = value if value else []
+            elif value is not None:
+                update_fields.append(f"{field} = :{field}")
+                update_params[field] = value
         
-        # updated_at 명시적으로 설정
-        seeker.updated_at = datetime.now(timezone.utc)
-        
-        db.commit()
-        db.refresh(seeker)
-        
-        return {
-            "success": True,
-            "message": "지원서가 수정되었습니다.",
-            "data": {
-                "id": seeker.id,
-                "title": seeker.title,
-                "updated_at": seeker.updated_at.isoformat() if seeker.updated_at else None
+        if update_fields:
+            update_fields.append("updated_at = :updated_at")
+            update_sql = f"""
+                UPDATE music_team_seekers 
+                SET {', '.join(update_fields)}
+                WHERE id = :seeker_id
+                RETURNING title
+            """
+            
+            result = db.execute(text(update_sql), update_params)
+            updated_title = result.fetchone()[0]
+            db.commit()
+            
+            return {
+                "success": True,
+                "message": "지원서가 수정되었습니다.",
+                "data": {
+                    "id": seeker_id,
+                    "title": updated_title,
+                    "updated_at": current_time.isoformat()
+                }
             }
-        }
+        else:
+            return {
+                "success": True,
+                "message": "수정할 내용이 없습니다.",
+                "data": {
+                    "id": seeker_id,
+                    "title": seeker_check[1]
+                }
+            }
         
     except Exception as e:
         db.rollback()
@@ -422,21 +480,35 @@ def delete_music_team_seeker(
 ):
     """음악팀 지원서 삭제"""
     try:
-        seeker = db.query(MusicTeamSeeker).filter(MusicTeamSeeker.id == seeker_id).first()
-        if not seeker:
+        # Raw SQL로 안전한 조회 및 권한 확인
+        from sqlalchemy import text
+        db.rollback()
+        
+        # 작성자 확인
+        check_sql = """
+            SELECT author_id 
+            FROM music_team_seekers 
+            WHERE id = :seeker_id
+        """
+        result = db.execute(text(check_sql), {"seeker_id": seeker_id})
+        seeker_check = result.fetchone()
+        
+        if not seeker_check:
             return {
                 "success": False,
                 "message": "지원서를 찾을 수 없습니다."
             }
         
         # 작성자 권한 확인
-        if seeker.author_id != current_user.id:
+        if seeker_check[0] != current_user.id:
             return {
                 "success": False,
                 "message": "본인이 작성한 지원서만 삭제할 수 있습니다."
             }
         
-        db.delete(seeker)
+        # Raw SQL DELETE
+        delete_sql = "DELETE FROM music_team_seekers WHERE id = :seeker_id"
+        db.execute(text(delete_sql), {"seeker_id": seeker_id})
         db.commit()
         
         return {
