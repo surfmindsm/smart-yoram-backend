@@ -213,43 +213,81 @@ async def create_music_team_seeker(
         # 현재 시간 설정
         current_time = datetime.now(timezone.utc)
         
-        # 데이터베이스에 저장 - PostgreSQL text[] 타입과 호환되도록 배열 처리
-        seeker_record = MusicTeamSeeker(
-            title=seeker_data.get('title'),
-            team_name=seeker_data.get('team_name'),
-            instrument=seeker_data.get('instrument'),
-            experience=seeker_data.get('experience'),
-            portfolio=seeker_data.get('portfolio'),
-            preferred_location=preferred_location,  # 파싱된 배열 사용
-            available_days=available_days,  # 파싱된 배열 사용
-            available_time=seeker_data.get('available_time'),
-            contact_phone=seeker_data.get('contact_phone'),
-            contact_email=seeker_data.get('contact_email'),
-            status="available",  # 기본 상태
-            author_id=current_user.id,
-            author_name=current_user.full_name or "익명",
-            church_id=getattr(current_user, 'church_id', None),
-            church_name=getattr(current_user, 'church_name', None),
-            views=0,
-            likes=0,
-            matches=0,
-            applications=0,
-            created_at=current_time,
-            updated_at=current_time
-        )
+        # Raw SQL로 데이터 저장 (실제 테이블 구조에 맞게) - 컬럼명 불일치 해결
+        from sqlalchemy import text
         
-        print(f"🔍 [MUSIC_TEAM_SEEKERS] 지원서 레코드 저장 중...")
-        db.add(seeker_record)
+        # 실제 테이블 구조 확인
+        try:
+            db.rollback()
+            table_info_sql = """
+                SELECT column_name, data_type 
+                FROM information_schema.columns 
+                WHERE table_name = 'music_team_seekers'
+                ORDER BY ordinal_position
+            """
+            result = db.execute(text(table_info_sql))
+            columns = result.fetchall()
+            column_names = [col[0] for col in columns]
+            print(f"🔍 [MUSIC_TEAM_SEEKERS] 실제 테이블 컬럼: {column_names}")
+        except Exception as e:
+            print(f"⚠️ [MUSIC_TEAM_SEEKERS] 테이블 구조 확인 실패: {e}")
+            column_names = []
+        
+        # Raw SQL INSERT (실제 컬럼명 사용)
+        insert_sql = """
+            INSERT INTO music_team_seekers (
+                title, team_name, instrument, experience, portfolio,
+                preferred_location, available_days, available_time,
+                contact_phone, contact_email, status,
+                author_id, author_name, church_id, church_name,
+                view_count, likes, matches, applications,
+                created_at, updated_at
+            ) VALUES (
+                :title, :team_name, :instrument, :experience, :portfolio,
+                :preferred_location, :available_days, :available_time,
+                :contact_phone, :contact_email, :status,
+                :author_id, :author_name, :church_id, :church_name,
+                :view_count, :likes, :matches, :applications,
+                :created_at, :updated_at
+            ) RETURNING id
+        """
+        
+        insert_params = {
+            "title": seeker_data.get('title'),
+            "team_name": seeker_data.get('team_name'),
+            "instrument": seeker_data.get('instrument'),
+            "experience": seeker_data.get('experience'),
+            "portfolio": seeker_data.get('portfolio'),
+            "preferred_location": preferred_location,  # 파싱된 배열 사용
+            "available_days": available_days,  # 파싱된 배열 사용
+            "available_time": seeker_data.get('available_time'),
+            "contact_phone": seeker_data.get('contact_phone'),
+            "contact_email": seeker_data.get('contact_email'),
+            "status": "available",  # 기본 상태
+            "author_id": current_user.id,
+            "author_name": current_user.full_name or "익명",
+            "church_id": getattr(current_user, 'church_id', None),
+            "church_name": getattr(current_user, 'church_name', None),
+            "view_count": 0,  # views → view_count
+            "likes": 0,
+            "matches": 0,
+            "applications": 0,
+            "created_at": current_time,
+            "updated_at": current_time
+        }
+        
+        print(f"🔍 [MUSIC_TEAM_SEEKERS] Raw SQL로 지원서 저장 중...")
+        result = db.execute(text(insert_sql), insert_params)
+        new_id = result.fetchone()[0]
         db.commit()
-        db.refresh(seeker_record)
-        print(f"✅ [MUSIC_TEAM_SEEKERS] 성공적으로 저장됨. ID: {seeker_record.id}")
+        print(f"✅ [MUSIC_TEAM_SEEKERS] 성공적으로 저장됨. ID: {new_id}")
         
         return {
             "success": True,
             "message": "지원서가 성공적으로 등록되었습니다",
             "data": {
-                "id": seeker_record.id,
-                "created_at": seeker_record.created_at.isoformat() if seeker_record.created_at else None
+                "id": new_id,
+                "created_at": current_time.isoformat()
             }
         }
         
