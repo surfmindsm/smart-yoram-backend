@@ -211,6 +211,7 @@ async def create_request(
             status=request_data.status or "open",
             images=request_data.images or [],
             user_id=current_user.id,  # 실제 테이블의 user_id 사용
+            author_id=current_user.id,  # author_id도 설정 (조회 API와 일치)
             church_id=current_user.church_id or 9998,  # 커뮤니티 기본값
         )
         
@@ -259,13 +260,24 @@ async def create_request(
 
 
 @router.post("/item-requests", response_model=dict)
-async def create_item_request(
+async def create_item_request_plural(
     request: Request,
     request_data: RequestCreateRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """물품 요청 등록 - 프론트엔드 호환성을 위한 별칭 엔드포인트"""
+    """물품 요청 등록 - 복수형 URL"""
+    return await create_request(request, request_data, db, current_user)
+
+
+@router.post("/item-request", response_model=dict)
+async def create_item_request_singular(
+    request: Request,
+    request_data: RequestCreateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """물품 요청 등록 - 단수형 URL (프론트엔드 호환)"""
     return await create_request(request, request_data, db, current_user)
 
 
