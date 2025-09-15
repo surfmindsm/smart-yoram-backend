@@ -221,50 +221,81 @@ async def create_music_team_recruitment(
         # 현재 시간 설정
         current_time = datetime.now(timezone.utc)
         
-        # 데이터베이스에 저장
-        recruitment_record = MusicTeamRecruitment(
-            title=recruitment_data.title,
-            team_name=recruitment_data.team_name,
-            team_type=recruitment_data.team_type,
-            instruments_needed=recruitment_data.instruments_needed,
-            positions_needed=recruitment_data.positions_needed,
-            experience_required=recruitment_data.experience_required,
-            practice_location=recruitment_data.practice_location,
-            practice_schedule=recruitment_data.practice_schedule,
-            commitment=recruitment_data.commitment,
-            description=recruitment_data.description,
-            requirements=recruitment_data.requirements,
-            benefits=recruitment_data.benefits,
-            contact_method=recruitment_data.contact_method,
-            contact_info=recruitment_data.contact_info,
-            status=recruitment_data.status,
-            current_members=recruitment_data.current_members,
-            target_members=recruitment_data.target_members,
-            author_id=current_user.id,
-            church_id=current_user.church_id or 9998,
-            views=0,
-            likes=0,
-            applicants_count=0,
-            created_at=current_time,
-            updated_at=current_time
-        )
+        # 실제 테이블 구조 확인
+        from sqlalchemy import text
+        try:
+            db.rollback()
+            table_info_sql = """
+                SELECT column_name, data_type 
+                FROM information_schema.columns 
+                WHERE table_name = 'community_music_teams'
+                ORDER BY ordinal_position
+            """
+            result = db.execute(text(table_info_sql))
+            columns = result.fetchall()
+            column_names = [col[0] for col in columns]
+            print(f"🔍 [MUSIC_TEAM_RECRUIT] 실제 테이블 컬럼: {column_names}")
+        except Exception as e:
+            print(f"⚠️ [MUSIC_TEAM_RECRUIT] 테이블 구조 확인 실패: {e}")
+            column_names = []
         
-        print(f"🔍 [MUSIC_TEAM_RECRUIT] 음악팀 모집 레코드 저장 중...")
-        db.add(recruitment_record)
+        # Raw SQL로 데이터 저장 (실제 테이블 구조에 맞게) - 문제 있는 컬럼 제외
+        insert_sql = """
+            INSERT INTO community_music_teams (
+                title, team_name, team_type, instruments_needed, positions_needed,
+                experience_required, practice_location, practice_schedule, commitment,
+                description, requirements, benefits, contact_method, contact_info,
+                status, current_members, target_members, author_id, church_id,
+                created_at, updated_at
+            ) VALUES (
+                :title, :team_name, :team_type, :instruments_needed, :positions_needed,
+                :experience_required, :practice_location, :practice_schedule, :commitment,
+                :description, :requirements, :benefits, :contact_method, :contact_info,
+                :status, :current_members, :target_members, :author_id, :church_id,
+                :created_at, :updated_at
+            ) RETURNING id
+        """
+        
+        insert_params = {
+            "title": recruitment_data.title,
+            "team_name": recruitment_data.team_name or "미정",
+            "team_type": recruitment_data.team_type,
+            "instruments_needed": recruitment_data.instruments_needed,
+            "positions_needed": recruitment_data.positions_needed,
+            "experience_required": recruitment_data.experience_required,
+            "practice_location": recruitment_data.practice_location,
+            "practice_schedule": recruitment_data.practice_schedule,
+            "commitment": recruitment_data.commitment,
+            "description": recruitment_data.description,
+            "requirements": recruitment_data.requirements,
+            "benefits": recruitment_data.benefits,
+            "contact_method": recruitment_data.contact_method,
+            "contact_info": recruitment_data.contact_info,
+            "status": recruitment_data.status,
+            "current_members": recruitment_data.current_members,
+            "target_members": recruitment_data.target_members,
+            "author_id": current_user.id,
+            "church_id": current_user.church_id or 9998,
+            "created_at": current_time,
+            "updated_at": current_time
+        }
+        
+        print(f"🔍 [MUSIC_TEAM_RECRUIT] Raw SQL로 음악팀 모집 저장 중...")
+        result = db.execute(text(insert_sql), insert_params)
+        new_id = result.fetchone()[0]
         db.commit()
-        db.refresh(recruitment_record)
-        print(f"✅ [MUSIC_TEAM_RECRUIT] 성공적으로 저장됨. ID: {recruitment_record.id}")
+        print(f"✅ [MUSIC_TEAM_RECRUIT] 성공적으로 저장됨. ID: {new_id}")
         
         return {
             "success": True,
             "message": "음악팀 모집이 등록되었습니다.",
             "data": {
-                "id": recruitment_record.id,
-                "title": recruitment_record.title,
-                "team_name": recruitment_record.team_name,
-                "team_type": recruitment_record.team_type,
-                "status": recruitment_record.status,
-                "created_at": recruitment_record.created_at.isoformat() if recruitment_record.created_at else None
+                "id": new_id,
+                "title": recruitment_data.title,
+                "team_name": recruitment_data.team_name or "미정",
+                "team_type": recruitment_data.team_type,
+                "status": recruitment_data.status,
+                "created_at": current_time.isoformat()
             }
         }
         
