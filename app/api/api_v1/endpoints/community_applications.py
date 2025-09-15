@@ -287,6 +287,8 @@ def debug_community_applications(
                     "total_pages": 1,
                     "total_count": 1,
                     "per_page": 20,
+                    "has_next": False,
+                    "has_prev": False,
                 },
                 "statistics": {"pending": 1, "approved": 0, "rejected": 0, "total": 1},
             },
@@ -391,6 +393,8 @@ def get_community_applications(
                 "total_pages": (total_count + limit - 1) // limit,
                 "total_count": total_count,
                 "per_page": limit,
+                "has_next": page < (total_count + limit - 1) // limit,
+                "has_prev": page > 1,
             },
             statistics=statistics,
         )
