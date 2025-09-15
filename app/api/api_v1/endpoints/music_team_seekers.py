@@ -211,8 +211,7 @@ async def create_music_team_seeker(
         
         print(f"🔍 [MUSIC_TEAM_SEEKERS] 파싱된 데이터: preferred_location={preferred_location}, available_days={available_days}")
         
-        # 현재 시간 설정
-        current_time = datetime.now(timezone.utc)
+        # created_at, updated_at는 SQLAlchemy server_default=func.now()로 자동 처리
         
         # Raw SQL로 데이터 저장 (실제 테이블 구조에 맞게) - 컬럼명 불일치 해결
         from sqlalchemy import text
@@ -241,15 +240,13 @@ async def create_music_team_seeker(
                 preferred_location, available_days, available_time,
                 contact_phone, contact_email, status,
                 author_id, author_name, church_id, church_name,
-                view_count, likes, matches, applications,
-                created_at, updated_at
+                view_count, likes, matches, applications
             ) VALUES (
                 :title, :team_name, :instrument, :experience, :portfolio,
                 :preferred_location, :available_days, :available_time,
                 :contact_phone, :contact_email, :status,
                 :author_id, :author_name, :church_id, :church_name,
-                :view_count, :likes, :matches, :applications,
-                :created_at, :updated_at
+                :view_count, :likes, :matches, :applications
             ) RETURNING id
         """
         
@@ -272,9 +269,7 @@ async def create_music_team_seeker(
             "view_count": 0,  # views → view_count
             "likes": 0,
             "matches": 0,
-            "applications": 0,
-            "created_at": current_time,
-            "updated_at": current_time
+            "applications": 0
         }
         
         print(f"🔍 [MUSIC_TEAM_SEEKERS] Raw SQL로 지원서 저장 중...")
@@ -287,8 +282,7 @@ async def create_music_team_seeker(
             "success": True,
             "message": "지원서가 성공적으로 등록되었습니다",
             "data": {
-                "id": new_id,
-                "created_at": current_time.isoformat()
+                "id": new_id
             }
         }
         
@@ -418,11 +412,10 @@ async def update_music_team_seeker(
         
         # 수정 가능한 필드 업데이트 (None이 아닌 값만)
         update_data = seeker_data.dict(exclude_unset=True)
-        current_time = datetime.now(timezone.utc)
         
-        # Raw SQL UPDATE 문 생성
+        # Raw SQL UPDATE 문 생성 (updated_at는 SQLAlchemy onupdate=func.now()로 자동 처리)
         update_fields = []
-        update_params = {"seeker_id": seeker_id, "updated_at": current_time}
+        update_params = {"seeker_id": seeker_id}
         
         for field, value in update_data.items():
             if field in ['preferred_location', 'available_days'] and value is not None:
@@ -433,7 +426,7 @@ async def update_music_team_seeker(
                 update_params[field] = value
         
         if update_fields:
-            update_fields.append("updated_at = :updated_at")
+            # updated_at는 SQLAlchemy의 onupdate=func.now()로 자동 처리됨
             update_sql = f"""
                 UPDATE music_team_seekers 
                 SET {', '.join(update_fields)}
@@ -450,8 +443,7 @@ async def update_music_team_seeker(
                 "message": "지원서가 수정되었습니다.",
                 "data": {
                     "id": seeker_id,
-                    "title": updated_title,
-                    "updated_at": current_time.isoformat()
+                    "title": updated_title
                 }
             }
         else:

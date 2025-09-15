@@ -41,6 +41,53 @@ class CommunityCategory(str, enum.Enum):
     OTHER = "기타"
 
 
+class EmploymentType(str, enum.Enum):
+    """고용 형태 (통합)"""
+    FULL_TIME = "정규직"
+    PART_TIME = "계약직"
+    CONTRACT = "아르바이트"
+    FREELANCE = "프리랜서"
+    INTERN = "인턴"
+
+
+class InstrumentType(str, enum.Enum):
+    """악기/포지션 유형 (통합)"""
+    PIANO = "피아노"
+    KEYBOARD = "키보드"
+    ORGAN = "오르간"
+    GUITAR = "기타"
+    ELECTRIC_GUITAR = "일렉기타"
+    BASS = "베이스"
+    DRUMS = "드럼"
+    VIOLIN = "바이올린"
+    CELLO = "첼로"
+    FLUTE = "플룻"
+    SAXOPHONE = "색소폰"
+    TRUMPET = "트럼펫"
+    VOCAL = "보컬"
+    OTHER = "기타"
+
+
+class TeamType(str, enum.Enum):
+    """팀 유형"""
+    WORSHIP = "워십팀"
+    CHOIR = "성가대"
+    ORCHESTRA = "오케스트라"
+    BAND = "밴드"
+    PRAISE = "찬양팀"
+    SPECIAL = "특별찬양"
+    OTHER = "기타"
+
+
+class ExperienceLevel(str, enum.Enum):
+    """경력 수준"""
+    BEGINNER = "초급"
+    INTERMEDIATE = "중급"
+    ADVANCED = "고급"
+    PROFESSIONAL = "전문가"
+    ANY = "무관"
+
+
 # 상태값 매핑 헬퍼 함수들
 def map_sharing_status(old_status: str) -> str:
     """무료 나눔 상태값을 통일된 상태값으로 매핑"""

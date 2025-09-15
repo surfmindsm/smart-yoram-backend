@@ -1,9 +1,10 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, JSON
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, JSON, Enum
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 import enum
 
 from app.db.base_class import Base
+from app.models.common import CommonStatus
 
 
 class InstrumentType(str, enum.Enum):
@@ -40,11 +41,7 @@ class AvailableTime(str, enum.Enum):
     NEGOTIABLE = "협의 후 결정"
 
 
-class SeekerStatus(str, enum.Enum):
-    """지원자 상태"""
-    AVAILABLE = "available"
-    INTERVIEWING = "interviewing"
-    INACTIVE = "inactive"
+# SeekerStatus removed - using CommonStatus instead
 
 
 class MusicTeamSeeker(Base):
@@ -53,7 +50,7 @@ class MusicTeamSeeker(Base):
     __tablename__ = "music_team_seekers"
     
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(200), nullable=False, comment="지원서 제목")
+    title = Column(String(255), nullable=False, comment="지원서 제목")
     team_name = Column(String(100), nullable=True, comment="현재 활동 팀명")
     instrument = Column(String(50), nullable=False, comment="팀 형태")
     experience = Column(Text, nullable=True, comment="연주 경력")
@@ -63,7 +60,7 @@ class MusicTeamSeeker(Base):
     available_time = Column(String(100), nullable=True, comment="활동 가능 시간대")
     contact_phone = Column(String(20), nullable=False, comment="연락처")
     contact_email = Column(String(100), nullable=True, comment="이메일")
-    status = Column(String(20), nullable=False, default="available", comment="상태")
+    status = Column(Enum(CommonStatus), nullable=False, default=CommonStatus.ACTIVE, comment="상태")
     
     # JWT에서 자동 추출되는 필드들
     author_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="작성자 ID")

@@ -29,7 +29,7 @@ class MusicTeamRecruit(Base):
     __tablename__ = "music_team_recruits"
     
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(200), nullable=False, comment="제목")
+    title = Column(String(255), nullable=False, comment="제목")
     team_name = Column(String(100), nullable=False, comment="팀명")
     church_name = Column(String(100), nullable=False, comment="교회명")
     instruments_needed = Column(JSON, nullable=False, comment="필요한 악기 목록")
@@ -51,7 +51,7 @@ class MusicTeamRecruit(Base):
     church_id = Column(Integer, nullable=True, comment="교회 ID (9998=커뮤니티)")
     
     # 통계
-    views = Column(Integer, default=0, comment="조회수")
+    view_count = Column(Integer, default=0, comment="조회수")
     likes = Column(Integer, default=0, comment="좋아요수")
     
     # 시간 정보
@@ -68,7 +68,7 @@ class MusicTeamApplication(Base):
     __tablename__ = "music_team_applications"
     
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(200), nullable=False, comment="제목")
+    title = Column(String(255), nullable=False, comment="제목")
     desired_team_type = Column(String(20), nullable=False, comment="희망 팀 유형")
     instruments = Column(JSON, nullable=False, comment="연주 가능 악기")
     experience_level = Column(String(20), nullable=False, comment="실력 수준")
@@ -87,7 +87,7 @@ class MusicTeamApplication(Base):
     church_id = Column(Integer, nullable=True, comment="교회 ID (9998=커뮤니티)")
     
     # 통계
-    views = Column(Integer, default=0, comment="조회수")
+    view_count = Column(Integer, default=0, comment="조회수")
     likes = Column(Integer, default=0, comment="좋아요수")
     
     # 시간 정보

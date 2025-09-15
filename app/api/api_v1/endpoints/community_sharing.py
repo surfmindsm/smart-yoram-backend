@@ -224,8 +224,8 @@ def get_sharing_list(
                 "view_count": row[12] or 0,      # cs.view_count
                 "author_id": row[15],            # cs.author_id
                 "author_name": row[17] or "익명",  # u.full_name (사용자명)
-                "church_id": row[15],            # cs.church_id
-                "church_name": row[17] or f"교회 {row[15]}"  # c.name (교회명)
+                "church_id": row[16],            # cs.church_id (수정됨)
+                "church_name": row[18] or f"교회 {row[16]}"  # c.name (교회명, 수정됨)
             })
         
         total_pages = (total_count + limit - 1) // limit
@@ -281,10 +281,8 @@ async def create_sharing(
         print(f"🔍 Parsed data: {sharing_data}")
         print(f"🔍 User ID: {current_user.id}, Church ID: {current_user.church_id}")
         
-        # 현재 시간 설정 (timezone-aware)
-        current_time = datetime.now(timezone.utc)
-        
         # 실제 데이터베이스에 저장 (실제 테이블 컬럼명에 맞춤)
+        # SQLAlchemy 모델의 server_default=func.now() 사용 (명시적 시간 설정 제거)
         sharing_record = CommunitySharing(
             church_id=current_user.church_id,  # 사용자의 교회 ID 사용
             author_id=current_user.id,  # 실제 컬럼명: author_id
@@ -299,8 +297,7 @@ async def create_sharing(
             contact_email=sharing_data.contact_email,
             images=sharing_data.images or [],  # JSON 컬럼으로 실제 존재함!
             status=sharing_data.status or "available",
-            created_at=current_time,
-            updated_at=current_time,
+            # created_at, updated_at은 모델의 server_default가 자동 처리
         )
         
         db.add(sharing_record)

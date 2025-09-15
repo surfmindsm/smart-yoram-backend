@@ -4,6 +4,7 @@ from sqlalchemy.orm import relationship
 import enum
 
 from app.db.base_class import Base
+from app.models.common import CommonStatus
 
 
 class NewsPriority(str, enum.Enum):
@@ -13,11 +14,7 @@ class NewsPriority(str, enum.Enum):
     NORMAL = "normal"
 
 
-class NewsStatus(str, enum.Enum):
-    """행사 소식 상태"""
-    ACTIVE = "active"
-    COMPLETED = "completed"
-    CANCELLED = "cancelled"
+# NewsStatus removed - using CommonStatus instead
 
 
 class ChurchNews(Base):
@@ -50,7 +47,7 @@ class ChurchNews(Base):
     contact_email = Column(String(100), nullable=True, comment="이메일")
     
     # 상태 관리
-    status = Column(String(20), default="active", index=True, comment="상태")
+    status = Column(Enum(CommonStatus), default=CommonStatus.ACTIVE, index=True, comment="상태")
     
     # 메타데이터 (다른 API와 일관성: view_count 사용)
     view_count = Column(Integer, default=0, comment="조회수")

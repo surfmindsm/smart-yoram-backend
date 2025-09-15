@@ -1,9 +1,10 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, JSON
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, JSON, Enum
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 import enum
 
 from app.db.base_class import Base
+from app.models.common import CommonStatus
 
 
 class EmploymentType(str, enum.Enum):
@@ -15,11 +16,7 @@ class EmploymentType(str, enum.Enum):
     INTERNSHIP = "internship"
 
 
-class JobStatus(str, enum.Enum):
-    """구인 상태"""
-    OPEN = "open"
-    CLOSED = "closed"
-    FILLED = "filled"
+# JobStatus removed - using CommonStatus instead
 
 
 class JobPost(Base):
@@ -28,7 +25,7 @@ class JobPost(Base):
     __tablename__ = "job_posts"
     
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(200), nullable=False, comment="제목")
+    title = Column(String(255), nullable=False, comment="제목")
     company = Column(String(100), nullable=False, comment="회사명")
     position = Column(String(100), nullable=False, comment="직책/포지션")
     employment_type = Column(String(20), nullable=False, comment="고용 형태")
@@ -41,7 +38,7 @@ class JobPost(Base):
     contact_method = Column(String(20), nullable=False, comment="연락 방법")
     contact_info = Column(String(100), nullable=False, comment="연락처")
     deadline = Column(DateTime(timezone=True), nullable=True, comment="마감일")
-    status = Column(String(20), default="open", nullable=False, comment="상태")
+    status = Column(Enum(CommonStatus), default=CommonStatus.ACTIVE, nullable=False, comment="상태")
     
     # 작성자 정보
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="작성자 ID")  # author_id → user_id
@@ -64,7 +61,7 @@ class JobSeeker(Base):
     __tablename__ = "job_seekers"
     
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(200), nullable=False, comment="제목")
+    title = Column(String(255), nullable=False, comment="제목")
     desired_position = Column(String(100), nullable=False, comment="희망 직책")
     employment_type = Column(String(20), nullable=False, comment="희망 고용 형태")
     desired_location = Column(String(100), nullable=False, comment="희망 근무 지역")
@@ -76,7 +73,7 @@ class JobSeeker(Base):
     contact_method = Column(String(20), nullable=False, comment="연락 방법")
     contact_info = Column(String(100), nullable=False, comment="연락처")
     available_from = Column(DateTime(timezone=True), nullable=True, comment="근무 가능 시작일")
-    status = Column(String(20), default="active", nullable=False, comment="상태")
+    status = Column(Enum(CommonStatus), default=CommonStatus.ACTIVE, nullable=False, comment="상태")
     
     # 작성자 정보
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="작성자 ID")  # author_id → user_id

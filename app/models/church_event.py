@@ -1,9 +1,10 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, JSON
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, JSON, Enum
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 import enum
 
 from app.db.base_class import Base
+from app.models.common import CommonStatus
 
 
 class EventType(str, enum.Enum):
@@ -18,12 +19,7 @@ class EventType(str, enum.Enum):
     OTHER = "기타"
 
 
-class EventStatus(str, enum.Enum):
-    """행사 상태"""
-    UPCOMING = "upcoming"
-    ONGOING = "ongoing"
-    COMPLETED = "completed"
-    CANCELLED = "cancelled"
+# EventStatus removed - using CommonStatus instead
 
 
 class ChurchEvent(Base):
@@ -32,7 +28,7 @@ class ChurchEvent(Base):
     __tablename__ = "church_events"
     
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(200), nullable=False, comment="행사명")
+    title = Column(String(255), nullable=False, comment="행사명")
     church_name = Column(String(100), nullable=False, comment="주최 교회")
     event_type = Column(String(20), nullable=False, comment="행사 유형")
     description = Column(Text, nullable=False, comment="행사 설명")
@@ -49,14 +45,14 @@ class ChurchEvent(Base):
     requirements = Column(Text, nullable=True, comment="참가 조건")
     includes = Column(Text, nullable=True, comment="포함 사항")
     images = Column(JSON, nullable=True, comment="행사 이미지 URL 배열")
-    status = Column(String(20), default="upcoming", nullable=False, comment="행사 상태")
+    status = Column(Enum(CommonStatus), default=CommonStatus.ACTIVE, nullable=False, comment="행사 상태")
     
     # 작성자 정보
     author_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="작성자 ID")
     church_id = Column(Integer, nullable=True, comment="교회 ID (9998=커뮤니티)")
     
     # 통계
-    views = Column(Integer, default=0, comment="조회수")
+    view_count = Column(Integer, default=0, comment="조회수")
     likes = Column(Integer, default=0, comment="좋아요수")
     
     # 시간 정보

@@ -264,7 +264,7 @@ async def create_request(
         print(f"🔍 [REQUEST] User ID: {current_user.id}, Church ID: {current_user.church_id}")
         print(f"🔍 [REQUEST] User name: {current_user.full_name}")
         
-        # 실제 데이터베이스에 저장
+        # 실제 데이터베이스에 저장 (created_at, updated_at는 SQLAlchemy server_default로 자동 처리)
         request_record = CommunityRequest(
             title=request_data.title,
             description=request_data.description,
@@ -276,8 +276,8 @@ async def create_request(
             reward_amount=request_data.reward_amount,
             status=request_data.status or "open",
             images=request_data.images or [],
-            author_id=current_user.id,  # 실제 테이블의 author_id 사용
-            church_id=current_user.church_id or 9998,  # 커뮤니티 기본값
+            author_id=current_user.id,
+            church_id=current_user.church_id or 9998,
         )
         
         print(f"🔍 [REQUEST] About to save request record...")

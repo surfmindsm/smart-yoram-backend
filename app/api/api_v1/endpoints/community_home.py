@@ -306,15 +306,6 @@ def get_my_posts(
                 "per_page": limit,
                 "has_next": page < total_pages,
                 "has_prev": page > 1
-            },
-            "_debug_info": {
-                "user_id": current_user.id,
-                "user_name": getattr(current_user, 'full_name', 'N/A'),
-                "user_email": getattr(current_user, 'email', 'N/A'),
-                "total_posts_found": total_count,
-                "api_version": "raw_sql_v2",
-                "timestamp": datetime.now().isoformat(),
-                "table_results": table_debug_results
             }
         }
         
@@ -332,11 +323,5 @@ def get_my_posts(
                 "per_page": limit,
                 "has_next": False,
                 "has_prev": False
-            },
-            "_debug_info": {
-                "user_id": getattr(current_user, 'id', 'unknown'),
-                "error": str(e),
-                "api_version": "raw_sql_v2_error",
-                "timestamp": datetime.now().isoformat()
             }
         }

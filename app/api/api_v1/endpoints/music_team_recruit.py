@@ -231,8 +231,7 @@ async def create_music_team_recruitment(
     try:
         print(f"🔍 [MUSIC_TEAM_RECRUIT] 음악팀 모집 데이터 받음: {recruitment_data}")
         
-        # 현재 시간 설정
-        current_time = datetime.now(timezone.utc)
+        # created_at, updated_at는 SQLAlchemy server_default=func.now()로 자동 처리
         
         # 실제 테이블 구조 확인
         from sqlalchemy import text
@@ -258,28 +257,22 @@ async def create_music_team_recruitment(
                 title, team_name, team_type, instruments_needed, positions_needed,
                 experience_required, practice_location, practice_schedule, commitment,
                 description, requirements, benefits, contact_method, contact_phone, contact_email,
-                status, current_members, target_members, author_id, church_id,
-                created_at, updated_at
+                status, current_members, target_members, author_id, church_id
             ) VALUES (
                 :title, :team_name, :team_type, :instruments_needed, :positions_needed,
                 :experience_required, :practice_location, :practice_schedule, :commitment,
                 :description, :requirements, :benefits, :contact_method, :contact_phone, :contact_email,
-                :status, :current_members, :target_members, :author_id, :church_id,
-                :created_at, :updated_at
+                :status, :current_members, :target_members, :author_id, :church_id
             ) RETURNING id
         """
         
-        # JSON 필드 처리
-        import json
-        instruments_json = None
-        if recruitment_data.instruments_needed is not None:
-            instruments_json = json.dumps(recruitment_data.instruments_needed)
+        # JSON 필드는 SQLAlchemy가 자동으로 처리함 (수동 변환 불필요)
         
         insert_params = {
             "title": recruitment_data.title,
             "team_name": recruitment_data.team_name or "미정",
             "team_type": recruitment_data.team_type,
-            "instruments_needed": instruments_json,  # JSON 문자열로 변환
+            "instruments_needed": recruitment_data.instruments_needed,  # SQLAlchemy가 자동으로 JSON 변환
             "positions_needed": recruitment_data.positions_needed,
             "experience_required": recruitment_data.experience_required,
             "practice_location": recruitment_data.practice_location,
@@ -295,9 +288,7 @@ async def create_music_team_recruitment(
             "current_members": recruitment_data.current_members,
             "target_members": recruitment_data.target_members,
             "author_id": current_user.id,
-            "church_id": current_user.church_id or 9998,
-            "created_at": current_time,
-            "updated_at": current_time
+            "church_id": current_user.church_id or 9998
         }
         
         print(f"🔍 [MUSIC_TEAM_RECRUIT] Raw SQL로 음악팀 모집 저장 중...")
@@ -314,8 +305,7 @@ async def create_music_team_recruitment(
                 "title": recruitment_data.title,
                 "team_name": recruitment_data.team_name or "미정",
                 "team_type": recruitment_data.team_type,
-                "status": recruitment_data.status,
-                "created_at": current_time.isoformat()
+                "status": recruitment_data.status
             }
         }
         
@@ -411,8 +401,7 @@ async def update_music_team_recruitment(
         for field, value in update_data.items():
             setattr(recruitment, field, value)
         
-        # updated_at 명시적으로 설정
-        recruitment.updated_at = datetime.now(timezone.utc)
+        # updated_at는 SQLAlchemy의 onupdate=func.now()로 자동 처리됨
         
         db.commit()
         db.refresh(recruitment)

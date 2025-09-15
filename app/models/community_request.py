@@ -1,16 +1,13 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, JSON
-from sqlalchemy.sql import func
+from sqlalchemy import Column, Integer, String, Text, JSON
 from sqlalchemy.orm import relationship
 import enum
 
 from app.db.base_class import Base
+from app.models.common import CommonStatus, CommunityBaseMixin
 
 
-class RequestStatus(str, enum.Enum):
-    """요청 상태"""
-    ACTIVE = "active"
-    FULFILLED = "fulfilled"
-    CANCELLED = "cancelled"
+# 통일된 상태 사용 - CommonStatus 활용
+# active → active, fulfilled → completed, cancelled → cancelled
 
 
 class RequestCategory(str, enum.Enum):
@@ -29,13 +26,13 @@ class UrgencyLevel(str, enum.Enum):
     HIGH = "높음"
 
 
-class CommunityRequest(Base):
+class CommunityRequest(Base, CommunityBaseMixin):
     """커뮤니티 물품 요청"""
     
     __tablename__ = "community_requests"
     
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, nullable=False, comment="제목")
+    title = Column(String(255), nullable=False, comment="제목")
     description = Column(Text, nullable=True, comment="상세 설명")
     category = Column(String, nullable=True, comment="카테고리")
     urgency = Column(String, nullable=True, default="normal", comment="긴급도")
@@ -44,19 +41,6 @@ class CommunityRequest(Base):
     contact_info = Column(String, nullable=True, comment="연락처")
     reward_type = Column(String, nullable=True, default="none", comment="보상 유형")
     reward_amount = Column(Integer, nullable=True, comment="보상 금액")
-    status = Column(String, default="open", nullable=True, comment="상태")
-    
-    # 작성자 정보 (실제 테이블 구조에 맞춤)
-    author_id = Column(Integer, ForeignKey("users.id"), nullable=True, comment="작성자 ID")
-    church_id = Column(Integer, nullable=False, default=9998, comment="교회 ID (9998=커뮤니티)")
-    
-    # 통계
-    view_count = Column(Integer, default=0, comment="조회수")
-    likes = Column(Integer, default=0, comment="좋아요수")
-    
-    # 시간 정보
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     # Relationships
-    author = relationship("User", foreign_keys=[author_id])
+    author = relationship("User", foreign_keys=["author_id"])
