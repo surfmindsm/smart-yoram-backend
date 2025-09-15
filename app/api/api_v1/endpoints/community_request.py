@@ -308,7 +308,9 @@ async def create_request(
                 "contact_info": request_record.contact_info,
                 "status": request_record.status,
                 "images": request_record.images or [],
-                "user_id": request_record.user_id,
+                "user_id": request_record.author_id,
+                "author_id": request_record.author_id,
+                "author_name": current_user.full_name or "익명",
                 "user_name": current_user.full_name or "익명",
                 "church_id": request_record.church_id,
                 "created_at": request_record.created_at.isoformat() if request_record.created_at else None

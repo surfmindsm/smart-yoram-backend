@@ -153,7 +153,9 @@ def get_item_sale_list(
                 "updated_at": row[13].isoformat() if row[13] else None,  # cs.updated_at
                 "view_count": row[11] or 0,      # cs.view_count
                 "user_id": row[14],              # cs.author_id (응답에서는 user_id로 유지)
-                "user_name": row[16] or "익명",    # u.full_name
+                "author_id": row[14],            # cs.author_id
+                "author_name": row[16] or "익명",  # u.full_name (사용자명)
+                "user_name": row[16] or "익명",    # u.full_name (호환성)
                 "church_id": row[15],            # cs.church_id
                 "church_name": row[17] or f"교회 {row[15]}"  # c.name (교회명)
             })
@@ -248,6 +250,8 @@ async def create_item_sale(
                 "status": sale_record.status,
                 "images": sale_record.images or [],
                 "user_id": sale_record.author_id,
+                "author_id": sale_record.author_id,
+                "author_name": current_user.full_name or "익명",
                 "user_name": current_user.full_name or "익명",
                 "church_id": sale_record.church_id,
                 "created_at": sale_record.created_at.isoformat() if sale_record.created_at else None
