@@ -94,28 +94,29 @@ def get_music_team_recruitments_list(
         
         query_sql = """
             SELECT 
-                id, title, team_name, team_type, instruments_needed,
-                positions_needed, experience_required, practice_location,
-                practice_schedule, commitment, description, requirements,
-                benefits, contact_method, contact_info, status,
-                current_members, target_members, author_id, church_id,
-                created_at, updated_at
-            FROM community_music_teams 
+                cmt.id, cmt.title, cmt.team_name, cmt.team_type, cmt.instruments_needed,
+                cmt.positions_needed, cmt.experience_required, cmt.practice_location,
+                cmt.practice_schedule, cmt.commitment, cmt.description, cmt.requirements,
+                cmt.benefits, cmt.contact_method, cmt.contact_info, cmt.status,
+                cmt.current_members, cmt.target_members, cmt.author_id, cmt.church_id,
+                cmt.created_at, cmt.updated_at, c.name as church_name
+            FROM community_music_teams cmt
+            LEFT JOIN churches c ON cmt.church_id = c.id
             WHERE 1=1
         """
         params = {}
         
         # 기본 필터링 (제목 검색만)
         if search:
-            query_sql += " AND title ILIKE :search"
+            query_sql += " AND cmt.title ILIKE :search"
             params["search"] = f"%{search}%"
         
-        query_sql += " ORDER BY created_at DESC"
+        query_sql += " ORDER BY cmt.created_at DESC"
         
         # 전체 개수 계산
-        count_sql = "SELECT COUNT(*) FROM community_music_teams WHERE 1=1"
+        count_sql = "SELECT COUNT(*) FROM community_music_teams cmt WHERE 1=1"
         if search:
-            count_sql += " AND title ILIKE :search"
+            count_sql += " AND cmt.title ILIKE :search"
         count_result = db.execute(text(count_sql), params)
         total_count = count_result.scalar() or 0
         print(f"🔍 [MUSIC_TEAM_RECRUIT] 필터링 후 전체 데이터 개수: {total_count}")
@@ -175,6 +176,7 @@ def get_music_team_recruitments_list(
                 "author_id": row[18],            # author_id
                 "author_name": author_names.get(row[18], "익명"),
                 "church_id": row[19] or 9998,    # church_id
+                "church_name": row[22] or f"교회 {row[19] or 9998}",  # church_name (JOIN으로 가져온 교회명)
                 "views": 0,                      # views (컬럼 없음)
                 "likes": 0,                      # likes (컬럼 없음) 
                 "applicants_count": 0,           # applicants_count (컬럼 없음)
