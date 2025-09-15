@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, JSON, ARRAY
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, JSON
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 import enum
@@ -58,8 +58,8 @@ class MusicTeamSeeker(Base):
     instrument = Column(String(50), nullable=False, comment="팀 형태")
     experience = Column(Text, nullable=True, comment="연주 경력")
     portfolio = Column(String(500), nullable=True, comment="포트폴리오 링크")
-    preferred_location = Column(ARRAY(String), nullable=True, comment="활동 가능 지역")
-    available_days = Column(ARRAY(String), nullable=True, comment="활동 가능 요일")
+    preferred_location = Column(JSON, nullable=True, comment="활동 가능 지역")
+    available_days = Column(JSON, nullable=True, comment="활동 가능 요일")
     available_time = Column(String(100), nullable=True, comment="활동 가능 시간대")
     contact_phone = Column(String(20), nullable=False, comment="연락처")
     contact_email = Column(String(100), nullable=True, comment="이메일")
