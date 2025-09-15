@@ -16,7 +16,7 @@ class MusicTeamRecruitmentCreateRequest(BaseModel):
     """음악팀 모집 등록 요청 스키마"""
     # 필수 필드
     title: str
-    team_name: str
+    team_name: Optional[str] = "미정"  # 프론트엔드에서 제거한 경우 기본값 제공
     team_type: str
     experience_required: str
     practice_location: str
