@@ -61,7 +61,7 @@ class ChurchEvent(Base):
     max_participants = Column(Integer, nullable=True, comment="최대 참가자")
     contact_info = Column(String(500), nullable=True, comment="연락처 정보")
     status = Column(String(20), nullable=True, default="upcoming", comment="상태")
-    views = Column(Integer, nullable=True, default=0, comment="조회수")
+    view_count = Column(Integer, nullable=True, default=0, comment="조회수")
     likes = Column(Integer, nullable=True, default=0, comment="좋아요수")
     created_at = Column(DateTime(timezone=True), nullable=True, server_default=func.now(), comment="생성일")
     updated_at = Column(DateTime(timezone=True), nullable=True, server_default=func.now(), onupdate=func.now(), comment="수정일")

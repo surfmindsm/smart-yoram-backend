@@ -64,7 +64,7 @@ class MusicTeamRecruitment(Base):
     target_members = Column(Integer, nullable=True, comment="목표 인원")
     author_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="작성자 ID")
     church_id = Column(Integer, nullable=False, comment="교회 ID")
-    views = Column(Integer, nullable=True, default=0, comment="조회수")
+    view_count = Column(Integer, nullable=True, default=0, comment="조회수")
     likes = Column(Integer, nullable=True, default=0, comment="좋아요수")
     applicants_count = Column(Integer, nullable=True, default=0, comment="지원자 수")
     created_at = Column(DateTime(timezone=True), nullable=True, server_default=func.now(), comment="생성일")

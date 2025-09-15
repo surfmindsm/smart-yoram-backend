@@ -72,7 +72,7 @@ class MusicTeamSeeker(Base):
     church_name = Column(String(100), nullable=True, comment="소속 교회명")
     
     # 시스템 필드
-    views = Column(Integer, nullable=True, default=0, comment="조회수")
+    view_count = Column(Integer, nullable=True, default=0, comment="조회수")
     likes = Column(Integer, nullable=True, default=0, comment="좋아요수")
     matches = Column(Integer, nullable=True, default=0, comment="매칭 건수")
     applications = Column(Integer, nullable=True, default=0, comment="지원 건수")

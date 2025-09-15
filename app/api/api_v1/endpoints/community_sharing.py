@@ -206,10 +206,8 @@ def get_sharing_list(
                 "created_at": row[12].isoformat() if row[12] else None,  # cs.created_at
                 "updated_at": row[13].isoformat() if row[13] else None,  # cs.updated_at
                 "view_count": row[11] or 0,      # cs.view_count
-                "user_id": row[14],              # cs.author_id (응답에서는 user_id로 유지)
                 "author_id": row[14],            # cs.author_id
                 "author_name": row[16] or "익명",  # u.full_name (사용자명)
-                "user_name": row[16] or "익명",    # u.full_name (호환성)
                 "church_id": row[15],            # cs.church_id
                 "church_name": row[17] or f"교회 {row[15]}"  # c.name (교회명)
             })
@@ -304,10 +302,8 @@ async def create_sharing(
                 "contact_info": sharing_record.contact_info,
                 "status": sharing_record.status,
                 "images": sharing_record.images or [],  # 실제로 DB에 저장된 이미지들
-                "user_id": sharing_record.author_id,  # 실제 컬럼명
                 "author_id": sharing_record.author_id,  # 작성자 ID
                 "author_name": current_user.full_name or "익명",  # 작성자 이름
-                "user_name": current_user.full_name or "익명",  # 현재 사용자 이름 (호환성)
                 "church_id": sharing_record.church_id,
                 "created_at": sharing_record.created_at.isoformat() if sharing_record.created_at else None
             }
@@ -361,8 +357,8 @@ def fix_author_ids(
             "success": True,
             "message": f"{updated_count}개 레코드의 author_id를 업데이트했습니다.",
             "updated_count": updated_count,
-            "user_id": current_user.id,
-            "user_name": current_user.full_name,
+            "author_id": current_user.id,
+            "author_name": current_user.full_name,
             "church_id": current_user.church_id
         }
         
