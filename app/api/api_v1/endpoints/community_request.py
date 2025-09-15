@@ -104,9 +104,11 @@ def get_item_request_list(
                 cr.updated_at,
                 cr.author_id,
                 cr.church_id,
-                COALESCE(u.full_name, '익명') as user_name
+                u.full_name,
+                c.name as church_name
             FROM community_requests cr
             LEFT JOIN users u ON cr.author_id = u.id
+            LEFT JOIN churches c ON cr.church_id = c.id
             WHERE 1=1
         """
         params = {}
@@ -183,17 +185,21 @@ def get_item_request_list(
                 "description": row[2],           # cr.description
                 "category": row[3],              # cr.category
                 "urgency": row[4],               # cr.urgency
-                "status": row[9],                # cr.status
-                "location": row[6],              # cr.location
-                "contact_info": row[7],          # cr.contact_info
-                "images": images_data,           # cr.images (JSON)
-                "created_at": row[11].isoformat() if row[11] else None,  # cr.created_at
-                "updated_at": row[12].isoformat() if row[12] else None,  # cr.updated_at
-                "view_count": row[10] or 0,      # cr.view_count
-                "user_id": row[13],              # cr.author_id (응답에서는 user_id로 유지)
-                "user_name": row[15] or "익명",    # u.full_name
-                "church_id": row[14],            # cr.church_id
-                "church_name": row[16] or f"교회 {row[14]}"  # c.name (교회명)
+                "location": row[5],              # cr.location
+                "contact_info": row[6],          # cr.contact_info
+                "reward_type": row[7],           # cr.reward_type
+                "reward_amount": row[8],         # cr.reward_amount
+                "images": images_data,           # cr.images (JSON) - row[9]
+                "status": row[10],               # cr.status
+                "view_count": row[11] or 0,      # cr.view_count
+                "created_at": row[12].isoformat() if row[12] else None,  # cr.created_at
+                "updated_at": row[13].isoformat() if row[13] else None,  # cr.updated_at
+                "user_id": row[14],              # cr.author_id (응답에서는 user_id로 유지)
+                "author_id": row[14],            # cr.author_id 
+                "author_name": row[16] or "익명",  # u.full_name (사용자명)
+                "user_name": row[16] or "익명",    # u.full_name (호환성)
+                "church_id": row[15],            # cr.church_id
+                "church_name": row[17] or f"교회 {row[15]}"  # c.name (교회명)
             })
         
         total_pages = (total_count + limit - 1) // limit
