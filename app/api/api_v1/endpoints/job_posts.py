@@ -129,8 +129,10 @@ def get_job_posting_list(
                 "created_at": row[5].isoformat() if row[5] else None,
                 "updated_at": row[5].isoformat() if row[5] else None,
                 "view_count": row[3] or 0,
-                "user_id": row[6],
-                "user_name": row[7] or "익명",
+                "user_id": row[6],  # author_id를 user_id로 응답 (호환성)
+                "author_id": row[6],  # 작성자 ID
+                "author_name": row[7] or "익명",  # 작성자 이름
+                "user_name": row[7] or "익명",  # 호환성
                 "church_id": 9998
             })
         
@@ -283,8 +285,7 @@ async def create_job_post(
             contact_info=combined_contact_info,  # 조합된 연락처 정보
             # application_deadline은 expires_at에서 변환 필요시 처리
             status=job_data.status or "active",
-            user_id=current_user.id,
-            author_id=current_user.id,  # 중복 필드도 채움
+            author_id=current_user.id,  # JobPost 모델의 실제 필드명
             church_id=current_user.church_id or 9998,  # 커뮤니티 기본값
         )
         
@@ -318,8 +319,10 @@ async def create_job_post(
                 "contact_email": job_data.contact_email,  # 분리된 이메일
                 "contact_info": job_record.contact_info,  # 조합된 연락처 (하위 호환성)
                 "status": job_record.status,
-                "user_id": job_record.user_id,
-                "user_name": current_user.full_name or "익명",
+                "user_id": job_record.author_id,  # 호환성을 위해 user_id로 응답
+                "author_id": job_record.author_id,  # 작성자 ID
+                "author_name": current_user.full_name or "익명",  # 작성자 이름
+                "user_name": current_user.full_name or "익명",  # 호환성
                 "church_id": job_record.church_id,
                 "created_at": job_record.created_at.isoformat() if job_record.created_at else None
             }
