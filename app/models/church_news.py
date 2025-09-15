@@ -67,4 +67,4 @@ class ChurchNews(Base):
     church_id = Column(Integer, nullable=True, comment="교회 ID")
     
     # 관계
-    author = relationship("User", foreign_keys=[author_id])
+    author = relationship("User")

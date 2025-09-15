@@ -52,7 +52,7 @@ class JobPost(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     # Relationships
-    author = relationship("User", foreign_keys=[user_id])  # author_id → user_id
+    author = relationship("User")
 
 
 class JobSeeker(Base):
@@ -87,4 +87,4 @@ class JobSeeker(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     # Relationships
-    author = relationship("User", foreign_keys=[user_id])  # author_id → user_id
+    author = relationship("User")

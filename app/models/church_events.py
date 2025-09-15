@@ -64,4 +64,4 @@ class ChurchEvent(Base):
     updated_at = Column(DateTime(timezone=True), nullable=True, server_default=func.now(), onupdate=func.now(), comment="수정일")
     
     # Relationships
-    author = relationship("User", foreign_keys=[author_id])
+    author = relationship("User")

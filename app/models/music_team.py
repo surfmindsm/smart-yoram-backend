@@ -59,7 +59,7 @@ class MusicTeamRecruit(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     # Relationships
-    author = relationship("User", foreign_keys=[author_id])
+    author = relationship("User")
 
 
 class MusicTeamApplication(Base):
@@ -95,4 +95,4 @@ class MusicTeamApplication(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     # Relationships
-    author = relationship("User", foreign_keys=[author_id])
+    author = relationship("User")
