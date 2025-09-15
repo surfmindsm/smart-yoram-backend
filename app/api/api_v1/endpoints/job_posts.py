@@ -10,12 +10,12 @@ from app.models.job_posts import JobPost, JobSeeker
 
 class JobPostCreateRequest(BaseModel):
     title: str
-    company: str
+    company: Optional[str] = "미정"  # 프론트엔드에서 보내지 않는 경우 기본값 제공
     position: str
     employment_type: str
-    location: str
+    location: Optional[str] = "미정"  # 프론트엔드에서 보내지 않는 경우 기본값 제공
     salary_range: Optional[str] = None
-    description: str
+    description: Optional[str] = ""  # 프론트엔드에서 보내지 않는 경우 기본값 제공
     requirements: Optional[str] = None
     benefits: Optional[str] = None
     contact_method: Optional[str] = "기타"  # 프론트엔드에서 보내지 않는 경우 기본값 제공
