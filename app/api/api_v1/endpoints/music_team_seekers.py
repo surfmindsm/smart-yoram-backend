@@ -175,7 +175,7 @@ def get_music_team_seekers_list(
 @router.post("/music-team-seekers", response_model=dict)
 async def create_music_team_seeker(
     request: Request,
-    seeker_data: MusicTeamSeekerCreateRequest,
+    seeker_data: dict,  # dict로 받아서 JSON 문자열 파싱 처리
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -183,21 +183,48 @@ async def create_music_team_seeker(
     try:
         print(f"🔍 [MUSIC_TEAM_SEEKERS] 지원서 데이터 받음: {seeker_data}")
         
+        # JSON 문자열을 배열로 파싱
+        import json
+        
+        # preferred_location 파싱
+        preferred_location = []
+        if seeker_data.get('preferred_location'):
+            try:
+                if isinstance(seeker_data['preferred_location'], str):
+                    preferred_location = json.loads(seeker_data['preferred_location'])
+                else:
+                    preferred_location = seeker_data['preferred_location']
+            except:
+                preferred_location = []
+        
+        # available_days 파싱
+        available_days = []
+        if seeker_data.get('available_days'):
+            try:
+                if isinstance(seeker_data['available_days'], str):
+                    available_days = json.loads(seeker_data['available_days'])
+                else:
+                    available_days = seeker_data['available_days']
+            except:
+                available_days = []
+        
+        print(f"🔍 [MUSIC_TEAM_SEEKERS] 파싱된 데이터: preferred_location={preferred_location}, available_days={available_days}")
+        
         # 현재 시간 설정
         current_time = datetime.now(timezone.utc)
         
         # 데이터베이스에 저장 - PostgreSQL text[] 타입과 호환되도록 배열 처리
         seeker_record = MusicTeamSeeker(
-            title=seeker_data.title,
-            team_name=seeker_data.team_name,
-            instrument=seeker_data.instrument,
-            experience=seeker_data.experience,
-            portfolio=seeker_data.portfolio,
-            preferred_location=seeker_data.preferred_location if seeker_data.preferred_location else [],
-            available_days=seeker_data.available_days if seeker_data.available_days else [],
-            available_time=seeker_data.available_time,
-            contact_phone=seeker_data.contact_phone,
-            contact_email=seeker_data.contact_email,
+            title=seeker_data.get('title'),
+            team_name=seeker_data.get('team_name'),
+            instrument=seeker_data.get('instrument'),
+            experience=seeker_data.get('experience'),
+            portfolio=seeker_data.get('portfolio'),
+            preferred_location=preferred_location,  # 파싱된 배열 사용
+            available_days=available_days,  # 파싱된 배열 사용
+            available_time=seeker_data.get('available_time'),
+            contact_phone=seeker_data.get('contact_phone'),
+            contact_email=seeker_data.get('contact_email'),
             status="available",  # 기본 상태
             author_id=current_user.id,
             author_name=current_user.full_name or "익명",
