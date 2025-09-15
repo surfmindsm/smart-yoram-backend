@@ -94,13 +94,12 @@ def get_music_team_recruitments_list(
         
         query_sql = """
             SELECT 
-                id,
-                title,
-                'active' as status,
-                0 as views,
-                0 as likes,
-                created_at,
-                author_id
+                id, title, team_name, team_type, instruments_needed,
+                positions_needed, experience_required, practice_location,
+                practice_schedule, commitment, description, requirements,
+                benefits, contact_method, contact_info, status,
+                current_members, target_members, author_id, church_id,
+                created_at, updated_at
             FROM community_music_teams 
             WHERE 1=1
         """
@@ -132,7 +131,7 @@ def get_music_team_recruitments_list(
         # 사용자 정보 조회 (author_name을 위해)
         author_names = {}
         if recruitments_list:
-            author_ids = [row[6] for row in recruitments_list if row[6]]
+            author_ids = [row[18] for row in recruitments_list if row[18]]  # author_id는 18번째 인덱스
             if author_ids:
                 try:
                     user_query = text("SELECT id, full_name FROM users WHERE id = ANY(:ids)")
@@ -142,36 +141,45 @@ def get_music_team_recruitments_list(
                 except Exception as e:
                     print(f"❌ 사용자 정보 조회 실패: {e}")
         
-        # 응답 데이터 구성 (기본 필드만)
+        # 응답 데이터 구성 (실제 데이터 사용)
+        import json
         data_items = []
         for row in recruitments_list:
+            # JSON 필드 파싱
+            instruments_needed = []
+            if row[4]:  # instruments_needed
+                try:
+                    instruments_needed = json.loads(row[4]) if isinstance(row[4], str) else row[4]
+                except:
+                    instruments_needed = []
+            
             data_items.append({
-                "id": row[0],
-                "title": row[1],
-                "team_name": row[1],  # 제목을 팀명으로 임시 사용
-                "team_type": "일반",  # 기본값
-                "instruments_needed": [],
-                "positions_needed": None,
-                "experience_required": "무관",
-                "practice_location": "미정",
-                "practice_schedule": "미정",
-                "commitment": None,
-                "description": row[1],  # 제목을 설명으로 임시 사용
-                "requirements": None,
-                "benefits": None,
-                "contact_method": "댓글",
-                "contact_info": "댓글로 연락",
-                "status": row[2],
-                "current_members": 0,
-                "target_members": 0,
-                "author_id": row[6],
-                "author_name": author_names.get(row[6], "익명"),
-                "church_id": 9998,
-                "views": row[3],
-                "likes": row[4],
-                "applicants_count": 0,
-                "created_at": row[5].isoformat() if row[5] else None,
-                "updated_at": row[5].isoformat() if row[5] else None
+                "id": row[0],                    # id
+                "title": row[1],                 # title
+                "team_name": row[2] or "미정",    # team_name
+                "team_type": row[3] or "일반",    # team_type
+                "instruments_needed": instruments_needed,  # instruments_needed (JSON 파싱)
+                "positions_needed": row[5],      # positions_needed
+                "experience_required": row[6] or "무관",  # experience_required
+                "practice_location": row[7] or "미정",    # practice_location
+                "practice_schedule": row[8] or "미정",    # practice_schedule
+                "commitment": row[9],            # commitment
+                "description": row[10] or "",    # description
+                "requirements": row[11],         # requirements
+                "benefits": row[12],             # benefits
+                "contact_method": row[13] or "댓글",      # contact_method
+                "contact_info": row[14] or "댓글로 연락",  # contact_info
+                "status": row[15] or "모집중",    # status
+                "current_members": row[16] or 0, # current_members
+                "target_members": row[17] or 0,  # target_members
+                "author_id": row[18],            # author_id
+                "author_name": author_names.get(row[18], "익명"),
+                "church_id": row[19] or 9998,    # church_id
+                "views": 0,                      # views (컬럼 없음)
+                "likes": 0,                      # likes (컬럼 없음) 
+                "applicants_count": 0,           # applicants_count (컬럼 없음)
+                "created_at": row[20].isoformat() if row[20] else None,  # created_at
+                "updated_at": row[21].isoformat() if row[21] else None   # updated_at
             })
         
         total_pages = (total_count + limit - 1) // limit
@@ -256,11 +264,17 @@ async def create_music_team_recruitment(
             ) RETURNING id
         """
         
+        # JSON 필드 처리
+        import json
+        instruments_json = None
+        if recruitment_data.instruments_needed is not None:
+            instruments_json = json.dumps(recruitment_data.instruments_needed)
+        
         insert_params = {
             "title": recruitment_data.title,
             "team_name": recruitment_data.team_name or "미정",
             "team_type": recruitment_data.team_type,
-            "instruments_needed": recruitment_data.instruments_needed,
+            "instruments_needed": instruments_json,  # JSON 문자열로 변환
             "positions_needed": recruitment_data.positions_needed,
             "experience_required": recruitment_data.experience_required,
             "practice_location": recruitment_data.practice_location,
