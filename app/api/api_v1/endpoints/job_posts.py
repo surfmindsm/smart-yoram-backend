@@ -78,7 +78,8 @@ def get_job_posting_list(
                 jp.created_at,
                 jp.author_id,
                 u.full_name,
-                jp.church_id
+                jp.church_id,
+                jp.application_deadline
             FROM job_posts jp
             LEFT JOIN users u ON jp.author_id = u.id
             WHERE 1=1
@@ -134,7 +135,9 @@ def get_job_posting_list(
                 "author_id": row[6],  # 작성자 ID
                 "author_name": row[7] or "익명",  # 작성자 이름
                 "user_name": row[7] or "익명",  # 호환성
-                "church_id": row[8]  # 실제 데이터베이스의 church_id
+                "church_id": row[8],  # 실제 데이터베이스의 church_id
+                "expires_at": row[9].isoformat() if row[9] else None,  # 마감일
+                "deadline": row[9].isoformat() if row[9] else None,  # 마감일 (호환성)
             })
         
         total_pages = (total_count + limit - 1) // limit
@@ -273,6 +276,18 @@ async def create_job_post(
             contact_parts.append(f"이메일: {job_data.contact_email}")
         combined_contact_info = " | ".join(contact_parts)
         
+        # expires_at을 application_deadline으로 변환
+        application_deadline = None
+        if job_data.expires_at:
+            try:
+                from datetime import datetime
+                # ISO 문자열을 datetime으로 변환 후 date로 변환
+                deadline_dt = datetime.fromisoformat(job_data.expires_at.replace('Z', '+00:00'))
+                application_deadline = deadline_dt.date()
+            except Exception as e:
+                print(f"⚠️ expires_at 변환 실패: {job_data.expires_at}, 오류: {e}")
+                application_deadline = None
+        
         # 실제 데이터베이스에 저장
         job_record = JobPost(
             title=job_data.title,
@@ -284,7 +299,7 @@ async def create_job_post(
             salary_range=job_data.salary_range,
             requirements=job_data.requirements,
             contact_info=combined_contact_info,  # 조합된 연락처 정보
-            # application_deadline은 expires_at에서 변환 필요시 처리
+            application_deadline=application_deadline,  # 변환된 마감일
             status=job_data.status or "active",
             author_id=current_user.id,  # JobPost 모델의 실제 필드명
             church_id=current_user.church_id or 9998,  # 커뮤니티 기본값
@@ -325,6 +340,8 @@ async def create_job_post(
                 "author_name": current_user.full_name or "익명",  # 작성자 이름
                 "user_name": current_user.full_name or "익명",  # 호환성
                 "church_id": job_record.church_id,
+                "expires_at": job_record.application_deadline.isoformat() if job_record.application_deadline else None,  # 마감일
+                "deadline": job_record.application_deadline.isoformat() if job_record.application_deadline else None,  # 마감일 (호환성)
                 "created_at": job_record.created_at.isoformat() if job_record.created_at else None
             }
         }
