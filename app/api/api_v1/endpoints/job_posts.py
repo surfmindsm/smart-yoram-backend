@@ -77,7 +77,8 @@ def get_job_posting_list(
                 0 as likes,
                 jp.created_at,
                 jp.author_id,
-                u.full_name
+                u.full_name,
+                jp.church_id
             FROM job_posts jp
             LEFT JOIN users u ON jp.author_id = u.id
             WHERE 1=1
@@ -133,7 +134,7 @@ def get_job_posting_list(
                 "author_id": row[6],  # 작성자 ID
                 "author_name": row[7] or "익명",  # 작성자 이름
                 "user_name": row[7] or "익명",  # 호환성
-                "church_id": 9998
+                "church_id": row[8]  # 실제 데이터베이스의 church_id
             })
         
         total_pages = (total_count + limit - 1) // limit
