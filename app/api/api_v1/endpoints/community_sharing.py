@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Q
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from pydantic import BaseModel
+from datetime import datetime, timezone
 import json
 
 from app.api.deps import get_db, get_current_active_user
@@ -85,7 +86,8 @@ def get_sharing_list(
                 cs.price,
                 cs.is_free,
                 cs.location,
-                cs.contact_info,
+                cs.contact_phone,
+                cs.contact_email,
                 cs.images,
                 cs.status,
                 cs.view_count,
@@ -212,15 +214,16 @@ def get_sharing_list(
                 "condition": row[4],             # cs.condition
                 "price": float(row[5]) if row[5] else 0,  # cs.price
                 "is_free": row[6],               # cs.is_free
-                "status": row[10],               # cs.status
+                "status": row[11],               # cs.status
                 "location": row[7],              # cs.location
-                "contact_info": row[8],          # cs.contact_info
+                "contact_phone": row[8],         # cs.contact_phone
+                "contact_email": row[9],         # cs.contact_email
                 "images": images_data,           # cs.images (JSON)
-                "created_at": row[12].isoformat() if row[12] else None,  # cs.created_at
-                "updated_at": row[13].isoformat() if row[13] else None,  # cs.updated_at
-                "view_count": row[11] or 0,      # cs.view_count
-                "author_id": row[14],            # cs.author_id
-                "author_name": row[16] or "익명",  # u.full_name (사용자명)
+                "created_at": row[13].isoformat() if row[13] else None,  # cs.created_at
+                "updated_at": row[14].isoformat() if row[14] else None,  # cs.updated_at
+                "view_count": row[12] or 0,      # cs.view_count
+                "author_id": row[15],            # cs.author_id
+                "author_name": row[17] or "익명",  # u.full_name (사용자명)
                 "church_id": row[15],            # cs.church_id
                 "church_name": row[17] or f"교회 {row[15]}"  # c.name (교회명)
             })
@@ -278,6 +281,9 @@ async def create_sharing(
         print(f"🔍 Parsed data: {sharing_data}")
         print(f"🔍 User ID: {current_user.id}, Church ID: {current_user.church_id}")
         
+        # 현재 시간 설정 (timezone-aware)
+        current_time = datetime.now(timezone.utc)
+        
         # 실제 데이터베이스에 저장 (실제 테이블 컬럼명에 맞춤)
         sharing_record = CommunitySharing(
             church_id=current_user.church_id,  # 사용자의 교회 ID 사용
@@ -289,9 +295,12 @@ async def create_sharing(
             price=0,  # 무료나눔이므로 0
             is_free=True,  # 무료나눔이므로 True
             location=sharing_data.location,
-            contact_info=sharing_data.contact_info,
+            contact_phone=sharing_data.contact_phone,
+            contact_email=sharing_data.contact_email,
             images=sharing_data.images or [],  # JSON 컬럼으로 실제 존재함!
             status=sharing_data.status or "available",
+            created_at=current_time,
+            updated_at=current_time,
         )
         
         db.add(sharing_record)
@@ -312,7 +321,8 @@ async def create_sharing(
                 "price": sharing_record.price,
                 "is_free": sharing_record.is_free,
                 "location": sharing_record.location,
-                "contact_info": sharing_record.contact_info,
+                "contact_phone": sharing_record.contact_phone,
+                "contact_email": sharing_record.contact_email,
                 "status": sharing_record.status,
                 "images": sharing_record.images or [],  # 실제로 DB에 저장된 이미지들
                 "author_id": sharing_record.author_id,  # 작성자 ID
@@ -519,7 +529,8 @@ def get_sharing_detail(
                 "status": "available",
                 "location": "서울",
                 "contact_method": "카톡",
-                "contact_info": "010-0000-0000"
+                "contact_phone": "010-0000-0000",
+                "contact_email": "test@example.com"
             }
         }
         

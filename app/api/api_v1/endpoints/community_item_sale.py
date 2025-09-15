@@ -152,10 +152,8 @@ def get_item_sale_list(
                 "created_at": row[12].isoformat() if row[12] else None,  # cs.created_at
                 "updated_at": row[13].isoformat() if row[13] else None,  # cs.updated_at
                 "view_count": row[11] or 0,      # cs.view_count
-                "user_id": row[14],              # cs.author_id (응답에서는 user_id로 유지)
                 "author_id": row[14],            # cs.author_id
                 "author_name": row[16] or "익명",  # u.full_name (사용자명)
-                "user_name": row[16] or "익명",    # u.full_name (호환성)
                 "church_id": row[15],            # cs.church_id
                 "church_name": row[17] or f"교회 {row[15]}"  # c.name (교회명)
             })
@@ -249,10 +247,8 @@ async def create_item_sale(
                 "contact_info": sale_record.contact_info,
                 "status": sale_record.status,
                 "images": sale_record.images or [],
-                "user_id": sale_record.author_id,
                 "author_id": sale_record.author_id,
                 "author_name": current_user.full_name or "익명",
-                "user_name": current_user.full_name or "익명",
                 "church_id": sale_record.church_id,
                 "created_at": sale_record.created_at.isoformat() if sale_record.created_at else None
             }
@@ -293,7 +289,7 @@ def get_item_sale_detail(
         
         # 작성자 정보 조회
         from app.models.user import User
-        author = db.query(User).filter(User.id == sale_item.user_id).first()
+        author = db.query(User).filter(User.id == sale_item.author_id).first()
         
         return {
             "success": True,
@@ -310,8 +306,8 @@ def get_item_sale_detail(
                 "images": sale_item.images or [],
                 "status": sale_item.status,
                 "view_count": sale_item.view_count,
-                "user_id": sale_item.user_id,
-                "user_name": author.full_name if author else "익명",
+                "author_id": sale_item.author_id,
+                "author_name": author.full_name if author else "익명",
                 "church_id": sale_item.church_id,
                 "created_at": sale_item.created_at.isoformat() if sale_item.created_at else None,
                 "updated_at": sale_item.updated_at.isoformat() if sale_item.updated_at else None
@@ -336,7 +332,7 @@ def update_item_sale(
     try:
         sale_item = db.query(CommunitySharing).filter(
             CommunitySharing.id == sale_id,
-            CommunitySharing.user_id == current_user.id,
+            CommunitySharing.author_id == current_user.id,
             CommunitySharing.is_free == False
         ).first()
         
@@ -388,7 +384,7 @@ def delete_item_sale(
     try:
         sale_item = db.query(CommunitySharing).filter(
             CommunitySharing.id == sale_id,
-            CommunitySharing.user_id == current_user.id,
+            CommunitySharing.author_id == current_user.id,
             CommunitySharing.is_free == False
         ).first()
         
@@ -425,7 +421,7 @@ def update_item_sale_status(
     try:
         sale_item = db.query(CommunitySharing).filter(
             CommunitySharing.id == sale_id,
-            CommunitySharing.user_id == current_user.id,
+            CommunitySharing.author_id == current_user.id,
             CommunitySharing.is_free == False
         ).first()
         

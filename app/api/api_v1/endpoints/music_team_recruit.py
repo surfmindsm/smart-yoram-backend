@@ -23,7 +23,8 @@ class MusicTeamRecruitmentCreateRequest(BaseModel):
     practice_schedule: str
     description: str
     contact_method: str
-    contact_info: str
+    contact_phone: Optional[str] = None
+    contact_email: Optional[str] = None
     status: str
     
     # 선택 필드
@@ -46,7 +47,8 @@ class MusicTeamRecruitmentUpdateRequest(BaseModel):
     practice_schedule: Optional[str] = None
     description: Optional[str] = None
     contact_method: Optional[str] = None
-    contact_info: Optional[str] = None
+    contact_phone: Optional[str] = None
+    contact_email: Optional[str] = None
     status: Optional[str] = None
     instruments_needed: Optional[List[str]] = None
     positions_needed: Optional[str] = None
@@ -97,7 +99,7 @@ def get_music_team_recruitments_list(
                 cmt.id, cmt.title, cmt.team_name, cmt.team_type, cmt.instruments_needed,
                 cmt.positions_needed, cmt.experience_required, cmt.practice_location,
                 cmt.practice_schedule, cmt.commitment, cmt.description, cmt.requirements,
-                cmt.benefits, cmt.contact_method, cmt.contact_info, cmt.status,
+                cmt.benefits, cmt.contact_method, cmt.contact_phone, cmt.contact_email, cmt.status,
                 cmt.current_members, cmt.target_members, cmt.author_id, cmt.church_id,
                 cmt.created_at, cmt.updated_at, c.name as church_name
             FROM community_music_teams cmt
@@ -132,7 +134,7 @@ def get_music_team_recruitments_list(
         # 사용자 정보 조회 (author_name을 위해)
         author_names = {}
         if recruitments_list:
-            author_ids = [row[18] for row in recruitments_list if row[18]]  # author_id는 18번째 인덱스
+            author_ids = [row[19] for row in recruitments_list if row[19]]  # author_id는 19번째 인덱스
             if author_ids:
                 try:
                     user_query = text("SELECT id, full_name FROM users WHERE id = ANY(:ids)")
@@ -169,19 +171,20 @@ def get_music_team_recruitments_list(
                 "requirements": row[11],         # requirements
                 "benefits": row[12],             # benefits
                 "contact_method": row[13] or "댓글",      # contact_method
-                "contact_info": row[14] or "댓글로 연락",  # contact_info
-                "status": row[15] or "모집중",    # status
-                "current_members": row[16] or 0, # current_members
-                "target_members": row[17] or 0,  # target_members
-                "author_id": row[18],            # author_id
-                "author_name": author_names.get(row[18], "익명"),
-                "church_id": row[19] or 9998,    # church_id
-                "church_name": row[22] or f"교회 {row[19] or 9998}",  # church_name (JOIN으로 가져온 교회명)
+                "contact_phone": row[14],               # contact_phone
+                "contact_email": row[15],               # contact_email
+                "status": row[16] or "모집중",    # status
+                "current_members": row[17] or 0, # current_members
+                "target_members": row[18] or 0,  # target_members
+                "author_id": row[19],            # author_id
+                "author_name": author_names.get(row[19], "익명"),
+                "church_id": row[20] or 9998,    # church_id
+                "church_name": row[23] or f"교회 {row[20] or 9998}",  # church_name (JOIN으로 가져온 교회명)
                 "views": 0,                      # views (컬럼 없음)
                 "likes": 0,                      # likes (컬럼 없음) 
                 "applicants_count": 0,           # applicants_count (컬럼 없음)
-                "created_at": row[20].isoformat() if row[20] else None,  # created_at
-                "updated_at": row[21].isoformat() if row[21] else None   # updated_at
+                "created_at": row[21].isoformat() if row[21] else None,  # created_at
+                "updated_at": row[22].isoformat() if row[22] else None   # updated_at
             })
         
         total_pages = (total_count + limit - 1) // limit
@@ -254,13 +257,13 @@ async def create_music_team_recruitment(
             INSERT INTO community_music_teams (
                 title, team_name, team_type, instruments_needed, positions_needed,
                 experience_required, practice_location, practice_schedule, commitment,
-                description, requirements, benefits, contact_method, contact_info,
+                description, requirements, benefits, contact_method, contact_phone, contact_email,
                 status, current_members, target_members, author_id, church_id,
                 created_at, updated_at
             ) VALUES (
                 :title, :team_name, :team_type, :instruments_needed, :positions_needed,
                 :experience_required, :practice_location, :practice_schedule, :commitment,
-                :description, :requirements, :benefits, :contact_method, :contact_info,
+                :description, :requirements, :benefits, :contact_method, :contact_phone, :contact_email,
                 :status, :current_members, :target_members, :author_id, :church_id,
                 :created_at, :updated_at
             ) RETURNING id
@@ -286,7 +289,8 @@ async def create_music_team_recruitment(
             "requirements": recruitment_data.requirements,
             "benefits": recruitment_data.benefits,
             "contact_method": recruitment_data.contact_method,
-            "contact_info": recruitment_data.contact_info,
+            "contact_phone": recruitment_data.contact_phone,
+            "contact_email": recruitment_data.contact_email,
             "status": recruitment_data.status,
             "current_members": recruitment_data.current_members,
             "target_members": recruitment_data.target_members,
@@ -362,7 +366,8 @@ def get_music_team_recruitment_detail(
                 "requirements": recruitment.requirements,
                 "benefits": recruitment.benefits,
                 "contact_method": recruitment.contact_method,
-                "contact_info": recruitment.contact_info,
+                "contact_phone": recruitment.contact_phone,
+                "contact_email": recruitment.contact_email,
                 "status": recruitment.status,
                 "current_members": recruitment.current_members,
                 "target_members": recruitment.target_members,

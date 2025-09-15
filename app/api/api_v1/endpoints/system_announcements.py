@@ -184,7 +184,7 @@ def update_system_announcement(
         for field, value in update_data.items():
             setattr(announcement, field, value)
         
-        announcement.updated_at = datetime.utcnow()
+        announcement.updated_at = datetime.now(timezone.utc)
         
         db.commit()
         db.refresh(announcement)

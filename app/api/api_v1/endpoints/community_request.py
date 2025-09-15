@@ -194,10 +194,8 @@ def get_item_request_list(
                 "view_count": row[11] or 0,      # cr.view_count
                 "created_at": row[12].isoformat() if row[12] else None,  # cr.created_at
                 "updated_at": row[13].isoformat() if row[13] else None,  # cr.updated_at
-                "user_id": row[14],              # cr.author_id (응답에서는 user_id로 유지)
                 "author_id": row[14],            # cr.author_id 
                 "author_name": row[16] or "익명",  # u.full_name (사용자명)
-                "user_name": row[16] or "익명",    # u.full_name (호환성)
                 "church_id": row[15],            # cr.church_id
                 "church_name": row[17] or f"교회 {row[15]}"  # c.name (교회명)
             })
@@ -308,10 +306,8 @@ async def create_request(
                 "contact_info": request_record.contact_info,
                 "status": request_record.status,
                 "images": request_record.images or [],
-                "user_id": request_record.author_id,
                 "author_id": request_record.author_id,
                 "author_name": current_user.full_name or "익명",
-                "user_name": current_user.full_name or "익명",
                 "church_id": request_record.church_id,
                 "created_at": request_record.created_at.isoformat() if request_record.created_at else None
             }
@@ -355,8 +351,8 @@ def fix_request_authors(
             "message": f"{updated_count}개의 요청이 업데이트되었습니다.",
             "data": {
                 "updated_count": updated_count,
-                "user_id": current_user.id,
-                "user_name": current_user.full_name or "익명"
+                "author_id": current_user.id,
+                "author_name": current_user.full_name or "익명"
             }
         }
         

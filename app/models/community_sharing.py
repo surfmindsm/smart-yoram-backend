@@ -44,7 +44,8 @@ class CommunitySharing(Base):
     price = Column(Integer, nullable=True, default=0, comment="가격")
     is_free = Column(Boolean, nullable=True, default=True, comment="무료 여부")
     location = Column(String, nullable=True, comment="지역")
-    contact_info = Column(String, nullable=True, comment="연락처")
+    contact_phone = Column(String(20), nullable=True, comment="연락처")
+    contact_email = Column(String(100), nullable=True, comment="이메일")
     images = Column(JSON, nullable=True, comment="이미지 URL 배열")  # 실제로 존재함!
     status = Column(String, nullable=True, default="available", comment="상태")
     view_count = Column(Integer, nullable=True, default=0, comment="조회수")  # 실제 컬럼명
