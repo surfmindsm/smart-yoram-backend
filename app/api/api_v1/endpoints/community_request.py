@@ -76,6 +76,12 @@ def get_item_request_list(
         print(f"🔍 [LIST] 물품 요청 목록 조회 시작")
         print(f"🔍 [LIST] 필터: status={status}, category={category}, urgency={urgency}, location={location}")
         
+        # 전체 데이터 개수 먼저 확인
+        total_requests = db.query(CommunityRequest).count()
+        null_author_requests = db.query(CommunityRequest).filter(CommunityRequest.author_id.is_(None)).count()
+        print(f"🔍 [DEBUG] 전체 요청 개수: {total_requests}")
+        print(f"🔍 [DEBUG] NULL author_id 요청 개수: {null_author_requests}")
+        
         # 기본 쿼리 (커뮤니티는 모든 교회가 공유) - User 테이블과 LEFT JOIN
         query = db.query(CommunityRequest, User.full_name).outerjoin(
             User, CommunityRequest.author_id == User.id
@@ -255,6 +261,46 @@ async def create_request(
         return {
             "success": False,
             "message": f"요청 등록 중 오류가 발생했습니다: {str(e)}"
+        }
+
+
+@router.post("/fix-request-authors", response_model=dict)
+def fix_request_authors(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """NULL author_id를 현재 사용자로 업데이트"""
+    try:
+        from sqlalchemy import text
+        
+        # NULL author_id인 레코드 찾기
+        null_records = db.query(CommunityRequest).filter(CommunityRequest.author_id.is_(None)).all()
+        
+        print(f"🔍 NULL author_id 레코드 개수: {len(null_records)}")
+        
+        updated_count = 0
+        for record in null_records:
+            record.author_id = current_user.id
+            updated_count += 1
+            print(f"✅ Request ID {record.id} author_id 업데이트: {current_user.id}")
+        
+        db.commit()
+        
+        return {
+            "success": True,
+            "message": f"{updated_count}개의 요청이 업데이트되었습니다.",
+            "data": {
+                "updated_count": updated_count,
+                "user_id": current_user.id,
+                "user_name": current_user.full_name or "익명"
+            }
+        }
+        
+    except Exception as e:
+        db.rollback()
+        return {
+            "success": False,
+            "message": f"업데이트 중 오류: {str(e)}"
         }
 
 
