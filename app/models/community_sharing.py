@@ -35,6 +35,7 @@ class CommunitySharing(Base, CommunityBaseMixin, ContactFieldsMixin):
     price = Column(Integer, nullable=True, default=0, comment="가격")
     is_free = Column(Boolean, nullable=True, default=True, comment="무료 여부")
     location = Column(String, nullable=True, comment="지역")
+    contact_info = Column(String, nullable=True, comment="연락처 정보")
     images = Column(JSON, nullable=True, comment="이미지 URL 배열")
     
     # Relationships
