@@ -82,62 +82,118 @@ def get_item_request_list(
         print(f"🔍 [DEBUG] 전체 요청 개수: {total_requests}")
         print(f"🔍 [DEBUG] NULL author_id 요청 개수: {null_author_requests}")
         
-        # 기본 쿼리 (커뮤니티는 모든 교회가 공유) - User 테이블과 LEFT JOIN
-        query = db.query(CommunityRequest, User.full_name).outerjoin(
-            User, CommunityRequest.author_id == User.id
-        )
-        # 커뮤니티는 교회 구분없이 모든 사용자가 볼 수 있음
+        # Raw SQL로 안전한 조회 - 실제 컬럼명 사용
+        from sqlalchemy import text
+        db.rollback()  # 이전 트랜잭션 실패 방지
         
-        # 먼저 필터링 없이 전체 데이터 개수 확인
-        total_without_filter = query.count()
-        print(f"🔍 [LIST] 필터링 전 전체 데이터 개수: {total_without_filter}")
+        query_sql = """
+            SELECT 
+                cr.id,
+                cr.title,
+                cr.description,
+                cr.category,
+                cr.urgency,
+                cr.location,
+                cr.contact_info,
+                cr.reward_type,
+                cr.reward_amount,
+                cr.images,
+                cr.status,
+                cr.view_count,
+                cr.created_at,
+                cr.updated_at,
+                cr.author_id,
+                cr.church_id,
+                COALESCE(u.full_name, '익명') as user_name
+            FROM community_requests cr
+            LEFT JOIN users u ON cr.author_id = u.id
+            WHERE 1=1
+        """
+        params = {}
         
-        # 필터링 적용 (빈 문자열도 None으로 처리)
+        # 필터링 적용
         if status and status != 'all':
-            query = query.filter(CommunityRequest.status == status)
+            query_sql += " AND cr.status = :status"
+            params["status"] = status
             print(f"🔍 [LIST] 상태 필터 적용: {status}")
         if category and category != 'all':
-            query = query.filter(CommunityRequest.category == category)
+            query_sql += " AND cr.category = :category"
+            params["category"] = category
             print(f"🔍 [LIST] 카테고리 필터 적용: {category}")
         if urgency and urgency != 'all':
-            query = query.filter(CommunityRequest.urgency == urgency)
+            query_sql += " AND cr.urgency = :urgency"
+            params["urgency"] = urgency
             print(f"🔍 [LIST] 긴급도 필터 적용: {urgency}")
         if location:
-            query = query.filter(CommunityRequest.location.ilike(f"%{location}%"))
+            query_sql += " AND cr.location ILIKE :location"
+            params["location"] = f"%{location}%"
         if search:
-            query = query.filter(
-                (CommunityRequest.title.ilike(f"%{search}%")) |
-                (CommunityRequest.description.ilike(f"%{search}%"))
-            )
+            query_sql += " AND (cr.title ILIKE :search OR cr.description ILIKE :search)"
+            params["search"] = f"%{search}%"
+        
+        query_sql += " ORDER BY cr.created_at DESC"
         
         # 전체 개수 계산
-        total_count = query.count()
+        count_sql = "SELECT COUNT(*) FROM community_requests cr WHERE 1=1"
+        count_params = {}
+        if status and status != 'all':
+            count_sql += " AND cr.status = :status"
+            count_params["status"] = status
+        if category and category != 'all':
+            count_sql += " AND cr.category = :category"
+            count_params["category"] = category
+        if urgency and urgency != 'all':
+            count_sql += " AND cr.urgency = :urgency"
+            count_params["urgency"] = urgency
+        if location:
+            count_sql += " AND cr.location ILIKE :location"
+            count_params["location"] = f"%{location}%"
+        if search:
+            count_sql += " AND (cr.title ILIKE :search OR cr.description ILIKE :search)"
+            count_params["search"] = f"%{search}%"
+            
+        count_result = db.execute(text(count_sql), count_params)
+        total_count = count_result.scalar() or 0
         print(f"🔍 [LIST] 필터링 후 전체 데이터 개수: {total_count}")
         
         # 페이지네이션
         offset = (page - 1) * limit
-        request_list = query.order_by(CommunityRequest.created_at.desc()).offset(offset).limit(limit).all()
+        query_sql += f" OFFSET {offset} LIMIT {limit}"
+        
+        result = db.execute(text(query_sql), params)
+        request_list = result.fetchall()
         print(f"🔍 [LIST] 조회된 데이터 개수: {len(request_list)}")
         
         # 응답 데이터 구성
         data_items = []
-        for request, user_full_name in request_list:
+        for row in request_list:
+            # Raw SQL 결과를 인덱스로 접근 (실제 컬럼 순서대로)
+            images_data = row[8] if row[8] else []  # JSON 컬럼
+            # JSON 문자열인 경우 파싱
+            if isinstance(images_data, str):
+                try:
+                    import json
+                    images_data = json.loads(images_data)
+                except:
+                    images_data = []
+            
             data_items.append({
-                "id": request.id,
-                "title": request.title,
-                "description": request.description,
-                "category": request.category,
-                "urgency": request.urgency,
-                "status": request.status,
-                "location": request.location,
-                "contact_info": request.contact_info,
-                "images": request.images or [],
-                "created_at": request.created_at.isoformat() if request.created_at else None,
-                "updated_at": request.updated_at.isoformat() if request.updated_at else None,
-                "view_count": request.view_count or 0,
-                "user_id": request.user_id,
-                "user_name": user_full_name or "익명",  # 사용자 이름 추가
-                "church_id": request.church_id
+                "id": row[0],                    # cr.id
+                "title": row[1],                 # cr.title  
+                "description": row[2],           # cr.description
+                "category": row[3],              # cr.category
+                "urgency": row[4],               # cr.urgency
+                "status": row[9],                # cr.status
+                "location": row[6],              # cr.location
+                "contact_info": row[7],          # cr.contact_info
+                "images": images_data,           # cr.images (JSON)
+                "created_at": row[11].isoformat() if row[11] else None,  # cr.created_at
+                "updated_at": row[12].isoformat() if row[12] else None,  # cr.updated_at
+                "view_count": row[10] or 0,      # cr.view_count
+                "user_id": row[13],              # cr.author_id (응답에서는 user_id로 유지)
+                "user_name": row[15] or "익명",    # u.full_name
+                "church_id": row[14],            # cr.church_id
+                "church_name": row[16] or f"교회 {row[14]}"  # c.name (교회명)
             })
         
         total_pages = (total_count + limit - 1) // limit
