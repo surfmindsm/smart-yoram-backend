@@ -39,7 +39,7 @@ def debug_requests(db: Session = Depends(get_db)):
                 "id": req.id,
                 "title": req.title,
                 "status": req.status,
-                "user_id": req.user_id,
+                "author_id": req.author_id,
                 "church_id": req.church_id,
                 "created_at": str(req.created_at)
             })
@@ -210,8 +210,7 @@ async def create_request(
             reward_amount=request_data.reward_amount,
             status=request_data.status or "open",
             images=request_data.images or [],
-            user_id=current_user.id,  # 실제 테이블의 user_id 사용
-            author_id=current_user.id,  # author_id도 설정 (조회 API와 일치)
+            author_id=current_user.id,  # 실제 테이블의 author_id 사용
             church_id=current_user.church_id or 9998,  # 커뮤니티 기본값
         )
         

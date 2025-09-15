@@ -46,14 +46,12 @@ class CommunityRequest(Base):
     reward_amount = Column(Integer, nullable=True, comment="보상 금액")
     status = Column(String, default="open", nullable=True, comment="상태")
     
-    # 작성자 정보 (실제 테이블에 both user_id, author_id 존재)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, comment="작성자 ID")
-    author_id = Column(Integer, nullable=True, comment="작성자 ID (중복)")
+    # 작성자 정보 (실제 테이블 구조에 맞춤)
+    author_id = Column(Integer, ForeignKey("users.id"), nullable=True, comment="작성자 ID")
     church_id = Column(Integer, nullable=False, default=9998, comment="교회 ID (9998=커뮤니티)")
     
-    # 통계 (실제 테이블에 both view_count, views 존재)
+    # 통계
     view_count = Column(Integer, default=0, comment="조회수")
-    views = Column(Integer, default=0, comment="조회수 (중복)")
     likes = Column(Integer, default=0, comment="좋아요수")
     
     # 시간 정보
@@ -61,4 +59,4 @@ class CommunityRequest(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     # Relationships
-    author = relationship("User", foreign_keys=[user_id])
+    author = relationship("User", foreign_keys=[author_id])
