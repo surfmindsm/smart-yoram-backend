@@ -43,4 +43,4 @@ class CommunityRequest(Base, CommunityBaseMixin):
     reward_amount = Column(Integer, nullable=True, comment="보상 금액")
     
     # Relationships
-    author = relationship("User", foreign_keys=["author_id"])
+    author = relationship("User")

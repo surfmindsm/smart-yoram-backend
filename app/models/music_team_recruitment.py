@@ -33,4 +33,4 @@ class MusicTeamRecruitment(Base, CommunityBaseMixin, ContactFieldsMixin):
     applicants_count = Column(Integer, nullable=True, default=0, comment="지원자 수")
     
     # Relationships
-    author = relationship("User", foreign_keys=["author_id"])
+    author = relationship("User")

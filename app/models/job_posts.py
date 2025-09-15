@@ -32,7 +32,7 @@ class JobPost(Base, CommunityBaseMixin):
     application_deadline = Column(Date, nullable=True, comment="지원 마감일")
     
     # Relationships
-    author = relationship("User", foreign_keys=["author_id"])
+    author = relationship("User")
 
 
 class JobSeeker(Base, CommunityBaseMixin):
@@ -58,4 +58,4 @@ class JobSeeker(Base, CommunityBaseMixin):
     available_start_date = Column(Date, nullable=True, comment="입사 가능일")
     
     # Relationships
-    author = relationship("User", foreign_keys=["author_id"])
+    author = relationship("User")

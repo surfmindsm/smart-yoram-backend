@@ -38,4 +38,4 @@ class CommunitySharing(Base, CommunityBaseMixin, ContactFieldsMixin):
     images = Column(JSON, nullable=True, comment="이미지 URL 배열")
     
     # Relationships
-    author = relationship("User", foreign_keys=["author_id"])
+    author = relationship("User", back_populates="community_sharing_posts")
