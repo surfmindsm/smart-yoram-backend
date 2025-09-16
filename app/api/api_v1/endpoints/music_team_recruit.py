@@ -112,7 +112,7 @@ def get_music_team_recruitments_list(
         # 단순한 쿼리로 시작해서 데이터 존재 여부 확인
         query_sql = """
             SELECT
-                cmt.id, cmt.title, cmt.status, cmt.author_id, cmt.created_at, COALESCE(cmt.views, 0) as views
+                cmt.id, cmt.title, cmt.status, cmt.author_id, cmt.created_at, COALESCE(cmt.view_count, 0) as view_count
             FROM community_music_teams cmt
             WHERE 1=1
         """
@@ -198,7 +198,7 @@ def get_music_team_recruitments_list(
                 "author_name": author_names.get(row[3], "익명"),
                 "church_id": 9998,               # 기본값
                 "church_name": "커뮤니티",        # 기본값
-                "views": row[5] or 0,            # 실제 데이터베이스 views 값 (6번째 인덱스)
+                "views": row[5] or 0,            # 실제 데이터베이스 view_count 값 (6번째 인덱스)
                 "likes": 0,                      # 기본값
                 "applicants_count": 0,           # 기본값
                 "created_at": created_at_kst,    # KST로 변환된 created_at
@@ -364,8 +364,8 @@ def increment_music_team_recruitment_view_count(
         from sqlalchemy import text
         print(f"🚀 [VIEW_INCREMENT_API] 음악팀 모집 조회수 증가 전용 API 호출 - ID: {recruitment_id}")
 
-        # 현재 조회수 확인 (views 컬럼 사용)
-        check_sql = "SELECT views FROM community_music_teams WHERE id = :recruitment_id"
+        # 현재 조회수 확인 (view_count 컬럼 사용)
+        check_sql = "SELECT view_count FROM community_music_teams WHERE id = :recruitment_id"
         result = db.execute(text(check_sql), {"recruitment_id": recruitment_id})
         row = result.fetchone()
 
@@ -378,12 +378,12 @@ def increment_music_team_recruitment_view_count(
         current_view_count = row[0] or 0
         print(f"🔍 [VIEW_INCREMENT_API] 현재 조회수: {current_view_count}")
 
-        # 조회수 증가 (views 컬럼 사용)
+        # 조회수 증가 (view_count 컬럼 사용)
         increment_sql = """
             UPDATE community_music_teams
-            SET views = COALESCE(views, 0) + 1
+            SET view_count = COALESCE(view_count, 0) + 1
             WHERE id = :recruitment_id
-            RETURNING views
+            RETURNING view_count
         """
         result = db.execute(text(increment_sql), {"recruitment_id": recruitment_id})
         new_view_count = result.fetchone()[0]
