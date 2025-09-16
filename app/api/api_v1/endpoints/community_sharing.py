@@ -185,19 +185,9 @@ def get_sharing_list(
             print(f"❌ [DEBUG] Query execution error: {query_e}")
             sharing_list = []
         
-        # 데이터가 없을 경우 임시 더미 데이터 추가
+        # 데이터가 없을 경우 빈 목록 반환
         if not sharing_list:
-            print("⚠️ [DEBUG] 데이터베이스에 데이터가 없어서 임시 더미 데이터를 추가합니다")
-            # 임시 더미 데이터를 sharing_list에 시뮬레이션
-            from datetime import datetime
-            dummy_data = [
-                (1, '냉장고 무료 나눔', '이사가면서 냉장고를 무료로 나눔합니다. 상태 좋습니다.', '가전제품', 'good', 0, True, '서울시 강남구', '010-1234-5678', 'test1@example.com', '[]', 'available', 0, datetime.now(), datetime.now(), 1, 6, '김성은2', '테스트교회'),
-                (2, '책장 무료 드림', '원목 책장입니다. 직접 가져가실 분만 연락주세요.', '가구', 'good', 0, True, '서울시 서초구', '010-2345-6789', 'test2@example.com', '[]', 'available', 0, datetime.now(), datetime.now(), 1, 6, '김성은2', '테스트교회'),
-                (3, '아기 옷 나눔', '6-12개월 아기 옷들 한 박스 나눔해요. 깨끗하게 세탁해서 드릴게요.', '의류', 'excellent', 0, True, '서울시 송파구', '010-3456-7890', 'test3@example.com', '[]', 'available', 0, datetime.now(), datetime.now(), 1, 6, '김성은2', '테스트교회')
-            ]
-            sharing_list = dummy_data
-            total_count = len(dummy_data)
-            print(f"✅ [DEBUG] 임시 더미 데이터 {len(dummy_data)}개 생성됨")
+            print("ℹ️ [DEBUG] 조회된 데이터가 없습니다.")
 
         # 응답 데이터 구성
         data_items = []
