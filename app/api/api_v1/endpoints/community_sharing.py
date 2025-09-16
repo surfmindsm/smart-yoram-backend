@@ -313,8 +313,8 @@ async def create_sharing(
                 "price": sharing_record.price,
                 "is_free": sharing_record.is_free,
                 "location": sharing_record.location,
-                "contact_phone": sharing_record.contact_phone,
-                "contact_email": sharing_record.contact_email,
+                "contact_phone": sharing_data.contact_phone or "",
+                "contact_email": sharing_data.contact_email or "",
                 "status": sharing_record.status,
                 "images": sharing_record.images or [],  # 실제로 DB에 저장된 이미지들
                 "author_id": sharing_record.author_id,  # 작성자 ID
