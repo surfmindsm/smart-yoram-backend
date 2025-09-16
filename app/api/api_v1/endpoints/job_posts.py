@@ -367,6 +367,61 @@ async def create_job_post(
         }
 
 
+@router.post("/job-posting/{job_id}/increment-view", response_model=dict)
+def increment_job_post_view_count(
+    job_id: int,
+    db: Session = Depends(get_db)
+):
+    """구인 공고 조회수 증가 전용 API - 인증 없이 사용 가능"""
+    try:
+        from sqlalchemy import text
+        print(f"🚀 [VIEW_INCREMENT_API] 구인 공고 조회수 증가 전용 API 호출 - ID: {job_id}")
+
+        # 현재 조회수 확인
+        check_sql = "SELECT view_count FROM job_posts WHERE id = :job_id"
+        result = db.execute(text(check_sql), {"job_id": job_id})
+        row = result.fetchone()
+
+        if not row:
+            return {
+                "success": False,
+                "message": "해당 구인 공고를 찾을 수 없습니다."
+            }
+
+        current_view_count = row[0] or 0
+        print(f"🔍 [VIEW_INCREMENT_API] 현재 조회수: {current_view_count}")
+
+        # 조회수 증가
+        increment_sql = """
+            UPDATE job_posts
+            SET view_count = COALESCE(view_count, 0) + 1
+            WHERE id = :job_id
+            RETURNING view_count
+        """
+        result = db.execute(text(increment_sql), {"job_id": job_id})
+        new_view_count = result.fetchone()[0]
+        db.commit()
+
+        print(f"✅ [VIEW_INCREMENT_API] 조회수 증가 성공 - ID: {job_id}, {current_view_count} → {new_view_count}")
+
+        return {
+            "success": True,
+            "data": {
+                "job_id": job_id,
+                "previous_view_count": current_view_count,
+                "new_view_count": new_view_count
+            }
+        }
+
+    except Exception as e:
+        db.rollback()
+        print(f"❌ [VIEW_INCREMENT_API] 조회수 증가 실패 - ID: {job_id}, 오류: {e}")
+        return {
+            "success": False,
+            "message": f"조회수 증가 중 오류가 발생했습니다: {str(e)}"
+        }
+
+
 @router.get("/job-posts/{job_id}", response_model=dict)
 def get_job_post_detail(
     job_id: int,
@@ -630,6 +685,61 @@ async def create_job_seeker(
         return {
             "success": False,
             "message": f"구직 신청 등록 중 오류가 발생했습니다: {str(e)}"
+        }
+
+
+@router.post("/job-seeking/{seeker_id}/increment-view", response_model=dict)
+def increment_job_seeker_view_count(
+    seeker_id: int,
+    db: Session = Depends(get_db)
+):
+    """구직 신청 조회수 증가 전용 API - 인증 없이 사용 가능"""
+    try:
+        from sqlalchemy import text
+        print(f"🚀 [VIEW_INCREMENT_API] 구직 신청 조회수 증가 전용 API 호출 - ID: {seeker_id}")
+
+        # 현재 조회수 확인
+        check_sql = "SELECT view_count FROM job_seekers WHERE id = :seeker_id"
+        result = db.execute(text(check_sql), {"seeker_id": seeker_id})
+        row = result.fetchone()
+
+        if not row:
+            return {
+                "success": False,
+                "message": "해당 구직 신청을 찾을 수 없습니다."
+            }
+
+        current_view_count = row[0] or 0
+        print(f"🔍 [VIEW_INCREMENT_API] 현재 조회수: {current_view_count}")
+
+        # 조회수 증가
+        increment_sql = """
+            UPDATE job_seekers
+            SET view_count = COALESCE(view_count, 0) + 1
+            WHERE id = :seeker_id
+            RETURNING view_count
+        """
+        result = db.execute(text(increment_sql), {"seeker_id": seeker_id})
+        new_view_count = result.fetchone()[0]
+        db.commit()
+
+        print(f"✅ [VIEW_INCREMENT_API] 조회수 증가 성공 - ID: {seeker_id}, {current_view_count} → {new_view_count}")
+
+        return {
+            "success": True,
+            "data": {
+                "seeker_id": seeker_id,
+                "previous_view_count": current_view_count,
+                "new_view_count": new_view_count
+            }
+        }
+
+    except Exception as e:
+        db.rollback()
+        print(f"❌ [VIEW_INCREMENT_API] 조회수 증가 실패 - ID: {seeker_id}, 오류: {e}")
+        return {
+            "success": False,
+            "message": f"조회수 증가 중 오류가 발생했습니다: {str(e)}"
         }
 
 

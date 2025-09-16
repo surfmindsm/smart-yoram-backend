@@ -276,6 +276,61 @@ async def create_item_sale(
         }
 
 
+@router.post("/item-sale/{sale_id}/increment-view", response_model=dict)
+def increment_item_sale_view_count(
+    sale_id: int,
+    db: Session = Depends(get_db)
+):
+    """물건 판매 조회수 증가 전용 API - 인증 없이 사용 가능"""
+    try:
+        from sqlalchemy import text
+        print(f"🚀 [VIEW_INCREMENT_API] 물건 판매 조회수 증가 전용 API 호출 - ID: {sale_id}")
+
+        # 현재 조회수 확인 (is_free = false인 판매 상품만)
+        check_sql = "SELECT view_count FROM community_sharing WHERE id = :sale_id AND is_free = false"
+        result = db.execute(text(check_sql), {"sale_id": sale_id})
+        row = result.fetchone()
+
+        if not row:
+            return {
+                "success": False,
+                "message": "해당 물건 판매 게시글을 찾을 수 없습니다."
+            }
+
+        current_view_count = row[0] or 0
+        print(f"🔍 [VIEW_INCREMENT_API] 현재 조회수: {current_view_count}")
+
+        # 조회수 증가
+        increment_sql = """
+            UPDATE community_sharing
+            SET view_count = COALESCE(view_count, 0) + 1
+            WHERE id = :sale_id AND is_free = false
+            RETURNING view_count
+        """
+        result = db.execute(text(increment_sql), {"sale_id": sale_id})
+        new_view_count = result.fetchone()[0]
+        db.commit()
+
+        print(f"✅ [VIEW_INCREMENT_API] 조회수 증가 성공 - ID: {sale_id}, {current_view_count} → {new_view_count}")
+
+        return {
+            "success": True,
+            "data": {
+                "sale_id": sale_id,
+                "previous_view_count": current_view_count,
+                "new_view_count": new_view_count
+            }
+        }
+
+    except Exception as e:
+        db.rollback()
+        print(f"❌ [VIEW_INCREMENT_API] 조회수 증가 실패 - ID: {sale_id}, 오류: {e}")
+        return {
+            "success": False,
+            "message": f"조회수 증가 중 오류가 발생했습니다: {str(e)}"
+        }
+
+
 @router.get("/item-sale/{sale_id}", response_model=dict)
 def get_item_sale_detail(
     sale_id: int,

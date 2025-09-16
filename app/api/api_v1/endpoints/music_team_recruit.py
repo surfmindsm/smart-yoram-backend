@@ -354,6 +354,61 @@ async def create_music_team_recruitment(
         }
 
 
+@router.post("/music-team-recruitments/{recruitment_id}/increment-view", response_model=dict)
+def increment_music_team_recruitment_view_count(
+    recruitment_id: int,
+    db: Session = Depends(get_db)
+):
+    """음악팀 모집 조회수 증가 전용 API - 인증 없이 사용 가능"""
+    try:
+        from sqlalchemy import text
+        print(f"🚀 [VIEW_INCREMENT_API] 음악팀 모집 조회수 증가 전용 API 호출 - ID: {recruitment_id}")
+
+        # 현재 조회수 확인 (views 컬럼 사용)
+        check_sql = "SELECT views FROM community_music_teams WHERE id = :recruitment_id"
+        result = db.execute(text(check_sql), {"recruitment_id": recruitment_id})
+        row = result.fetchone()
+
+        if not row:
+            return {
+                "success": False,
+                "message": "해당 음악팀 모집을 찾을 수 없습니다."
+            }
+
+        current_view_count = row[0] or 0
+        print(f"🔍 [VIEW_INCREMENT_API] 현재 조회수: {current_view_count}")
+
+        # 조회수 증가 (views 컬럼 사용)
+        increment_sql = """
+            UPDATE community_music_teams
+            SET views = COALESCE(views, 0) + 1
+            WHERE id = :recruitment_id
+            RETURNING views
+        """
+        result = db.execute(text(increment_sql), {"recruitment_id": recruitment_id})
+        new_view_count = result.fetchone()[0]
+        db.commit()
+
+        print(f"✅ [VIEW_INCREMENT_API] 조회수 증가 성공 - ID: {recruitment_id}, {current_view_count} → {new_view_count}")
+
+        return {
+            "success": True,
+            "data": {
+                "recruitment_id": recruitment_id,
+                "previous_view_count": current_view_count,
+                "new_view_count": new_view_count
+            }
+        }
+
+    except Exception as e:
+        db.rollback()
+        print(f"❌ [VIEW_INCREMENT_API] 조회수 증가 실패 - ID: {recruitment_id}, 오류: {e}")
+        return {
+            "success": False,
+            "message": f"조회수 증가 중 오류가 발생했습니다: {str(e)}"
+        }
+
+
 @router.get("/music-team-recruitments/{recruitment_id}", response_model=dict)
 def get_music_team_recruitment_detail(
     recruitment_id: int,

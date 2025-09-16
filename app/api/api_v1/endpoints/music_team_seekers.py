@@ -312,6 +312,61 @@ async def create_music_team_seeker(
         }
 
 
+@router.post("/music-team-seekers/{seeker_id}/increment-view", response_model=dict)
+def increment_music_team_seeker_view_count(
+    seeker_id: int,
+    db: Session = Depends(get_db)
+):
+    """음악팀 지원자 조회수 증가 전용 API - 인증 없이 사용 가능"""
+    try:
+        from sqlalchemy import text
+        print(f"🚀 [VIEW_INCREMENT_API] 음악팀 지원자 조회수 증가 전용 API 호출 - ID: {seeker_id}")
+
+        # 현재 조회수 확인
+        check_sql = "SELECT view_count FROM music_team_seekers WHERE id = :seeker_id"
+        result = db.execute(text(check_sql), {"seeker_id": seeker_id})
+        row = result.fetchone()
+
+        if not row:
+            return {
+                "success": False,
+                "message": "해당 음악팀 지원자를 찾을 수 없습니다."
+            }
+
+        current_view_count = row[0] or 0
+        print(f"🔍 [VIEW_INCREMENT_API] 현재 조회수: {current_view_count}")
+
+        # 조회수 증가
+        increment_sql = """
+            UPDATE music_team_seekers
+            SET view_count = COALESCE(view_count, 0) + 1
+            WHERE id = :seeker_id
+            RETURNING view_count
+        """
+        result = db.execute(text(increment_sql), {"seeker_id": seeker_id})
+        new_view_count = result.fetchone()[0]
+        db.commit()
+
+        print(f"✅ [VIEW_INCREMENT_API] 조회수 증가 성공 - ID: {seeker_id}, {current_view_count} → {new_view_count}")
+
+        return {
+            "success": True,
+            "data": {
+                "seeker_id": seeker_id,
+                "previous_view_count": current_view_count,
+                "new_view_count": new_view_count
+            }
+        }
+
+    except Exception as e:
+        db.rollback()
+        print(f"❌ [VIEW_INCREMENT_API] 조회수 증가 실패 - ID: {seeker_id}, 오류: {e}")
+        return {
+            "success": False,
+            "message": f"조회수 증가 중 오류가 발생했습니다: {str(e)}"
+        }
+
+
 @router.get("/music-team-seekers/{seeker_id}", response_model=dict)
 def get_music_team_seeker_detail(
     seeker_id: int,

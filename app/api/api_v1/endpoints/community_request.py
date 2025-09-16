@@ -418,6 +418,61 @@ def get_item_requests_list(
     return get_request_list(status, category, urgency, location, search, church_filter, page, limit, db, current_user)
 
 
+@router.post("/item-request/{request_id}/increment-view", response_model=dict)
+def increment_request_view_count(
+    request_id: int,
+    db: Session = Depends(get_db)
+):
+    """물품 요청 조회수 증가 전용 API - 인증 없이 사용 가능"""
+    try:
+        from sqlalchemy import text
+        print(f"🚀 [VIEW_INCREMENT_API] 물품 요청 조회수 증가 전용 API 호출 - ID: {request_id}")
+
+        # 현재 조회수 확인
+        check_sql = "SELECT view_count FROM community_requests WHERE id = :request_id"
+        result = db.execute(text(check_sql), {"request_id": request_id})
+        row = result.fetchone()
+
+        if not row:
+            return {
+                "success": False,
+                "message": "해당 물품 요청을 찾을 수 없습니다."
+            }
+
+        current_view_count = row[0] or 0
+        print(f"🔍 [VIEW_INCREMENT_API] 현재 조회수: {current_view_count}")
+
+        # 조회수 증가
+        increment_sql = """
+            UPDATE community_requests
+            SET view_count = COALESCE(view_count, 0) + 1
+            WHERE id = :request_id
+            RETURNING view_count
+        """
+        result = db.execute(text(increment_sql), {"request_id": request_id})
+        new_view_count = result.fetchone()[0]
+        db.commit()
+
+        print(f"✅ [VIEW_INCREMENT_API] 조회수 증가 성공 - ID: {request_id}, {current_view_count} → {new_view_count}")
+
+        return {
+            "success": True,
+            "data": {
+                "request_id": request_id,
+                "previous_view_count": current_view_count,
+                "new_view_count": new_view_count
+            }
+        }
+
+    except Exception as e:
+        db.rollback()
+        print(f"❌ [VIEW_INCREMENT_API] 조회수 증가 실패 - ID: {request_id}, 오류: {e}")
+        return {
+            "success": False,
+            "message": f"조회수 증가 중 오류가 발생했습니다: {str(e)}"
+        }
+
+
 @router.get("/requests/{request_id}", response_model=dict)
 def get_request_detail(
     request_id: int,
