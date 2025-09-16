@@ -267,13 +267,15 @@ async def create_music_team_recruitment(
             ) RETURNING id
         """
         
-        # JSON 필드는 SQLAlchemy가 자동으로 처리함 (수동 변환 불필요)
-        
+        # JSON 필드 명시적 변환
+        import json
+        instruments_json = json.dumps(recruitment_data.instruments_needed) if recruitment_data.instruments_needed else None
+
         insert_params = {
             "title": recruitment_data.title,
             "team_name": recruitment_data.team_name or "미정",
             "team_type": recruitment_data.team_type,
-            "instruments_needed": recruitment_data.instruments_needed,  # SQLAlchemy가 자동으로 JSON 변환
+            "instruments_needed": instruments_json,  # JSON 문자열로 명시적 변환
             "positions_needed": recruitment_data.positions_needed,
             "experience_required": recruitment_data.experience_required,
             "practice_location": recruitment_data.practice_location,
