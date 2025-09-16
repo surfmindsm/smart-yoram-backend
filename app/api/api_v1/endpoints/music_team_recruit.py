@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from app.api.deps import get_db, get_current_active_user
 from app.models.user import User
 from app.models.music_team_recruitment import MusicTeamRecruitment
+from app.models.common import CommonStatus
 
 
 class MusicTeamRecruitmentCreateRequest(BaseModel):
@@ -60,6 +61,20 @@ class MusicTeamRecruitmentUpdateRequest(BaseModel):
 
 
 router = APIRouter()
+
+
+def map_frontend_status_to_enum(status: str) -> CommonStatus:
+    """프론트엔드 status 값을 CommonStatus enum으로 매핑"""
+    status_mapping = {
+        "recruiting": CommonStatus.ACTIVE,
+        "open": CommonStatus.ACTIVE,
+        "active": CommonStatus.ACTIVE,
+        "closed": CommonStatus.COMPLETED,
+        "completed": CommonStatus.COMPLETED,
+        "cancelled": CommonStatus.CANCELLED,
+        "paused": CommonStatus.PAUSED
+    }
+    return status_mapping.get(status.lower(), CommonStatus.ACTIVE)
 
 
 def parse_datetime(date_string: str) -> datetime:
@@ -284,7 +299,7 @@ async def create_music_team_recruitment(
             "contact_method": recruitment_data.contact_method,
             "contact_phone": recruitment_data.contact_phone,
             "contact_email": recruitment_data.contact_email,
-            "status": recruitment_data.status,
+            "status": map_frontend_status_to_enum(recruitment_data.status).value,
             "current_members": recruitment_data.current_members,
             "target_members": recruitment_data.target_members,
             "author_id": current_user.id,

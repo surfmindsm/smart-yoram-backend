@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from app.api.deps import get_db, get_current_active_user
 from app.models.user import User
 from app.models.job_posts import JobPost, JobSeeker
+from app.models.common import CommonStatus
 
 
 class JobPostCreateRequest(BaseModel):
@@ -42,6 +43,19 @@ class JobSeekerCreateRequest(BaseModel):
     status: Optional[str] = "active"
 
 router = APIRouter()
+
+
+def map_frontend_status_to_enum(status: str) -> CommonStatus:
+    """프론트엔드 status 값을 CommonStatus enum으로 매핑"""
+    status_mapping = {
+        "open": CommonStatus.ACTIVE,
+        "active": CommonStatus.ACTIVE,
+        "closed": CommonStatus.COMPLETED,
+        "filled": CommonStatus.COMPLETED,
+        "cancelled": CommonStatus.CANCELLED,
+        "paused": CommonStatus.PAUSED
+    }
+    return status_mapping.get(status.lower(), CommonStatus.ACTIVE)
 
 
 # === Job Posts (구인 공고) ===
@@ -298,7 +312,7 @@ async def create_job_post(
             requirements=job_data.requirements,
             contact_info=combined_contact_info,  # 조합된 연락처 정보
             application_deadline=application_deadline,  # 변환된 마감일
-            status=job_data.status or "active",
+            status=map_frontend_status_to_enum(job_data.status or "active"),
             author_id=current_user.id,  # JobPost 모델의 실제 필드명
             church_id=current_user.church_id or 9998,  # 커뮤니티 기본값
         )

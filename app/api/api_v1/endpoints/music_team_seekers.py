@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from app.api.deps import get_db, get_current_active_user
 from app.models.user import User
 from app.models.music_team_seeker import MusicTeamSeeker
+from app.models.common import CommonStatus
 
 
 class MusicTeamSeekerCreateRequest(BaseModel):
@@ -46,6 +47,20 @@ class MusicTeamSeekerUpdateRequest(BaseModel):
 
 
 router = APIRouter()
+
+
+def map_frontend_status_to_enum(status: str) -> CommonStatus:
+    """프론트엔드 status 값을 CommonStatus enum으로 매핑"""
+    status_mapping = {
+        "available": CommonStatus.ACTIVE,
+        "active": CommonStatus.ACTIVE,
+        "recruiting": CommonStatus.ACTIVE,
+        "matched": CommonStatus.COMPLETED,
+        "completed": CommonStatus.COMPLETED,
+        "cancelled": CommonStatus.CANCELLED,
+        "paused": CommonStatus.PAUSED
+    }
+    return status_mapping.get(status.lower(), CommonStatus.ACTIVE)
 
 
 @router.get("/music-team-seekers", response_model=dict)
@@ -261,7 +276,7 @@ async def create_music_team_seeker(
             "available_time": seeker_data.get('available_time'),
             "contact_phone": seeker_data.get('contact_phone'),
             "contact_email": seeker_data.get('contact_email'),
-            "status": "available",  # 기본 상태
+            "status": map_frontend_status_to_enum("available").value,  # 기본 상태
             "author_id": current_user.id,
             "author_name": current_user.full_name or "익명",
             "church_id": getattr(current_user, 'church_id', None),

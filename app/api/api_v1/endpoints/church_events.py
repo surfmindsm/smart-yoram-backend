@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from app.api.deps import get_db, get_current_active_user
 from app.models.user import User
 from app.models.church_events import ChurchEvent
+from app.models.common import CommonStatus
 
 
 class ChurchEventCreateRequest(BaseModel):
@@ -33,6 +34,20 @@ class ChurchEventCreateRequest(BaseModel):
 
 
 router = APIRouter()
+
+
+def map_frontend_status_to_enum(status: str) -> CommonStatus:
+    """프론트엔드 status 값을 CommonStatus enum으로 매핑"""
+    status_mapping = {
+        "upcoming": CommonStatus.ACTIVE,
+        "active": CommonStatus.ACTIVE,
+        "open": CommonStatus.ACTIVE,
+        "closed": CommonStatus.COMPLETED,
+        "completed": CommonStatus.COMPLETED,
+        "cancelled": CommonStatus.CANCELLED,
+        "paused": CommonStatus.PAUSED
+    }
+    return status_mapping.get(status.lower(), CommonStatus.ACTIVE)
 
 
 def parse_contact_info(contact_info: str) -> tuple[str, str]:
@@ -204,7 +219,7 @@ async def create_church_event(
             location=event_data.location,
             max_participants=event_data.max_participants,
             contact_info=combined_contact_info,  # 조합된 연락처 정보
-            status=event_data.status or "upcoming",
+            status=map_frontend_status_to_enum(event_data.status or "upcoming"),
             author_id=current_user.id,
             church_id=current_user.church_id or 9998,  # 커뮤니티 기본값
             views=0,
