@@ -206,7 +206,7 @@ def get_sharing_list(
         data_items = []
         for row in sharing_list:
             # Raw SQL 결과를 인덱스로 접근 (실제 컬럼 순서대로)
-            images_data = row[9] if row[9] else []  # JSON 컬럼
+            images_data = row[10] if row[10] else []  # images 컬럼 (11번째, 인덱스 10)
             # JSON 문자열인 경우 파싱
             import json
             if isinstance(images_data, str):
@@ -554,9 +554,9 @@ def get_sharing_detail(
                 "message": "해당 나눔을 찾을 수 없습니다."
             }
 
-        # 이미지 데이터 파싱
+        # 이미지 데이터 파싱 (상세 조회 SQL의 images는 10번째 인덱스)
         import json
-        images_data = row[9] if row[9] else []
+        images_data = row[9] if row[9] else []  # 상세 조회 SQL에서 images 위치 확인 필요
         if isinstance(images_data, str):
             try:
                 images_data = json.loads(images_data)
