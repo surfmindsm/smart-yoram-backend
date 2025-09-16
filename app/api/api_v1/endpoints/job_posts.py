@@ -83,11 +83,11 @@ def get_job_posting_list(
         db.rollback()  # 이전 트랜잭션 실패 방지
         
         query_sql = """
-            SELECT 
+            SELECT
                 jp.id,
                 jp.title,
                 'active' as status,
-                0 as views,
+                COALESCE(jp.view_count, 0) as views,
                 0 as likes,
                 jp.created_at,
                 jp.author_id,
