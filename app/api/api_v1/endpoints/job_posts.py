@@ -367,6 +367,26 @@ async def create_job_post(
         }
 
 
+@router.get("/job-posting/{job_id}", response_model=dict)
+def get_job_posting_detail(
+    job_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """구인 공고 상세 조회 - /job-posting URL 버전"""
+    # 기존 job-posts 상세 조회와 동일한 로직 사용
+    return get_job_post_detail(job_id, db, current_user)
+
+
+@router.post("/job-posting/{job_id}/view", response_model=dict)
+def increment_job_posting_view_count_simple(
+    job_id: int,
+    db: Session = Depends(get_db)
+):
+    """구인 공고 조회수 증가 API - 프론트엔드 호환 버전 (/view)"""
+    return increment_job_post_view_count(job_id, db)
+
+
 @router.post("/job-posting/{job_id}/increment-view", response_model=dict)
 def increment_job_post_view_count(
     job_id: int,
