@@ -531,6 +531,8 @@ def get_sharing_detail(
 ):
     """나눔 상세 조회"""
     try:
+        print(f"🚀 [API_CALL] 무료나눔 상세 조회 API 호출됨 - ID: {sharing_id}, 사용자: {current_user.id}")
+
         # Raw SQL로 실제 데이터 조회
         from sqlalchemy import text
 
@@ -554,19 +556,27 @@ def get_sharing_detail(
                 "message": "해당 나눔을 찾을 수 없습니다."
             }
 
-        # 조회수 증가
+        # 조회수 증가 (상세 디버깅 추가)
+        current_view_count = row[13] or 0  # 현재 조회수
+        print(f"🔍 [VIEW_COUNT_DEBUG] 상세 조회 시작 - ID: {sharing_id}, 현재 조회수: {current_view_count}")
+
         try:
             increment_sql = """
                 UPDATE community_sharing
                 SET view_count = COALESCE(view_count, 0) + 1
                 WHERE id = :sharing_id
+                RETURNING view_count
             """
-            db.execute(text(increment_sql), {"sharing_id": sharing_id})
+            result = db.execute(text(increment_sql), {"sharing_id": sharing_id})
+            new_view_count = result.fetchone()[0] if result.rowcount > 0 else current_view_count
             db.commit()
-            print(f"✅ [DETAIL_DEBUG] 조회수 증가 완료 - ID: {sharing_id}")
+            print(f"✅ [VIEW_COUNT_DEBUG] 조회수 증가 성공 - ID: {sharing_id}, {current_view_count} → {new_view_count}")
         except Exception as e:
-            print(f"❌ [DETAIL_DEBUG] 조회수 증가 실패 - ID: {sharing_id}, 오류: {e}")
+            print(f"❌ [VIEW_COUNT_DEBUG] 조회수 증가 실패 - ID: {sharing_id}, 오류: {e}")
+            print(f"❌ [VIEW_COUNT_DEBUG] SQL: {increment_sql}")
+            print(f"❌ [VIEW_COUNT_DEBUG] Params: sharing_id={sharing_id}")
             # 조회수 증가 실패해도 상세 조회는 계속 진행
+            new_view_count = current_view_count
 
         # 이미지 데이터 파싱 (상세 조회 SQL의 images는 10번째 인덱스)
         import json
@@ -596,7 +606,7 @@ def get_sharing_detail(
                 "author_id": row[11],
                 "author_name": row[16] or "익명",  # u.full_name
                 "church_id": row[12],
-                "view_count": (row[13] or 0) + 1,  # 증가된 조회수 반영 (cs.view_count + 1)
+                "view_count": new_view_count,  # 실제 증가된 조회수 반영
                 "created_at": row[14].isoformat() if row[14] else None,  # cs.created_at
                 "updated_at": row[15].isoformat() if row[15] else None   # cs.updated_at
             }
