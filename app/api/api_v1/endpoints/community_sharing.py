@@ -208,12 +208,19 @@ def get_sharing_list(
             # Raw SQL 결과를 인덱스로 접근 (실제 컬럼 순서대로)
             images_data = row[9] if row[9] else []  # JSON 컬럼
             # JSON 문자열인 경우 파싱
+            import json
             if isinstance(images_data, str):
                 try:
-                    import json
                     images_data = json.loads(images_data)
-                except:
+                    print(f"🔍 [DEBUG] JSON 파싱 성공 - ID {row[0]}: {images_data}")
+                except Exception as e:
+                    print(f"❌ [DEBUG] JSON 파싱 실패 - ID {row[0]}: {e}, raw_data: {repr(images_data)}")
                     images_data = []
+            elif isinstance(images_data, list):
+                print(f"🔍 [DEBUG] 이미 리스트 타입 - ID {row[0]}: {images_data}")
+            else:
+                print(f"🔍 [DEBUG] 알 수 없는 타입 - ID {row[0]}: {type(images_data)}, data: {repr(images_data)}")
+                images_data = []
             
             data_items.append({
                 "id": row[0],                    # cs.id
@@ -522,24 +529,66 @@ def get_sharing_detail(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """나눔 상세 조회 - 단순화된 버전"""
+    """나눔 상세 조회"""
     try:
+        # Raw SQL로 실제 데이터 조회
+        from sqlalchemy import text
+
+        detail_sql = """
+            SELECT
+                cs.id, cs.title, cs.description, cs.category, cs.condition, cs.price,
+                cs.location, cs.contact_info, cs.status, cs.images, cs.is_free,
+                cs.author_id, cs.church_id, cs.created_at, cs.updated_at,
+                u.full_name
+            FROM community_sharing cs
+            LEFT JOIN users u ON cs.author_id = u.id
+            WHERE cs.id = :sharing_id
+        """
+
+        result = db.execute(text(detail_sql), {"sharing_id": sharing_id})
+        row = result.fetchone()
+
+        if not row:
+            return {
+                "success": False,
+                "message": "해당 나눔을 찾을 수 없습니다."
+            }
+
+        # 이미지 데이터 파싱
+        import json
+        images_data = row[9] if row[9] else []
+        if isinstance(images_data, str):
+            try:
+                images_data = json.loads(images_data)
+                print(f"🔍 [DETAIL_DEBUG] JSON 파싱 성공 - ID {row[0]}: {images_data}")
+            except Exception as e:
+                print(f"❌ [DETAIL_DEBUG] JSON 파싱 실패 - ID {row[0]}: {e}, raw_data: {repr(images_data)}")
+                images_data = []
+
         return {
             "success": True,
             "data": {
-                "id": sharing_id,
-                "title": "샘플 나눔 제목",
-                "description": "샘플 나눔 설명",
-                "category": "생활용품",
-                "status": "available",
-                "location": "서울",
-                "contact_method": "카톡",
-                "contact_phone": "010-0000-0000",
-                "contact_email": "test@example.com"
+                "id": row[0],
+                "title": row[1],
+                "description": row[2],
+                "category": row[3],
+                "condition": row[4],
+                "price": float(row[5]) if row[5] else 0,
+                "location": row[6],
+                "contact_info": row[7],
+                "status": row[8],
+                "images": images_data,
+                "is_free": row[10],
+                "author_id": row[11],
+                "author_name": row[15] or "익명",
+                "church_id": row[12],
+                "created_at": row[13].isoformat() if row[13] else None,
+                "updated_at": row[14].isoformat() if row[14] else None
             }
         }
-        
+
     except Exception as e:
+        print(f"❌ [DETAIL_DEBUG] 나눔 상세 조회 오류: {e}")
         return {
             "success": False,
             "message": f"나눔 상세 조회 중 오류가 발생했습니다: {str(e)}"
