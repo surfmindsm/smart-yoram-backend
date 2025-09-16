@@ -9,6 +9,7 @@ import json
 from app.api.deps import get_db, get_current_active_user
 from app.models.user import User
 from app.models.community_sharing import CommunitySharing
+from app.models.common import CommonStatus
 from app.schemas.community_common import (
     CommunityBaseRequest, 
     StandardListResponse, 
@@ -35,6 +36,18 @@ class SharingCreateRequest(CommunityBaseRequest):
     is_free: bool = True  # 무료 나눔은 항상 True
 
 router = APIRouter()
+
+
+def map_frontend_status_to_enum(status: str) -> CommonStatus:
+    """프론트엔드 status 값을 CommonStatus enum으로 매핑"""
+    status_mapping = {
+        "available": CommonStatus.ACTIVE,
+        "active": CommonStatus.ACTIVE,
+        "completed": CommonStatus.COMPLETED,
+        "cancelled": CommonStatus.CANCELLED,
+        "paused": CommonStatus.PAUSED
+    }
+    return status_mapping.get(status.lower(), CommonStatus.ACTIVE)
 
 
 # 프론트엔드에서 호출하는 나눔 제공 URL에 맞춰 추가 (실제 DB 조회)
@@ -291,7 +304,7 @@ async def create_sharing(
             location=sharing_data.location,
             contact_info=f"{sharing_data.contact_phone or ''} {sharing_data.contact_email or ''}".strip(),
             images=sharing_data.images or [],  # JSON 컬럼으로 실제 존재함!
-            status=sharing_data.status or "available",
+            status=map_frontend_status_to_enum(sharing_data.status or "available"),
             # created_at, updated_at은 모델의 server_default가 자동 처리
         )
         

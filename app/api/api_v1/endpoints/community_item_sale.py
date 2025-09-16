@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from app.api.deps import get_db, get_current_active_user
 from app.models.user import User
 from app.models.community_sharing import CommunitySharing
+from app.models.common import CommonStatus
 
 class ItemSaleCreateRequest(BaseModel):
     title: str
@@ -22,6 +23,18 @@ class ItemSaleCreateRequest(BaseModel):
     status: Optional[str] = "available"
 
 router = APIRouter()
+
+
+def map_frontend_status_to_enum(status: str) -> CommonStatus:
+    """프론트엔드 status 값을 CommonStatus enum으로 매핑"""
+    status_mapping = {
+        "available": CommonStatus.ACTIVE,
+        "active": CommonStatus.ACTIVE,
+        "completed": CommonStatus.COMPLETED,
+        "cancelled": CommonStatus.CANCELLED,
+        "paused": CommonStatus.PAUSED
+    }
+    return status_mapping.get(status.lower(), CommonStatus.ACTIVE)
 
 
 @router.get("/item-sale", response_model=dict)
@@ -223,7 +236,7 @@ async def create_item_sale(
             location=sale_data.location,
             contact_info=sale_data.contact_info,
             images=sale_data.images or [],
-            status=sale_data.status or "available",
+            status=map_frontend_status_to_enum(sale_data.status or "available"),
         )
         
         db.add(sale_record)
@@ -351,7 +364,7 @@ def update_item_sale(
         sale_item.location = sale_data.location
         sale_item.contact_info = sale_data.contact_info
         sale_item.images = sale_data.images or []
-        sale_item.status = sale_data.status
+        sale_item.status = map_frontend_status_to_enum(sale_data.status)
         
         db.commit()
         
@@ -431,7 +444,7 @@ def update_item_sale_status(
                 "message": "상태를 변경할 판매 게시글을 찾을 수 없거나 권한이 없습니다."
             }
         
-        sale_item.status = status
+        sale_item.status = map_frontend_status_to_enum(status)
         db.commit()
         
         return {
