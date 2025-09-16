@@ -109,16 +109,11 @@ def get_music_team_recruitments_list(
         from sqlalchemy import text
         db.rollback()  # 이전 트랜잭션 실패 방지
         
+        # 단순한 쿼리로 시작해서 데이터 존재 여부 확인
         query_sql = """
-            SELECT 
-                cmt.id, cmt.title, cmt.team_name, cmt.team_type, cmt.instruments_needed,
-                cmt.positions_needed, cmt.experience_required, cmt.practice_location,
-                cmt.practice_schedule, cmt.commitment, cmt.description, cmt.requirements,
-                cmt.benefits, cmt.contact_method, cmt.contact_phone, cmt.contact_email, cmt.status,
-                cmt.current_members, cmt.target_members, cmt.author_id, cmt.church_id,
-                cmt.created_at, cmt.updated_at, c.name as church_name
+            SELECT
+                cmt.id, cmt.title, cmt.status, cmt.author_id, cmt.created_at
             FROM community_music_teams cmt
-            LEFT JOIN churches c ON cmt.church_id = c.id
             WHERE 1=1
         """
         params = {}
@@ -149,7 +144,7 @@ def get_music_team_recruitments_list(
         # 사용자 정보 조회 (author_name을 위해)
         author_names = {}
         if recruitments_list:
-            author_ids = [row[19] for row in recruitments_list if row[19]]  # author_id는 19번째 인덱스
+            author_ids = [row[3] for row in recruitments_list if row[3]]  # author_id는 3번째 인덱스
             if author_ids:
                 try:
                     user_query = text("SELECT id, full_name FROM users WHERE id = ANY(:ids)")
@@ -158,48 +153,39 @@ def get_music_team_recruitments_list(
                         author_names[user_row[0]] = user_row[1]
                 except Exception as e:
                     print(f"❌ 사용자 정보 조회 실패: {e}")
-        
-        # 응답 데이터 구성 (실제 데이터 사용)
-        import json
+
+        # 응답 데이터 구성 (실제 데이터 사용) - 간소화된 버전
         data_items = []
         for row in recruitments_list:
-            # JSON 필드 파싱
-            instruments_needed = []
-            if row[4]:  # instruments_needed
-                try:
-                    instruments_needed = json.loads(row[4]) if isinstance(row[4], str) else row[4]
-                except:
-                    instruments_needed = []
-            
             data_items.append({
                 "id": row[0],                    # id
                 "title": row[1],                 # title
-                "team_name": row[2] or "미정",    # team_name
-                "team_type": row[3] or "일반",    # team_type
-                "instruments_needed": instruments_needed,  # instruments_needed (JSON 파싱)
-                "positions_needed": row[5],      # positions_needed
-                "experience_required": row[6] or "무관",  # experience_required
-                "practice_location": row[7] or "미정",    # practice_location
-                "practice_schedule": row[8] or "미정",    # practice_schedule
-                "commitment": row[9],            # commitment
-                "description": row[10] or "",    # description
-                "requirements": row[11],         # requirements
-                "benefits": row[12],             # benefits
-                "contact_method": row[13] or "댓글",      # contact_method
-                "contact_phone": row[14],               # contact_phone
-                "contact_email": row[15],               # contact_email
-                "status": row[16] or "모집중",    # status
-                "current_members": row[17] or 0, # current_members
-                "target_members": row[18] or 0,  # target_members
-                "author_id": row[19],            # author_id
-                "author_name": author_names.get(row[19], "익명"),
-                "church_id": row[20] or 9998,    # church_id
-                "church_name": row[23] or f"교회 {row[20] or 9998}",  # church_name (JOIN으로 가져온 교회명)
-                "views": 0,                      # views (컬럼 없음)
-                "likes": 0,                      # likes (컬럼 없음) 
-                "applicants_count": 0,           # applicants_count (컬럼 없음)
-                "created_at": row[21].isoformat() if row[21] else None,  # created_at
-                "updated_at": row[22].isoformat() if row[22] else None   # updated_at
+                "team_name": "미정",              # 기본값
+                "team_type": "일반",              # 기본값
+                "instruments_needed": [],        # 기본값
+                "positions_needed": "미정",       # 기본값
+                "experience_required": "무관",    # 기본값
+                "practice_location": "미정",      # 기본값
+                "practice_schedule": "미정",      # 기본값
+                "commitment": "미정",            # 기본값
+                "description": "",               # 기본값
+                "requirements": "",              # 기본값
+                "benefits": "",                  # 기본값
+                "contact_method": "댓글",        # 기본값
+                "contact_phone": "",             # 기본값
+                "contact_email": "",             # 기본값
+                "status": row[2] or "모집중",     # status
+                "current_members": 0,            # 기본값
+                "target_members": 0,             # 기본값
+                "author_id": row[3],             # author_id
+                "author_name": author_names.get(row[3], "익명"),
+                "church_id": 9998,               # 기본값
+                "church_name": "커뮤니티",        # 기본값
+                "views": 0,                      # 기본값
+                "likes": 0,                      # 기본값
+                "applicants_count": 0,           # 기본값
+                "created_at": row[4].isoformat() if row[4] else None,  # created_at
+                "updated_at": row[4].isoformat() if row[4] else None   # updated_at (same as created_at for now)
             })
         
         total_pages = (total_count + limit - 1) // limit
