@@ -252,17 +252,17 @@ async def create_music_team_recruitment(
             print(f"⚠️ [MUSIC_TEAM_RECRUIT] 테이블 구조 확인 실패: {e}")
             column_names = []
         
-        # Raw SQL로 데이터 저장 (실제 테이블 구조에 맞게) - contact_phone, contact_email 제외
+        # Raw SQL로 데이터 저장 (실제 테이블 구조에 맞게) - contact_info 필드 추가
         insert_sql = """
             INSERT INTO community_music_teams (
                 title, team_name, team_type, instruments_needed, positions_needed,
                 experience_required, practice_location, practice_schedule, commitment,
-                description, requirements, benefits, contact_method,
+                description, requirements, benefits, contact_method, contact_info,
                 status, current_members, target_members, author_id, church_id
             ) VALUES (
                 :title, :team_name, :team_type, :instruments_needed, :positions_needed,
                 :experience_required, :practice_location, :practice_schedule, :commitment,
-                :description, :requirements, :benefits, :contact_method,
+                :description, :requirements, :benefits, :contact_method, :contact_info,
                 :status, :current_members, :target_members, :author_id, :church_id
             ) RETURNING id
         """
@@ -270,6 +270,13 @@ async def create_music_team_recruitment(
         # JSON 필드 명시적 변환
         import json
         instruments_json = json.dumps(recruitment_data.instruments_needed) if recruitment_data.instruments_needed else None
+
+        # contact_info 구성 (contact_phone, contact_email이 없으므로 contact_method만 사용)
+        contact_info = f"연락방법: {recruitment_data.contact_method}"
+        if recruitment_data.contact_phone:
+            contact_info += f" | 전화: {recruitment_data.contact_phone}"
+        if recruitment_data.contact_email:
+            contact_info += f" | 이메일: {recruitment_data.contact_email}"
 
         insert_params = {
             "title": recruitment_data.title,
@@ -285,6 +292,7 @@ async def create_music_team_recruitment(
             "requirements": recruitment_data.requirements,
             "benefits": recruitment_data.benefits,
             "contact_method": recruitment_data.contact_method,
+            "contact_info": contact_info,  # NOT NULL 제약조건 만족
             "status": map_frontend_status_to_enum(recruitment_data.status).value,
             "current_members": recruitment_data.current_members,
             "target_members": recruitment_data.target_members,
