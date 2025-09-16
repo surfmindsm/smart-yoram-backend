@@ -155,8 +155,25 @@ def get_music_team_recruitments_list(
                     print(f"❌ 사용자 정보 조회 실패: {e}")
 
         # 응답 데이터 구성 (실제 데이터 사용) - 간소화된 버전
+        from datetime import timezone, timedelta
+        kst = timezone(timedelta(hours=9))  # KST = UTC+9
+
         data_items = []
         for row in recruitments_list:
+            # UTC to KST 변환
+            created_at_kst = None
+            updated_at_kst = None
+            if row[4]:  # created_at
+                if row[4].tzinfo is None:
+                    # naive datetime을 UTC로 간주하고 KST로 변환
+                    utc_time = row[4].replace(tzinfo=timezone.utc)
+                    created_at_kst = utc_time.astimezone(kst).isoformat()
+                    updated_at_kst = created_at_kst
+                else:
+                    # timezone-aware datetime을 KST로 변환
+                    created_at_kst = row[4].astimezone(kst).isoformat()
+                    updated_at_kst = created_at_kst
+
             data_items.append({
                 "id": row[0],                    # id
                 "title": row[1],                 # title
@@ -184,8 +201,8 @@ def get_music_team_recruitments_list(
                 "views": 0,                      # 기본값
                 "likes": 0,                      # 기본값
                 "applicants_count": 0,           # 기본값
-                "created_at": row[4].isoformat() if row[4] else None,  # created_at
-                "updated_at": row[4].isoformat() if row[4] else None   # updated_at (same as created_at for now)
+                "created_at": created_at_kst,    # KST로 변환된 created_at
+                "updated_at": updated_at_kst     # KST로 변환된 updated_at
             })
         
         total_pages = (total_count + limit - 1) // limit
@@ -306,6 +323,11 @@ async def create_music_team_recruitment(
         db.commit()
         print(f"✅ [MUSIC_TEAM_RECRUIT] 성공적으로 저장됨. ID: {new_id}")
         
+        # 등록 후 현재 시간을 KST로 변환해서 응답
+        from datetime import datetime, timezone, timedelta
+        kst = timezone(timedelta(hours=9))
+        current_time_kst = datetime.now(kst).isoformat()
+
         return {
             "success": True,
             "message": "음악팀 모집이 등록되었습니다.",
@@ -315,7 +337,9 @@ async def create_music_team_recruitment(
                 "team_name": recruitment_data.team_name or "미정",
                 "team_type": recruitment_data.team_type,
                 "contact_method": recruitment_data.contact_method,
-                "status": recruitment_data.status
+                "status": recruitment_data.status,
+                "created_at": current_time_kst,
+                "updated_at": current_time_kst
             }
         }
         
@@ -348,7 +372,10 @@ def get_music_team_recruitment_detail(
         # 조회수 증가
         recruitment.views = (recruitment.views or 0) + 1
         db.commit()
-        
+
+        # KST 변환을 위한 import
+        from datetime import timezone, timedelta
+
         return {
             "success": True,
             "data": {
@@ -375,8 +402,8 @@ def get_music_team_recruitment_detail(
                 "views": recruitment.views or 0,
                 "likes": recruitment.likes or 0,
                 "applicants_count": recruitment.applicants_count or 0,
-                "created_at": recruitment.created_at.isoformat() if recruitment.created_at else None,
-                "updated_at": recruitment.updated_at.isoformat() if recruitment.updated_at else None
+                "created_at": recruitment.created_at.astimezone(timezone(timedelta(hours=9))).isoformat() if recruitment.created_at else None,
+                "updated_at": recruitment.updated_at.astimezone(timezone(timedelta(hours=9))).isoformat() if recruitment.updated_at else None
             }
         }
         
