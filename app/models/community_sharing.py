@@ -3,7 +3,7 @@ from sqlalchemy.orm import relationship
 import enum
 
 from app.db.base_class import Base
-from app.models.common import CommonStatus, ContactMethod, CommunityBaseMixin, ContactFieldsMixin
+from app.models.common import CommonStatus, ContactMethod, CommunityBaseMixin
 
 
 # 통일된 상태 사용 - CommonStatus 활용
@@ -22,7 +22,7 @@ class SharingCategory(str, enum.Enum):
 # ContactMethod는 common.py에서 import
 
 
-class CommunitySharing(Base, CommunityBaseMixin, ContactFieldsMixin):
+class CommunitySharing(Base, CommunityBaseMixin):
     """커뮤니티 무료 나눔"""
     
     __tablename__ = "community_sharing"
