@@ -538,7 +538,7 @@ def get_sharing_detail(
             SELECT
                 cs.id, cs.title, cs.description, cs.category, cs.condition, cs.price,
                 cs.location, cs.contact_info, cs.status, cs.images, cs.is_free,
-                cs.author_id, cs.church_id, cs.created_at, cs.updated_at,
+                cs.author_id, cs.church_id, cs.view_count, cs.created_at, cs.updated_at,
                 u.full_name
             FROM community_sharing cs
             LEFT JOIN users u ON cs.author_id = u.id
@@ -553,6 +553,20 @@ def get_sharing_detail(
                 "success": False,
                 "message": "해당 나눔을 찾을 수 없습니다."
             }
+
+        # 조회수 증가
+        try:
+            increment_sql = """
+                UPDATE community_sharing
+                SET view_count = COALESCE(view_count, 0) + 1
+                WHERE id = :sharing_id
+            """
+            db.execute(text(increment_sql), {"sharing_id": sharing_id})
+            db.commit()
+            print(f"✅ [DETAIL_DEBUG] 조회수 증가 완료 - ID: {sharing_id}")
+        except Exception as e:
+            print(f"❌ [DETAIL_DEBUG] 조회수 증가 실패 - ID: {sharing_id}, 오류: {e}")
+            # 조회수 증가 실패해도 상세 조회는 계속 진행
 
         # 이미지 데이터 파싱 (상세 조회 SQL의 images는 10번째 인덱스)
         import json
@@ -580,10 +594,11 @@ def get_sharing_detail(
                 "images": images_data,
                 "is_free": row[10],
                 "author_id": row[11],
-                "author_name": row[15] or "익명",
+                "author_name": row[16] or "익명",  # u.full_name
                 "church_id": row[12],
-                "created_at": row[13].isoformat() if row[13] else None,
-                "updated_at": row[14].isoformat() if row[14] else None
+                "view_count": (row[13] or 0) + 1,  # 증가된 조회수 반영 (cs.view_count + 1)
+                "created_at": row[14].isoformat() if row[14] else None,  # cs.created_at
+                "updated_at": row[15].isoformat() if row[15] else None   # cs.updated_at
             }
         }
 
