@@ -112,7 +112,7 @@ def get_music_team_recruitments_list(
         # 단순한 쿼리로 시작해서 데이터 존재 여부 확인
         query_sql = """
             SELECT
-                cmt.id, cmt.title, cmt.status, cmt.author_id, cmt.created_at
+                cmt.id, cmt.title, cmt.status, cmt.author_id, cmt.created_at, COALESCE(cmt.views, 0) as views
             FROM community_music_teams cmt
             WHERE 1=1
         """
@@ -198,7 +198,7 @@ def get_music_team_recruitments_list(
                 "author_name": author_names.get(row[3], "익명"),
                 "church_id": 9998,               # 기본값
                 "church_name": "커뮤니티",        # 기본값
-                "views": 0,                      # 기본값
+                "views": row[5] or 0,            # 실제 데이터베이스 views 값 (6번째 인덱스)
                 "likes": 0,                      # 기본값
                 "applicants_count": 0,           # 기본값
                 "created_at": created_at_kst,    # KST로 변환된 created_at
