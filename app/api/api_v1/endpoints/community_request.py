@@ -8,6 +8,7 @@ import json
 from app.api.deps import get_db, get_current_active_user
 from app.models.user import User
 from app.models.community_request import CommunityRequest
+from app.models.common import CommonStatus
 
 
 class RequestCreateRequest(BaseModel):
@@ -23,6 +24,20 @@ class RequestCreateRequest(BaseModel):
     status: Optional[str] = "open"
 
 router = APIRouter()
+
+
+def map_frontend_status_to_enum(status: str) -> CommonStatus:
+    """프론트엔드 status 값을 CommonStatus enum으로 매핑"""
+    status_mapping = {
+        "open": CommonStatus.ACTIVE,
+        "requesting": CommonStatus.ACTIVE,
+        "active": CommonStatus.ACTIVE,
+        "fulfilled": CommonStatus.COMPLETED,
+        "completed": CommonStatus.COMPLETED,
+        "cancelled": CommonStatus.CANCELLED,
+        "paused": CommonStatus.PAUSED
+    }
+    return status_mapping.get(status.lower(), CommonStatus.ACTIVE)
 
 
 # 디버깅용 간단한 테스트 엔드포인트
@@ -274,7 +289,7 @@ async def create_request(
             contact_info=request_data.contact_info,
             reward_type=request_data.reward_type or "none",
             reward_amount=request_data.reward_amount,
-            status=request_data.status or "open",
+            status=map_frontend_status_to_enum(request_data.status or "open"),
             images=request_data.images or [],
             author_id=current_user.id,
             church_id=current_user.church_id or 9998,
