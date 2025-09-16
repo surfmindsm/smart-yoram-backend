@@ -59,9 +59,49 @@
 - **조회수 자동 증가**: 상세 페이지 조회 시마다 view_count +1
 - **실제 데이터 반환**: 기존 샘플 데이터에서 실제 DB 데이터로 변경
 
+#### ⚠️ 현재 상태:
+- **문제 발견**: 403 Forbidden 오류로 인해 조회수 증가 기능이 실행되지 않음
+- **대체 방안**: 아래 신규 API들을 사용 권장
+
 #### 🎯 프론트엔드 액션:
-- **필요 없음** - 기존 코드 그대로 사용 가능
-- 조회수가 자동으로 증가하여 표시됨
+- **조회수 문제로 인해 대체 API 사용 필요** (하단 Q3 참조)
+
+### 2-1. 🆕 무료나눔 목록 조회 API 확장 (`/api/v1/community/sharing`)
+
+#### 🔧 새로운 파라미터:
+```javascript
+// 기존 파라미터에 추가
+increment_view: Optional[int] // 조회수를 증가시킬 아이템 ID
+```
+
+#### 🎯 사용법:
+```javascript
+// 아이템 클릭 시 조회수 증가와 함께 목록 갱신
+GET /api/v1/community/sharing?increment_view=23&page=1&limit=20
+```
+
+### 2-2. 🆕 조회수 증가 전용 API (`/api/v1/community/sharing/{id}/increment-view`)
+
+#### 🔧 새로운 기능:
+- **인증 불필요**: 별도 토큰 없이 사용 가능
+- **조회수만 증가**: 단순히 view_count +1 처리
+
+#### 🎯 사용법:
+```javascript
+POST /api/v1/community/sharing/23/increment-view
+// Content-Type: application/json
+// Authorization: 불필요
+
+// 응답 예시
+{
+  "success": true,
+  "data": {
+    "sharing_id": 23,
+    "previous_view_count": 5,
+    "new_view_count": 6
+  }
+}
+```
 
 ### 3. 행사팀 모집 API (`/api/v1/community/music-team-recruitments`)
 
@@ -177,8 +217,32 @@ console.log('변환된 시간:', new Date(sharingItem.created_at).toLocaleString
 
 ### Q3: 조회수가 증가하지 않는다면?
 **A**:
-1. 상세 페이지 API 호출이 정상적으로 이루어지는지 확인하세요
-2. 백엔드 로그에서 조회수 증가 관련 메시지를 확인하세요
+**문제 발견**: 상세 API(`/api/v1/community/sharing/{id}`)가 403 Forbidden 오류로 인해 조회수 증가가 실행되지 않는 문제 확인
+
+**해결책 1 - 목록 API 활용**:
+```javascript
+// 프론트엔드에서 아이템 클릭 시 조회수 증가
+const handleItemClick = async (itemId) => {
+  // 조회수 증가를 위해 increment_view 파라미터와 함께 목록 API 호출
+  await fetch(`/api/v1/community/sharing?increment_view=${itemId}&page=1&limit=1`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+
+  // 이후 상세 페이지로 이동
+  navigateToDetail(itemId);
+};
+```
+
+**해결책 2 - 전용 API 사용**:
+```javascript
+// 조회수 증가 전용 API (인증 불필요)
+const incrementViewCount = async (itemId) => {
+  await fetch(`/api/v1/community/sharing/${itemId}/increment-view`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  });
+};
+```
 
 ### Q4: 시간이 잘못 표시된다면?
 **A**:

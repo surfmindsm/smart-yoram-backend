@@ -65,7 +65,7 @@ def get_sharing_offer_list(
 ):
     """나눔 제공 목록 조회 - 실제 데이터베이스에서 조회"""
     # /sharing-offer와 /sharing은 동일한 로직 사용
-    return get_sharing_list(status, category, location, search, church_filter, page, limit, db, current_user)
+    return get_sharing_list(status, category, location, search, church_filter, None, page, limit, db, current_user)
 
 
 @router.get("/sharing", response_model=dict)
@@ -75,6 +75,7 @@ def get_sharing_list(
     location: Optional[str] = Query(None, description="지역 필터"),
     search: Optional[str] = Query(None, description="제목/내용 검색"),
     church_filter: Optional[int] = Query(None, description="교회 필터 (선택사항)"),
+    increment_view: Optional[int] = Query(None, description="조회수를 증가시킬 아이템 ID (상세 조회 대체용)"),
     page: int = Query(1, ge=1, description="페이지 번호"),
     limit: int = Query(20, ge=1, le=100, description="페이지당 항목 수"),
     db: Session = Depends(get_db),
@@ -84,6 +85,27 @@ def get_sharing_list(
     try:
         print(f"🚀 [DEBUG] 커뮤니티 나눔 API 호출됨 - 배포 버전 2024-09-11")
         print(f"🚀 [DEBUG] 현재 사용자: church_id={current_user.church_id}, user_id={current_user.id}")
+
+        # 조회수 증가 기능 (상세 API 대신 사용)
+        if increment_view:
+            try:
+                print(f"🔍 [VIEW_COUNT_FALLBACK] 목록 API에서 조회수 증가 시도 - ID: {increment_view}")
+                increment_sql = """
+                    UPDATE community_sharing
+                    SET view_count = COALESCE(view_count, 0) + 1
+                    WHERE id = :sharing_id
+                    RETURNING view_count
+                """
+                result = db.execute(text(increment_sql), {"sharing_id": increment_view})
+                if result.rowcount > 0:
+                    new_view_count = result.fetchone()[0]
+                    db.commit()
+                    print(f"✅ [VIEW_COUNT_FALLBACK] 조회수 증가 성공 - ID: {increment_view}, 새 조회수: {new_view_count}")
+                else:
+                    print(f"❌ [VIEW_COUNT_FALLBACK] 해당 ID의 아이템을 찾을 수 없음 - ID: {increment_view}")
+            except Exception as view_e:
+                print(f"❌ [VIEW_COUNT_FALLBACK] 조회수 증가 실패 - ID: {increment_view}, 오류: {view_e}")
+                db.rollback()  # 조회수 증가 실패 시 롤백하고 목록 조회는 계속 진행
         
         # Raw SQL로 안전한 조회 - 트랜잭션 초기화 및 실제 컬럼명 사용
         from sqlalchemy import text
@@ -520,6 +542,60 @@ def check_church_data(
         return {
             "success": False,
             "message": f"Church data 확인 중 오류: {str(e)}"
+        }
+
+
+@router.post("/sharing/{sharing_id}/increment-view", response_model=dict)
+def increment_view_count(
+    sharing_id: int,
+    db: Session = Depends(get_db)
+):
+    """조회수 증가 전용 API - 인증 없이 사용 가능"""
+    try:
+        print(f"🚀 [VIEW_INCREMENT_API] 조회수 증가 전용 API 호출 - ID: {sharing_id}")
+
+        # 현재 조회수 확인
+        check_sql = "SELECT view_count FROM community_sharing WHERE id = :sharing_id"
+        result = db.execute(text(check_sql), {"sharing_id": sharing_id})
+        row = result.fetchone()
+
+        if not row:
+            return {
+                "success": False,
+                "message": "해당 나눔을 찾을 수 없습니다."
+            }
+
+        current_view_count = row[0] or 0
+        print(f"🔍 [VIEW_INCREMENT_API] 현재 조회수: {current_view_count}")
+
+        # 조회수 증가
+        increment_sql = """
+            UPDATE community_sharing
+            SET view_count = COALESCE(view_count, 0) + 1
+            WHERE id = :sharing_id
+            RETURNING view_count
+        """
+        result = db.execute(text(increment_sql), {"sharing_id": sharing_id})
+        new_view_count = result.fetchone()[0]
+        db.commit()
+
+        print(f"✅ [VIEW_INCREMENT_API] 조회수 증가 성공 - ID: {sharing_id}, {current_view_count} → {new_view_count}")
+
+        return {
+            "success": True,
+            "data": {
+                "sharing_id": sharing_id,
+                "previous_view_count": current_view_count,
+                "new_view_count": new_view_count
+            }
+        }
+
+    except Exception as e:
+        db.rollback()
+        print(f"❌ [VIEW_INCREMENT_API] 조회수 증가 실패 - ID: {sharing_id}, 오류: {e}")
+        return {
+            "success": False,
+            "message": f"조회수 증가 중 오류가 발생했습니다: {str(e)}"
         }
 
 
