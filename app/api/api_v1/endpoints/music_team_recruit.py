@@ -252,17 +252,17 @@ async def create_music_team_recruitment(
             print(f"⚠️ [MUSIC_TEAM_RECRUIT] 테이블 구조 확인 실패: {e}")
             column_names = []
         
-        # Raw SQL로 데이터 저장 (실제 테이블 구조에 맞게) - 문제 있는 컬럼 제외
+        # Raw SQL로 데이터 저장 (실제 테이블 구조에 맞게) - contact_phone, contact_email 제외
         insert_sql = """
             INSERT INTO community_music_teams (
                 title, team_name, team_type, instruments_needed, positions_needed,
                 experience_required, practice_location, practice_schedule, commitment,
-                description, requirements, benefits, contact_method, contact_phone, contact_email,
+                description, requirements, benefits, contact_method,
                 status, current_members, target_members, author_id, church_id
             ) VALUES (
                 :title, :team_name, :team_type, :instruments_needed, :positions_needed,
                 :experience_required, :practice_location, :practice_schedule, :commitment,
-                :description, :requirements, :benefits, :contact_method, :contact_phone, :contact_email,
+                :description, :requirements, :benefits, :contact_method,
                 :status, :current_members, :target_members, :author_id, :church_id
             ) RETURNING id
         """
@@ -283,8 +283,6 @@ async def create_music_team_recruitment(
             "requirements": recruitment_data.requirements,
             "benefits": recruitment_data.benefits,
             "contact_method": recruitment_data.contact_method,
-            "contact_phone": recruitment_data.contact_phone,
-            "contact_email": recruitment_data.contact_email,
             "status": map_frontend_status_to_enum(recruitment_data.status).value,
             "current_members": recruitment_data.current_members,
             "target_members": recruitment_data.target_members,
@@ -306,6 +304,7 @@ async def create_music_team_recruitment(
                 "title": recruitment_data.title,
                 "team_name": recruitment_data.team_name or "미정",
                 "team_type": recruitment_data.team_type,
+                "contact_method": recruitment_data.contact_method,
                 "status": recruitment_data.status
             }
         }
@@ -357,8 +356,6 @@ def get_music_team_recruitment_detail(
                 "requirements": recruitment.requirements,
                 "benefits": recruitment.benefits,
                 "contact_method": recruitment.contact_method,
-                "contact_phone": recruitment.contact_phone,
-                "contact_email": recruitment.contact_email,
                 "status": recruitment.status,
                 "current_members": recruitment.current_members,
                 "target_members": recruitment.target_members,

@@ -3,13 +3,13 @@ from sqlalchemy.orm import relationship
 import enum
 
 from app.db.base_class import Base
-from app.models.common import CommonStatus, CommunityBaseMixin, ContactFieldsMixin
+from app.models.common import CommonStatus, CommunityBaseMixin
 
 
 # RecruitmentType and InstrumentType moved to app/enums/community.py for consistency
 
 
-class MusicTeamRecruitment(Base, CommunityBaseMixin, ContactFieldsMixin):
+class MusicTeamRecruitment(Base, CommunityBaseMixin):
     """음악팀 모집"""
     
     __tablename__ = "community_music_teams"
