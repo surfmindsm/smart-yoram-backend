@@ -148,6 +148,7 @@ def get_music_team_seekers_list(
                 "church_id": row[13] or 9998,              # church_id (실제 데이터)
                 "church_name": row[14] or "커뮤니티",       # church_name (실제 데이터)
                 "views": row[15] or 0,                     # view_count (실제 데이터)
+                "view_count": row[15] or 0,                # 프론트엔드 호환성을 위한 view_count 필드
                 "likes": row[16] or 0,                     # likes (실제 데이터)
                 "matches": row[17] or 0,                   # matches (실제 데이터)
                 "applications": row[18] or 0,              # applications (실제 데이터)
@@ -281,6 +282,7 @@ async def create_music_team_seeker(
             "author_name": current_user.full_name or "익명",
             "church_id": getattr(current_user, 'church_id', None),
             "church_name": getattr(current_user, 'church_name', None),
+            "views": 0,       # 프론트엔드 호환성을 위한 views 필드
             "view_count": 0,  # views → view_count
             "likes": 0,
             "matches": 0,
@@ -431,6 +433,7 @@ def get_music_team_seeker_detail(
                 "church_id": seeker_data[14] or 9998,
                 "church_name": seeker_data[15] or "커뮤니티",
                 "views": (seeker_data[16] or 0) + 1,  # 조회수 증가 반영
+                "view_count": (seeker_data[16] or 0) + 1,  # 프론트엔드 호환성을 위한 view_count 필드
                 "likes": seeker_data[17] or 0,
                 "matches": seeker_data[18] or 0,
                 "applications": seeker_data[19] or 0,
