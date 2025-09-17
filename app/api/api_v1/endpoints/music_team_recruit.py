@@ -199,6 +199,7 @@ def get_music_team_recruitments_list(
                 "church_id": 9998,               # 기본값
                 "church_name": "커뮤니티",        # 기본값
                 "views": row[5] or 0,            # 실제 데이터베이스 view_count 값 (6번째 인덱스)
+                "view_count": row[5] or 0,       # 프론트엔드 호환성을 위한 view_count 필드
                 "likes": 0,                      # 기본값
                 "applicants_count": 0,           # 기본값
                 "created_at": created_at_kst,    # KST로 변환된 created_at
