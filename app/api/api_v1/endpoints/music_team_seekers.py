@@ -401,13 +401,7 @@ def get_music_team_seeker_detail(
                 "message": "지원서를 찾을 수 없습니다."
             }
         
-        # 조회수 증가
-        db.execute(text("""
-            UPDATE music_team_seekers 
-            SET view_count = COALESCE(view_count, 0) + 1 
-            WHERE id = :seeker_id
-        """), {"seeker_id": seeker_id})
-        db.commit()
+        # 조회수 증가는 별도 increment-view API에서만 처리
         
         # 배열 필드 처리
         preferred_location = seeker_data[6] if seeker_data[6] else []
@@ -432,8 +426,8 @@ def get_music_team_seeker_detail(
                 "author_name": seeker_data[13] or "익명",
                 "church_id": seeker_data[14] or 9998,
                 "church_name": seeker_data[15] or "커뮤니티",
-                "views": (seeker_data[16] or 0) + 1,  # 조회수 증가 반영
-                "view_count": (seeker_data[16] or 0) + 1,  # 프론트엔드 호환성을 위한 view_count 필드
+                "views": seeker_data[16] or 0,  # 실제 조회수 (증가 없음)
+                "view_count": seeker_data[16] or 0,  # 프론트엔드 호환성을 위한 view_count 필드
                 "likes": seeker_data[17] or 0,
                 "matches": seeker_data[18] or 0,
                 "applications": seeker_data[19] or 0,

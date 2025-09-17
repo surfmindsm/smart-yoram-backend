@@ -350,3 +350,58 @@ def delete_music_team_seeking(
             "success": False,
             "message": f"음악팀 참여 희망 삭제 중 오류가 발생했습니다: {str(e)}"
         }
+
+
+@router.post("/music-team-seeking/{seeking_id}/increment-view", response_model=dict)
+def increment_music_team_seeking_view_count(
+    seeking_id: int,
+    db: Session = Depends(get_db)
+):
+    """음악팀 참여 희망 조회수 증가 전용 API - 인증 없이 사용 가능"""
+    try:
+        from sqlalchemy import text
+        print(f"🚀 [VIEW_INCREMENT_API] 음악팀 참여 희망 조회수 증가 전용 API 호출 - ID: {seeking_id}")
+
+        # 현재 조회수 확인 (view_count 컬럼 사용)
+        check_sql = "SELECT view_count FROM music_team_seekers WHERE id = :seeking_id"
+        result = db.execute(text(check_sql), {"seeking_id": seeking_id})
+        row = result.fetchone()
+
+        if not row:
+            return {
+                "success": False,
+                "message": "해당 음악팀 참여 희망을 찾을 수 없습니다."
+            }
+
+        current_view_count = row[0] or 0
+        print(f"🔍 [VIEW_INCREMENT_API] 현재 조회수: {current_view_count}")
+
+        # 조회수 증가 (view_count 컬럼 사용)
+        increment_sql = """
+            UPDATE music_team_seekers
+            SET view_count = COALESCE(view_count, 0) + 1
+            WHERE id = :seeking_id
+            RETURNING view_count
+        """
+        result = db.execute(text(increment_sql), {"seeking_id": seeking_id})
+        new_view_count = result.fetchone()[0]
+        db.commit()
+
+        print(f"✅ [VIEW_INCREMENT_API] 조회수 증가 성공 - ID: {seeking_id}, {current_view_count} → {new_view_count}")
+
+        return {
+            "success": True,
+            "data": {
+                "seeking_id": seeking_id,
+                "previous_view_count": current_view_count,
+                "new_view_count": new_view_count
+            }
+        }
+
+    except Exception as e:
+        db.rollback()
+        print(f"❌ [VIEW_INCREMENT_API] 조회수 증가 실패 - ID: {seeking_id}, 오류: {e}")
+        return {
+            "success": False,
+            "message": f"조회수 증가 중 오류가 발생했습니다: {str(e)}"
+        }
