@@ -165,6 +165,7 @@ def get_church_news_list(
                 "contact_phone": "",
                 "contact_email": "",
                 "status": row[2],
+                "views": row[3] or 0,         # 프론트엔드 호환성을 위한 views 필드
                 "view_count": row[3] or 0,
                 "likes": row[4] or 0,
                 "comments_count": 0,
@@ -413,6 +414,7 @@ def get_church_news_detail(
                 "contact_phone": "",
                 "contact_email": "",
                 "status": "active",
+                "views": 0,           # 프론트엔드 호환성을 위한 views 필드
                 "view_count": 0,
                 "likes": 0,
                 "comments_count": 0,
