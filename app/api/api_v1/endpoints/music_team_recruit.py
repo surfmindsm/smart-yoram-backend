@@ -18,8 +18,8 @@ class MusicTeamRecruitmentCreateRequest(BaseModel):
     # 필수 필드
     title: str
     team_name: Optional[str] = "미정"  # 프론트엔드에서 제거한 경우 기본값 제공
-    team_type: str                    # 팀 형태 (찬양팀, 워십팀, 밴드 등)
     worship_type: str                 # 예배 형태 (주일예배, 수요예배 등)
+    team_types: Optional[List[str]] = None  # 팀 유형 배열 (솔로, 찬양팀, 워십팀 등)
     experience_required: str
     practice_location: str
     practice_schedule: str
@@ -43,8 +43,8 @@ class MusicTeamRecruitmentUpdateRequest(BaseModel):
     """음악팀 모집 수정 요청 스키마"""
     title: Optional[str] = None
     team_name: Optional[str] = None
-    team_type: Optional[str] = None       # 팀 형태
     worship_type: Optional[str] = None    # 예배 형태
+    team_types: Optional[List[str]] = None  # 팀 유형 배열
     experience_required: Optional[str] = None
     practice_location: Optional[str] = None
     practice_schedule: Optional[str] = None
@@ -68,8 +68,8 @@ router = APIRouter()
 # 프론트엔드에서 사용하는 URL에 맞는 별칭 엔드포인트 추가
 @router.get("/music-team-recruit", response_model=dict)
 def get_music_team_recruit_list(
-    team_type: Optional[str] = Query(None, description="팀 형태 필터 (찬양팀, 워십팀, 밴드 등)"),
     worship_type: Optional[str] = Query(None, description="예배 형태 필터 (주일예배, 수요예배 등)"),
+    team_types: Optional[str] = Query(None, description="팀 유형 필터 (솔로, 찬양팀, 워십팀 등)"),
     instruments: Optional[str] = Query(None, description="악기 필터 (하위 호환성)"),
     team_name: Optional[str] = Query(None, description="팀명 필터"),
     status: Optional[str] = Query(None, description="모집 상태 필터"),
@@ -82,7 +82,7 @@ def get_music_team_recruit_list(
 ):
     """음악팀 모집 목록 조회 - 프론트엔드 호환 URL"""
     return get_music_team_recruitments_list(
-        team_type, worship_type, instruments, team_name, status,
+        worship_type, team_types, instruments, team_name, status,
         experience_required, search, page, limit, db, current_user
     )
 
@@ -124,8 +124,8 @@ def parse_datetime(date_string: str) -> datetime:
 
 @router.get("/music-team-recruitments", response_model=dict)
 def get_music_team_recruitments_list(
-    team_type: Optional[str] = Query(None, description="팀 형태 필터 (찬양팀, 워십팀, 밴드 등)"),
     worship_type: Optional[str] = Query(None, description="예배 형태 필터 (주일예배, 수요예배 등)"),
+    team_types: Optional[str] = Query(None, description="팀 유형 필터 (솔로, 찬양팀, 워십팀 등)"),
     instruments: Optional[str] = Query(None, description="악기 필터 (하위 호환성)"),
     team_name: Optional[str] = Query(None, description="팀명 필터"),
     status: Optional[str] = Query(None, description="모집 상태 필터"),
@@ -139,10 +139,10 @@ def get_music_team_recruitments_list(
     """음악팀 모집 목록 조회"""
     try:
         print(f"🔍 [MUSIC_TEAM_RECRUIT] 음악팀 모집 목록 조회 시작")
-        print(f"🔍 [MUSIC_TEAM_RECRUIT] 필터: team_type={team_type}, worship_type={worship_type}, instruments={instruments}, status={status}")
+        print(f"🔍 [MUSIC_TEAM_RECRUIT] 필터: worship_type={worship_type}, team_types={team_types}, instruments={instruments}, status={status}")
 
-        if team_type:
-            print(f"🔍 [MUSIC_TEAM_RECRUIT] 팀 형태 필터 적용: {team_type}")
+        if team_types:
+            print(f"🔍 [MUSIC_TEAM_RECRUIT] 팀 유형 필터 적용: {team_types}")
         if worship_type:
             print(f"🔍 [MUSIC_TEAM_RECRUIT] 예배 형태 필터 적용: {worship_type}")
         if instruments:
@@ -157,39 +157,52 @@ def get_music_team_recruitments_list(
             SELECT column_name
             FROM information_schema.columns
             WHERE table_name = 'community_music_teams'
-            AND column_name IN ('worship_type')
+            AND column_name IN ('worship_type', 'team_types')
         """
 
         try:
             schema_result = db.execute(text(schema_check_sql))
             existing_columns = [row[0] for row in schema_result.fetchall()]
             has_worship_type = 'worship_type' in existing_columns
-            print(f"🔍 [SCHEMA_CHECK] worship_type 컬럼 존재: {has_worship_type}")
+            has_team_types = 'team_types' in existing_columns
+            print(f"🔍 [SCHEMA_CHECK] worship_type 컬럼 존재: {has_worship_type}, team_types 컬럼 존재: {has_team_types}")
         except Exception as e:
             print(f"⚠️ [SCHEMA_CHECK] 스키마 확인 실패: {e}")
             has_worship_type = False
+            has_team_types = False
 
         # 스키마에 따라 동적으로 쿼리 작성
-        if has_worship_type:
-            # 새로운 스키마: worship_type 컬럼 포함
+        if has_worship_type and has_team_types:
+            # 새로운 스키마: worship_type + team_types 컬럼 모두 존재
             query_sql = """
                 SELECT
-                    cmt.id, cmt.title, cmt.team_name, cmt.team_type,
+                    cmt.id, cmt.title, cmt.team_name,
                     COALESCE(cmt.worship_type, '주일예배') as worship_type,
-                    cmt.instruments_needed,
+                    cmt.team_types, cmt.instruments_needed,
+                    cmt.status, cmt.author_id, cmt.created_at, COALESCE(cmt.view_count, 0) as view_count,
+                    cmt.practice_location, cmt.practice_schedule, cmt.description, cmt.requirements
+                FROM community_music_teams cmt
+                WHERE 1=1
+            """
+        elif has_worship_type:
+            # 중간 스키마: worship_type만 존재
+            query_sql = """
+                SELECT
+                    cmt.id, cmt.title, cmt.team_name,
+                    COALESCE(cmt.worship_type, '주일예배') as worship_type,
+                    '[]' as team_types, cmt.instruments_needed,
                     cmt.status, cmt.author_id, cmt.created_at, COALESCE(cmt.view_count, 0) as view_count,
                     cmt.practice_location, cmt.practice_schedule, cmt.description, cmt.requirements
                 FROM community_music_teams cmt
                 WHERE 1=1
             """
         else:
-            # 기존 스키마: worship_type 컬럼 없음
+            # 기존 스키마: team_type 컬럼만 존재 (기존 데이터 team_type = 예배유형)
             query_sql = """
                 SELECT
                     cmt.id, cmt.title, cmt.team_name,
-                    COALESCE(cmt.team_type, '찬양팀') as team_type,
-                    '주일예배' as worship_type,  -- 기본값
-                    cmt.instruments_needed,
+                    COALESCE(cmt.team_type, '주일예배') as worship_type,  -- team_type에 예배유형 저장됨
+                    '["찬양팀"]' as team_types, cmt.instruments_needed,
                     cmt.status, cmt.author_id, cmt.created_at, COALESCE(cmt.view_count, 0) as view_count,
                     cmt.practice_location, cmt.practice_schedule, cmt.description, cmt.requirements
                 FROM community_music_teams cmt
@@ -198,17 +211,23 @@ def get_music_team_recruitments_list(
         params = {}
         
         # 필터링 조건 추가 (스키마에 따라 안전하게)
-        if team_type:
-            query_sql += " AND COALESCE(cmt.team_type, '') = :team_type"
-            params["team_type"] = team_type
+        if worship_type:
+            if has_worship_type:
+                query_sql += " AND COALESCE(cmt.worship_type, '주일예배') = :worship_type"
+                params["worship_type"] = worship_type
+            else:
+                # 기존 스키마: team_type 컬럼에 예배유형 저장됨
+                query_sql += " AND COALESCE(cmt.team_type, '') = :worship_type"
+                params["worship_type"] = worship_type
 
-        if worship_type and has_worship_type:
-            query_sql += " AND COALESCE(cmt.worship_type, '주일예배') = :worship_type"
-            params["worship_type"] = worship_type
-        elif worship_type and not has_worship_type:
-            # worship_type 컬럼이 없는 경우 team_type으로 대체 검색 (하위 호환성)
-            query_sql += " AND COALESCE(cmt.team_type, '') ILIKE :worship_type_fallback"
-            params["worship_type_fallback"] = f"%{worship_type}%"
+        if team_types:
+            if has_team_types:
+                # team_types JSON 배열에서 검색
+                query_sql += " AND cmt.team_types::text ILIKE :team_types"
+                params["team_types"] = f"%{team_types}%"
+            else:
+                # 기존 스키마에서는 무시 (또는 기본값으로 처리)
+                pass
 
         if instruments:
             # JSON 배열에서 악기 검색 (하위 호환성) - NULL 안전 처리
@@ -223,12 +242,13 @@ def get_music_team_recruitments_list(
         
         # 전체 개수 계산 (동일한 필터링 조건 적용)
         count_sql = "SELECT COUNT(*) FROM community_music_teams cmt WHERE 1=1"
-        if team_type:
-            count_sql += " AND COALESCE(cmt.team_type, '') = :team_type"
-        if worship_type and has_worship_type:
-            count_sql += " AND COALESCE(cmt.worship_type, '주일예배') = :worship_type"
-        elif worship_type and not has_worship_type:
-            count_sql += " AND COALESCE(cmt.team_type, '') ILIKE :worship_type_fallback"
+        if worship_type:
+            if has_worship_type:
+                count_sql += " AND COALESCE(cmt.worship_type, '주일예배') = :worship_type"
+            else:
+                count_sql += " AND COALESCE(cmt.team_type, '') = :worship_type"
+        if team_types and has_team_types:
+            count_sql += " AND cmt.team_types::text ILIKE :team_types"
         if instruments:
             count_sql += " AND COALESCE(cmt.instruments_needed::text, '[]') ILIKE :instruments"
         if search:
@@ -257,7 +277,7 @@ def get_music_team_recruitments_list(
         # 사용자 정보 조회 (author_name을 위해)
         author_names = {}
         if recruitments_list:
-            author_ids = [row[7] for row in recruitments_list if row[7]]  # author_id는 7번째 인덱스
+            author_ids = [row[6] for row in recruitments_list if row[6]]  # author_id는 6번째 인덱스
             if author_ids:
                 try:
                     user_query = text("SELECT id, full_name FROM users WHERE id = ANY(:ids)")
@@ -457,23 +477,24 @@ async def create_music_team_recruitment(
             print(f"⚠️ [MUSIC_TEAM_RECRUIT] 테이블 구조 확인 실패: {e}")
             column_names = []
         
-        # Raw SQL로 데이터 저장 (실제 테이블 구조에 맞게) - worship_type 및 instruments_needed 포함
+        # Raw SQL로 데이터 저장 (실제 테이블 구조에 맞게) - worship_type 및 team_types 포함
         insert_sql = """
             INSERT INTO community_music_teams (
-                title, team_name, team_type, worship_type, instruments_needed, positions_needed,
+                title, team_name, worship_type, team_types, instruments_needed, positions_needed,
                 experience_required, practice_location, practice_schedule, commitment,
                 description, requirements, benefits, contact_method, contact_info,
                 status, current_members, target_members, author_id, church_id
             ) VALUES (
-                :title, :team_name, :team_type, :worship_type, :instruments_needed, :positions_needed,
+                :title, :team_name, :worship_type, :team_types, :instruments_needed, :positions_needed,
                 :experience_required, :practice_location, :practice_schedule, :commitment,
                 :description, :requirements, :benefits, :contact_method, :contact_info,
                 :status, :current_members, :target_members, :author_id, :church_id
             ) RETURNING id
         """
         
-        # JSON 필드 설정 (instruments_needed)
+        # JSON 필드 설정 (team_types 및 instruments_needed)
         import json
+        team_types_json = json.dumps(recruitment_data.team_types) if recruitment_data.team_types else None
         instruments_json = json.dumps(recruitment_data.instruments_needed) if recruitment_data.instruments_needed else None
 
         # contact_info 구성 (contact_phone, contact_email이 없으므로 contact_method만 사용)
@@ -486,9 +507,9 @@ async def create_music_team_recruitment(
         insert_params = {
             "title": recruitment_data.title,
             "team_name": recruitment_data.team_name or "미정",
-            "team_type": recruitment_data.team_type,     # 팀 형태
-            "worship_type": recruitment_data.worship_type, # 예배 형태
-            "instruments_needed": instruments_json,      # JSON 문자열로 변환
+            "worship_type": recruitment_data.worship_type,   # 예배 형태
+            "team_types": team_types_json,                   # 팀 유형 JSON 배열
+            "instruments_needed": instruments_json,          # 악기 JSON 배열
             "positions_needed": recruitment_data.positions_needed,
             "experience_required": recruitment_data.experience_required,
             "practice_location": recruitment_data.practice_location,
@@ -524,8 +545,8 @@ async def create_music_team_recruitment(
                 "id": new_id,
                 "title": recruitment_data.title,
                 "team_name": recruitment_data.team_name or "미정",
-                "team_type": recruitment_data.team_type,         # 팀 형태
                 "worship_type": recruitment_data.worship_type,   # 예배 형태
+                "team_types": recruitment_data.team_types or [], # 팀 유형 배열
                 "instruments_needed": recruitment_data.instruments_needed or [], # 필요한 악기 목록
                 "contact_method": recruitment_data.contact_method,
                 "status": recruitment_data.status,
