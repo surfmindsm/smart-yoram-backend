@@ -18,7 +18,7 @@ class MusicTeamRecruitmentCreateRequest(BaseModel):
     # 필수 필드
     title: str
     team_name: Optional[str] = "미정"  # 프론트엔드에서 제거한 경우 기본값 제공
-    team_type: str
+    worship_type: str                 # team_type → worship_type으로 변경
     experience_required: str
     practice_location: str
     practice_schedule: str
@@ -28,9 +28,7 @@ class MusicTeamRecruitmentCreateRequest(BaseModel):
     contact_email: Optional[str] = None
     status: str
 
-    # 선택 필드 - 새로운 teamTypes 필드 추가 (하위 호환성 유지)
-    team_types: Optional[List[str]] = None           # 새로운 필드 (프론트엔드용)
-    instruments_needed: Optional[List[str]] = None   # 기존 필드 (하위 호환성)
+    # 선택 필드
     positions_needed: Optional[str] = None
     commitment: Optional[str] = None
     requirements: Optional[str] = None
@@ -43,7 +41,7 @@ class MusicTeamRecruitmentUpdateRequest(BaseModel):
     """음악팀 모집 수정 요청 스키마"""
     title: Optional[str] = None
     team_name: Optional[str] = None
-    team_type: Optional[str] = None
+    worship_type: Optional[str] = None    # team_type → worship_type으로 변경
     experience_required: Optional[str] = None
     practice_location: Optional[str] = None
     practice_schedule: Optional[str] = None
@@ -52,9 +50,6 @@ class MusicTeamRecruitmentUpdateRequest(BaseModel):
     contact_phone: Optional[str] = None
     contact_email: Optional[str] = None
     status: Optional[str] = None
-    # 새로운 teamTypes 필드 추가 (하위 호환성 유지)
-    team_types: Optional[List[str]] = None           # 새로운 필드 (프론트엔드용)
-    instruments_needed: Optional[List[str]] = None   # 기존 필드 (하위 호환성)
     positions_needed: Optional[str] = None
     commitment: Optional[str] = None
     requirements: Optional[str] = None
@@ -69,9 +64,7 @@ router = APIRouter()
 # 프론트엔드에서 사용하는 URL에 맞는 별칭 엔드포인트 추가
 @router.get("/music-team-recruit", response_model=dict)
 def get_music_team_recruit_list(
-    team_type: Optional[str] = Query(None, description="팀 유형 필터"),
-    teamType: Optional[str] = Query(None, description="팀 형태 필터 (새로운 필드)"),
-    instruments: Optional[str] = Query(None, description="악기 필터 (하위 호환성)"),
+    worship_type: Optional[str] = Query(None, description="예배 유형 필터"),
     team_name: Optional[str] = Query(None, description="팀명 필터"),
     status: Optional[str] = Query(None, description="모집 상태 필터"),
     experience_required: Optional[str] = Query(None, description="경력 요구사항 필터"),
@@ -83,7 +76,7 @@ def get_music_team_recruit_list(
 ):
     """음악팀 모집 목록 조회 - 프론트엔드 호환 URL"""
     return get_music_team_recruitments_list(
-        team_type, teamType, instruments, team_name, status,
+        worship_type, team_name, status,
         experience_required, search, page, limit, db, current_user
     )
 
@@ -125,9 +118,7 @@ def parse_datetime(date_string: str) -> datetime:
 
 @router.get("/music-team-recruitments", response_model=dict)
 def get_music_team_recruitments_list(
-    team_type: Optional[str] = Query(None, description="팀 유형 필터"),
-    teamType: Optional[str] = Query(None, description="팀 형태 필터 (새로운 필드)"),
-    instruments: Optional[str] = Query(None, description="악기 필터 (하위 호환성)"),
+    worship_type: Optional[str] = Query(None, description="예배 유형 필터"),
     team_name: Optional[str] = Query(None, description="팀명 필터"),
     status: Optional[str] = Query(None, description="모집 상태 필터"),
     experience_required: Optional[str] = Query(None, description="경력 요구사항 필터"),
@@ -140,21 +131,21 @@ def get_music_team_recruitments_list(
     """음악팀 모집 목록 조회"""
     try:
         print(f"🔍 [MUSIC_TEAM_RECRUIT] 음악팀 모집 목록 조회 시작")
-        print(f"🔍 [MUSIC_TEAM_RECRUIT] 필터: team_type={team_type}, teamType={teamType}, team_name={team_name}, status={status}")
+        print(f"🔍 [MUSIC_TEAM_RECRUIT] 필터: worship_type={worship_type}, team_name={team_name}, status={status}")
 
-        # teamType 우선, 없으면 instruments 사용 (하위 호환성)
-        effective_team_filter = teamType if teamType else instruments
-        if effective_team_filter:
-            print(f"🔍 [MUSIC_TEAM_RECRUIT] 팀 형태 필터 적용: {effective_team_filter}")
+        if worship_type:
+            print(f"🔍 [MUSIC_TEAM_RECRUIT] 예배 유형 필터 적용: {worship_type}")
         
         # Raw SQL로 안전한 조회 (기본 필드만) - 트랜잭션 초기화
         from sqlalchemy import text
         db.rollback()  # 이전 트랜잭션 실패 방지
         
-        # 단순한 쿼리로 시작해서 데이터 존재 여부 확인
+        # 실제 데이터를 조회하는 쿼리
         query_sql = """
             SELECT
-                cmt.id, cmt.title, cmt.status, cmt.author_id, cmt.created_at, COALESCE(cmt.view_count, 0) as view_count
+                cmt.id, cmt.title, cmt.team_name, cmt.team_type,
+                cmt.status, cmt.author_id, cmt.created_at, COALESCE(cmt.view_count, 0) as view_count,
+                cmt.practice_location, cmt.practice_schedule, cmt.description, cmt.requirements
             FROM community_music_teams cmt
             WHERE 1=1
         """
@@ -186,7 +177,7 @@ def get_music_team_recruitments_list(
         # 사용자 정보 조회 (author_name을 위해)
         author_names = {}
         if recruitments_list:
-            author_ids = [row[3] for row in recruitments_list if row[3]]  # author_id는 3번째 인덱스
+            author_ids = [row[5] for row in recruitments_list if row[5]]  # author_id는 5번째 인덱스
             if author_ids:
                 try:
                     user_query = text("SELECT id, full_name FROM users WHERE id = ANY(:ids)")
@@ -196,57 +187,56 @@ def get_music_team_recruitments_list(
                 except Exception as e:
                     print(f"❌ 사용자 정보 조회 실패: {e}")
 
-        # 응답 데이터 구성 (실제 데이터 사용) - 간소화된 버전
+        # 응답 데이터 구성 (실제 DB 데이터 사용)
         from datetime import timezone, timedelta
+        import json
         kst = timezone(timedelta(hours=9))  # KST = UTC+9
 
         data_items = []
         for row in recruitments_list:
-            # UTC to KST 변환
+            # UTC to KST 변환 (created_at은 이제 6번째 인덱스)
             created_at_kst = None
             updated_at_kst = None
-            if row[4]:  # created_at
-                if row[4].tzinfo is None:
+            if row[6]:  # created_at
+                if row[6].tzinfo is None:
                     # naive datetime을 UTC로 간주하고 KST로 변환
-                    utc_time = row[4].replace(tzinfo=timezone.utc)
+                    utc_time = row[6].replace(tzinfo=timezone.utc)
                     created_at_kst = utc_time.astimezone(kst).isoformat()
                     updated_at_kst = created_at_kst
                 else:
                     # timezone-aware datetime을 KST로 변환
-                    created_at_kst = row[4].astimezone(kst).isoformat()
+                    created_at_kst = row[6].astimezone(kst).isoformat()
                     updated_at_kst = created_at_kst
 
             data_items.append({
-                "id": row[0],                    # id
-                "title": row[1],                 # title
-                "team_name": "미정",              # 기본값
-                "team_type": "일반",              # 기본값
-                "team_types": [],                # 새로운 필드 (프론트엔드용)
-                "instruments_needed": [],        # 기존 필드 (하위 호환성)
-                "positions_needed": "미정",       # 기본값
-                "experience_required": "무관",    # 기본값
-                "practice_location": "미정",      # 기본값
-                "practice_schedule": "미정",      # 기본값
-                "commitment": "미정",            # 기본값
-                "description": "",               # 기본값
-                "requirements": "",              # 기본값
-                "benefits": "",                  # 기본값
-                "contact_method": "댓글",        # 기본값
-                "contact_phone": "",             # 기본값
-                "contact_email": "",             # 기본값
-                "status": row[2] or "모집중",     # status
-                "current_members": 0,            # 기본값
-                "target_members": 0,             # 기본값
-                "author_id": row[3],             # author_id
-                "author_name": author_names.get(row[3], "익명"),
-                "church_id": 9998,               # 기본값
-                "church_name": "커뮤니티",        # 기본값
-                "views": row[5] or 0,            # 실제 데이터베이스 view_count 값 (6번째 인덱스)
-                "view_count": row[5] or 0,       # 프론트엔드 호환성을 위한 view_count 필드
-                "likes": 0,                      # 기본값
-                "applicants_count": 0,           # 기본값
-                "created_at": created_at_kst,    # KST로 변환된 created_at
-                "updated_at": updated_at_kst     # KST로 변환된 updated_at
+                "id": row[0],                                    # id
+                "title": row[1],                                 # title
+                "team_name": row[2] or "미정",                   # team_name (실제 데이터)
+                "worship_type": row[3] or "일반",                # worship_type (team_type에서 변경)
+                "positions_needed": "미정",                      # 기본값 (필요시 추가)
+                "experience_required": "무관",                   # 기본값 (필요시 추가)
+                "practice_location": row[8] or "미정",           # practice_location (실제 데이터)
+                "practice_schedule": row[9] or "미정",           # practice_schedule (실제 데이터)
+                "commitment": "미정",                            # 기본값 (필요시 추가)
+                "description": row[10] or "",                    # description (실제 데이터)
+                "requirements": row[11] or "",                   # requirements (실제 데이터)
+                "benefits": "",                                  # 기본값 (필요시 추가)
+                "contact_method": "댓글",                        # 기본값 (필요시 추가)
+                "contact_phone": "",                             # 기본값
+                "contact_email": "",                             # 기본값
+                "status": row[4] or "모집중",                     # status (실제 데이터)
+                "current_members": 0,                            # 기본값 (필요시 추가)
+                "target_members": 0,                             # 기본값 (필요시 추가)
+                "author_id": row[5],                             # author_id
+                "author_name": author_names.get(row[5], "익명"),
+                "church_id": 9998,                               # 기본값
+                "church_name": "커뮤니티",                        # 기본값
+                "views": row[7] or 0,                            # view_count (실제 데이터)
+                "view_count": row[7] or 0,                       # 프론트엔드 호환성
+                "likes": 0,                                      # 기본값
+                "applicants_count": 0,                           # 기본값
+                "created_at": created_at_kst,                    # KST로 변환된 created_at
+                "updated_at": updated_at_kst                     # KST로 변환된 updated_at
             })
         
         total_pages = (total_count + limit - 1) // limit
@@ -316,22 +306,20 @@ async def create_music_team_recruitment(
         # Raw SQL로 데이터 저장 (실제 테이블 구조에 맞게) - contact_info 필드 추가
         insert_sql = """
             INSERT INTO community_music_teams (
-                title, team_name, team_type, instruments_needed, positions_needed,
+                title, team_name, team_type, positions_needed,
                 experience_required, practice_location, practice_schedule, commitment,
                 description, requirements, benefits, contact_method, contact_info,
                 status, current_members, target_members, author_id, church_id
             ) VALUES (
-                :title, :team_name, :team_type, :instruments_needed, :positions_needed,
+                :title, :team_name, :team_type, :positions_needed,
                 :experience_required, :practice_location, :practice_schedule, :commitment,
                 :description, :requirements, :benefits, :contact_method, :contact_info,
                 :status, :current_members, :target_members, :author_id, :church_id
             ) RETURNING id
         """
         
-        # JSON 필드 명시적 변환 - team_types 우선, 없으면 instruments_needed 사용 (하위 호환성)
+        # JSON 필드 제거 (instruments 관련 제거)
         import json
-        team_data = recruitment_data.team_types if recruitment_data.team_types else recruitment_data.instruments_needed
-        instruments_json = json.dumps(team_data) if team_data else None
 
         # contact_info 구성 (contact_phone, contact_email이 없으므로 contact_method만 사용)
         contact_info = f"연락방법: {recruitment_data.contact_method}"
@@ -343,8 +331,7 @@ async def create_music_team_recruitment(
         insert_params = {
             "title": recruitment_data.title,
             "team_name": recruitment_data.team_name or "미정",
-            "team_type": recruitment_data.team_type,
-            "instruments_needed": instruments_json,  # JSON 문자열로 명시적 변환
+            "team_type": recruitment_data.worship_type,  # worship_type 사용
             "positions_needed": recruitment_data.positions_needed,
             "experience_required": recruitment_data.experience_required,
             "practice_location": recruitment_data.practice_location,
@@ -380,9 +367,7 @@ async def create_music_team_recruitment(
                 "id": new_id,
                 "title": recruitment_data.title,
                 "team_name": recruitment_data.team_name or "미정",
-                "team_type": recruitment_data.team_type,
-                "team_types": team_data or [],           # 새로운 필드 (프론트엔드용)
-                "instruments_needed": team_data or [],   # 기존 필드 (하위 호환성)
+                "worship_type": recruitment_data.worship_type,  # worship_type으로 변경
                 "contact_method": recruitment_data.contact_method,
                 "status": recruitment_data.status,
                 "created_at": current_time_kst,
@@ -484,9 +469,7 @@ def get_music_team_recruitment_detail(
                 "id": recruitment.id,
                 "title": recruitment.title,
                 "team_name": recruitment.team_name,
-                "team_type": recruitment.team_type,
-                "team_types": recruitment.instruments_needed or [],      # 새로운 필드 (프론트엔드용)
-                "instruments_needed": recruitment.instruments_needed or [], # 기존 필드 (하위 호환성)
+                "worship_type": recruitment.team_type,  # worship_type으로 변경
                 "positions_needed": recruitment.positions_needed,
                 "experience_required": recruitment.experience_required,
                 "practice_location": recruitment.practice_location,
