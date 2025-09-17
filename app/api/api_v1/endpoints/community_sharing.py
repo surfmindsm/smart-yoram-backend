@@ -38,22 +38,42 @@ class SharingCreateRequest(CommunityBaseRequest):
 router = APIRouter()
 
 
-def map_frontend_status_to_enum(status: str) -> CommonStatus:
-    """프론트엔드 status 값을 CommonStatus enum으로 매핑"""
+def map_frontend_status_to_db(status: str) -> str:
+    """프론트엔드 status 값을 DB 저장용 단순화된 상태값으로 매핑"""
+    # 새로운 단순화된 상태값: sharing, completed
     status_mapping = {
-        "available": CommonStatus.ACTIVE,
-        "active": CommonStatus.ACTIVE,
-        "completed": CommonStatus.COMPLETED,
-        "cancelled": CommonStatus.CANCELLED,
-        "paused": CommonStatus.PAUSED
+        # 기존 상태값들 → 새로운 상태값
+        "available": "sharing",
+        "reserved": "sharing",
+        "active": "sharing",
+        "paused": "sharing",
+        "sharing": "sharing",  # 새로운 상태값
+        "completed": "completed",
+        "cancelled": "completed",  # 취소도 완료로 처리
     }
-    return status_mapping.get(status.lower(), CommonStatus.ACTIVE)
+    return status_mapping.get(status.lower(), "sharing")  # 기본값: sharing
+
+
+def map_db_status_to_frontend(status: str) -> str:
+    """DB 상태값을 프론트엔드가 기대하는 형태로 매핑 (호환성 유지)"""
+    # DB의 단순화된 상태값 → 프론트엔드 호환 상태값
+    status_mapping = {
+        "sharing": "sharing",     # 나눔중
+        "completed": "completed", # 나눔완료
+        # 기존 상태값들 (마이그레이션 전 데이터 호환성)
+        "available": "sharing",
+        "reserved": "sharing",
+        "active": "sharing",
+        "paused": "sharing",
+        "cancelled": "completed",
+    }
+    return status_mapping.get(status, "sharing")  # 기본값: sharing
 
 
 # 프론트엔드에서 호출하는 나눔 제공 URL에 맞춰 추가 (실제 DB 조회)
 @router.get("/sharing-offer", response_model=dict)
 def get_sharing_offer_list(
-    status: Optional[str] = Query(None, description="상태 필터: available, reserved, completed"),
+    status: Optional[str] = Query(None, description="상태 필터: sharing, completed"),
     category: Optional[str] = Query(None, description="카테고리 필터"),
     location: Optional[str] = Query(None, description="지역 필터"),
     search: Optional[str] = Query(None, description="제목/내용 검색"),
@@ -70,7 +90,7 @@ def get_sharing_offer_list(
 
 @router.get("/sharing", response_model=dict)
 def get_sharing_list(
-    status: Optional[str] = Query(None, description="상태 필터: available, reserved, completed"),
+    status: Optional[str] = Query(None, description="상태 필터: sharing, completed"),
     category: Optional[str] = Query(None, description="카테고리 필터"),
     location: Optional[str] = Query(None, description="지역 필터"),
     search: Optional[str] = Query(None, description="제목/내용 검색"),
@@ -163,10 +183,12 @@ def get_sharing_list(
         except Exception as struct_e:
             print(f"❌ [DEBUG] Error checking structure: {struct_e}")
         
-        # 필터링 적용
+        # 필터링 적용 (상태값 매핑 포함)
         if status:
+            # 프론트엔드 상태값을 DB 상태값으로 변환하여 필터링
+            db_status = map_frontend_status_to_db(status)
             query_sql += " AND cs.status = :status"
-            params["status"] = status
+            params["status"] = db_status
         if category:
             query_sql += " AND cs.category = :category"  
             params["category"] = category
@@ -183,8 +205,10 @@ def get_sharing_list(
         count_sql = "SELECT COUNT(*) FROM community_sharing cs WHERE 1=1 AND cs.is_free = true"
         count_params = {}
         if status:
+            # 프론트엔드 상태값을 DB 상태값으로 변환하여 필터링
+            db_status = map_frontend_status_to_db(status)
             count_sql += " AND cs.status = :status"
-            count_params["status"] = status
+            count_params["status"] = db_status
         if category:
             count_sql += " AND cs.category = :category"
             count_params["category"] = category
@@ -246,13 +270,13 @@ def get_sharing_list(
             
             data_items.append({
                 "id": row[0],                    # cs.id
-                "title": row[1],                 # cs.title  
+                "title": row[1],                 # cs.title
                 "description": row[2],           # cs.description
                 "category": row[3],              # cs.category
                 "condition": row[4],             # cs.condition
                 "price": float(row[5]) if row[5] else 0,  # cs.price
                 "is_free": row[6],               # cs.is_free
-                "status": row[11],               # cs.status
+                "status": map_db_status_to_frontend(row[11]),  # 상태값 매핑 적용
                 "location": row[7],              # cs.location
                 "contact_phone": row[8],         # cs.contact_info
                 "contact_email": row[9] or "",   # empty placeholder
@@ -333,7 +357,7 @@ async def create_sharing(
             location=sharing_data.location,
             contact_info=f"{sharing_data.contact_phone or ''} {sharing_data.contact_email or ''}".strip(),
             images=sharing_data.images or [],  # JSON 컬럼으로 실제 존재함!
-            status=map_frontend_status_to_enum(sharing_data.status or "available"),
+            status=map_frontend_status_to_db(sharing_data.status or "sharing"),
             # created_at, updated_at은 모델의 server_default가 자동 처리
         )
         
@@ -357,7 +381,7 @@ async def create_sharing(
                 "location": sharing_record.location,
                 "contact_phone": sharing_data.contact_phone or "",
                 "contact_email": sharing_data.contact_email or "",
-                "status": sharing_record.status,
+                "status": map_db_status_to_frontend(sharing_record.status),
                 "images": sharing_record.images or [],  # 실제로 DB에 저장된 이미지들
                 "author_id": sharing_record.author_id,  # 작성자 ID
                 "author_name": current_user.full_name or "익명",  # 작성자 이름
@@ -676,7 +700,7 @@ def get_sharing_detail(
                 "price": float(row[5]) if row[5] else 0,
                 "location": row[6],
                 "contact_info": row[7],
-                "status": row[8],
+                "status": map_db_status_to_frontend(row[8]),
                 "images": images_data,
                 "is_free": row[10],
                 "author_id": row[11],
@@ -724,21 +748,49 @@ def update_sharing(
 @router.patch("/sharing/{sharing_id}/status", response_model=dict)
 def update_sharing_status(
     sharing_id: int,
+    new_status: str = Query(..., description="새로운 상태값: sharing, completed"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """나눔 상태 변경 - 단순화된 버전"""
+    """나눔 상태 변경 - 새로운 단순화된 상태값 지원"""
     try:
+        # 프론트엔드 상태값을 DB 상태값으로 변환
+        db_status = map_frontend_status_to_db(new_status)
+
+        # 실제 DB 업데이트
+        update_sql = """
+            UPDATE community_sharing
+            SET status = :new_status, updated_at = NOW()
+            WHERE id = :sharing_id AND author_id = :author_id
+            RETURNING status
+        """
+
+        result = db.execute(text(update_sql), {
+            "new_status": db_status,
+            "sharing_id": sharing_id,
+            "author_id": current_user.id
+        })
+
+        if result.rowcount == 0:
+            return {
+                "success": False,
+                "message": "해당 나눔을 찾을 수 없거나 권한이 없습니다."
+            }
+
+        updated_status = result.fetchone()[0]
+        db.commit()
+
         return {
             "success": True,
             "message": "나눔 상태가 변경되었습니다.",
             "data": {
                 "id": sharing_id,
-                "status": "completed"
+                "status": map_db_status_to_frontend(updated_status)  # 프론트엔드 형태로 반환
             }
         }
-        
+
     except Exception as e:
+        db.rollback()
         return {
             "success": False,
             "message": f"나눔 상태 변경 중 오류가 발생했습니다: {str(e)}"
