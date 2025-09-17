@@ -105,12 +105,12 @@ def get_church_news_list(
         db.rollback()  # 이전 트랜잭션 실패 방지
         
         query_sql = """
-            SELECT 
+            SELECT
                 cn.id,
                 cn.title,
-                'active' as status,
-                0 as views,
-                0 as likes,
+                cn.status,
+                COALESCE(cn.view_count, 0) as views,
+                COALESCE(cn.likes, 0) as likes,
                 cn.created_at,
                 cn.author_id,
                 u.full_name
@@ -374,9 +374,32 @@ def get_church_news_detail(
         db.rollback()  # 이전 트랜잭션 실패 방지
         
         query_sql = """
-            SELECT 
+            SELECT
                 cn.id,
                 cn.title,
+                cn.content,
+                cn.category,
+                cn.priority,
+                cn.event_date,
+                cn.event_time,
+                cn.location,
+                cn.organizer,
+                cn.target_audience,
+                cn.participation_fee,
+                cn.registration_required,
+                cn.registration_deadline,
+                cn.contact_person,
+                cn.contact_phone,
+                cn.contact_email,
+                cn.status,
+                COALESCE(cn.view_count, 0) as view_count,
+                COALESCE(cn.likes, 0) as likes,
+                COALESCE(cn.comments_count, 0) as comments_count,
+                cn.tags,
+                cn.images,
+                cn.created_at,
+                cn.updated_at,
+                cn.author_id,
                 u.full_name
             FROM church_news cn
             LEFT JOIN users u ON cn.author_id = u.id
@@ -392,37 +415,59 @@ def get_church_news_detail(
                 "message": "교회 소식을 찾을 수 없습니다."
             }
         
-        news_id, title, author_name = row
-        
+        # 조회된 실제 데이터 사용 (26개 컬럼)
+        (news_id, title, content, category, priority, event_date, event_time,
+         location, organizer, target_audience, participation_fee, registration_required,
+         registration_deadline, contact_person, contact_phone, contact_email,
+         status, view_count, likes, comments_count, tags, images,
+         created_at, updated_at, author_id, author_name) = row
+
+        # JSON 필드 파싱
+        parsed_tags = []
+        if tags:
+            try:
+                import json
+                parsed_tags = json.loads(tags) if isinstance(tags, str) else tags
+            except:
+                parsed_tags = []
+
+        parsed_images = []
+        if images:
+            try:
+                import json
+                parsed_images = json.loads(images) if isinstance(images, str) else images
+            except:
+                parsed_images = []
+
         return {
             "success": True,
             "data": {
                 "id": news_id,
                 "title": title,
-                "content": title,  # 제목을 내용으로 임시 사용
-                "category": "일반",
-                "priority": "보통",
-                "event_date": None,
-                "event_time": None,
-                "location": "미정",
-                "organizer": "교회",
-                "target_audience": "전체",
-                "participation_fee": 0,
-                "registration_required": False,
-                "registration_deadline": None,
-                "contact_person": "담당자",
-                "contact_phone": "",
-                "contact_email": "",
-                "status": "active",
-                "views": 0,           # 프론트엔드 호환성을 위한 views 필드
-                "view_count": 0,
-                "likes": 0,
-                "comments_count": 0,
-                "tags": [],
-                "images": [],
-                "created_at": None,
-                "updated_at": None,
-                "author_id": 1,
+                "content": content or title,  # content가 없으면 title 사용
+                "category": category or "일반",
+                "priority": priority or "보통",
+                "event_date": event_date.isoformat() if event_date else None,
+                "event_time": event_time.strftime("%H:%M") if event_time else None,
+                "location": location or "미정",
+                "organizer": organizer or "교회",
+                "target_audience": target_audience or "전체",
+                "participation_fee": participation_fee or 0,
+                "registration_required": registration_required or False,
+                "registration_deadline": registration_deadline.isoformat() if registration_deadline else None,
+                "contact_person": contact_person or "담당자",
+                "contact_phone": contact_phone or "",
+                "contact_email": contact_email or "",
+                "status": status or "active",
+                "views": view_count,           # 실제 DB 데이터 사용
+                "view_count": view_count,      # 실제 DB 데이터 사용
+                "likes": likes,
+                "comments_count": comments_count,
+                "tags": parsed_tags,
+                "images": parsed_images,
+                "created_at": created_at.isoformat() if created_at else None,
+                "updated_at": updated_at.isoformat() if updated_at else None,
+                "author_id": author_id,
                 "author_name": author_name or "익명",
                 "church_id": 9998
             }
