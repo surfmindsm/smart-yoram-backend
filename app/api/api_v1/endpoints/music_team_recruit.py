@@ -152,29 +152,67 @@ def get_music_team_recruitments_list(
         from sqlalchemy import text
         db.rollback()  # 이전 트랜잭션 실패 방지
         
-        # 실제 데이터를 조회하는 쿼리 - worship_type 및 instruments_needed 포함
-        query_sql = """
-            SELECT
-                cmt.id, cmt.title, cmt.team_name, cmt.team_type, cmt.worship_type, cmt.instruments_needed,
-                cmt.status, cmt.author_id, cmt.created_at, COALESCE(cmt.view_count, 0) as view_count,
-                cmt.practice_location, cmt.practice_schedule, cmt.description, cmt.requirements
-            FROM community_music_teams cmt
-            WHERE 1=1
+        # 테이블 스키마 확인 후 안전한 쿼리 작성
+        schema_check_sql = """
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_name = 'community_music_teams'
+            AND column_name IN ('worship_type')
         """
+
+        try:
+            schema_result = db.execute(text(schema_check_sql))
+            existing_columns = [row[0] for row in schema_result.fetchall()]
+            has_worship_type = 'worship_type' in existing_columns
+            print(f"🔍 [SCHEMA_CHECK] worship_type 컬럼 존재: {has_worship_type}")
+        except Exception as e:
+            print(f"⚠️ [SCHEMA_CHECK] 스키마 확인 실패: {e}")
+            has_worship_type = False
+
+        # 스키마에 따라 동적으로 쿼리 작성
+        if has_worship_type:
+            # 새로운 스키마: worship_type 컬럼 포함
+            query_sql = """
+                SELECT
+                    cmt.id, cmt.title, cmt.team_name, cmt.team_type,
+                    COALESCE(cmt.worship_type, '주일예배') as worship_type,
+                    cmt.instruments_needed,
+                    cmt.status, cmt.author_id, cmt.created_at, COALESCE(cmt.view_count, 0) as view_count,
+                    cmt.practice_location, cmt.practice_schedule, cmt.description, cmt.requirements
+                FROM community_music_teams cmt
+                WHERE 1=1
+            """
+        else:
+            # 기존 스키마: worship_type 컬럼 없음
+            query_sql = """
+                SELECT
+                    cmt.id, cmt.title, cmt.team_name,
+                    COALESCE(cmt.team_type, '찬양팀') as team_type,
+                    '주일예배' as worship_type,  -- 기본값
+                    cmt.instruments_needed,
+                    cmt.status, cmt.author_id, cmt.created_at, COALESCE(cmt.view_count, 0) as view_count,
+                    cmt.practice_location, cmt.practice_schedule, cmt.description, cmt.requirements
+                FROM community_music_teams cmt
+                WHERE 1=1
+            """
         params = {}
         
-        # 필터링 조건 추가
+        # 필터링 조건 추가 (스키마에 따라 안전하게)
         if team_type:
-            query_sql += " AND cmt.team_type = :team_type"
+            query_sql += " AND COALESCE(cmt.team_type, '') = :team_type"
             params["team_type"] = team_type
 
-        if worship_type:
-            query_sql += " AND cmt.worship_type = :worship_type"
+        if worship_type and has_worship_type:
+            query_sql += " AND COALESCE(cmt.worship_type, '주일예배') = :worship_type"
             params["worship_type"] = worship_type
+        elif worship_type and not has_worship_type:
+            # worship_type 컬럼이 없는 경우 team_type으로 대체 검색 (하위 호환성)
+            query_sql += " AND COALESCE(cmt.team_type, '') ILIKE :worship_type_fallback"
+            params["worship_type_fallback"] = f"%{worship_type}%"
 
         if instruments:
-            # JSON 배열에서 악기 검색 (하위 호환성)
-            query_sql += " AND cmt.instruments_needed::text ILIKE :instruments"
+            # JSON 배열에서 악기 검색 (하위 호환성) - NULL 안전 처리
+            query_sql += " AND COALESCE(cmt.instruments_needed::text, '[]') ILIKE :instruments"
             params["instruments"] = f"%{instruments}%"
 
         if search:
@@ -183,14 +221,16 @@ def get_music_team_recruitments_list(
         
         query_sql += " ORDER BY cmt.created_at DESC"
         
-        # 전체 개수 계산
+        # 전체 개수 계산 (동일한 필터링 조건 적용)
         count_sql = "SELECT COUNT(*) FROM community_music_teams cmt WHERE 1=1"
         if team_type:
-            count_sql += " AND cmt.team_type = :team_type"
-        if worship_type:
-            count_sql += " AND cmt.worship_type = :worship_type"
+            count_sql += " AND COALESCE(cmt.team_type, '') = :team_type"
+        if worship_type and has_worship_type:
+            count_sql += " AND COALESCE(cmt.worship_type, '주일예배') = :worship_type"
+        elif worship_type and not has_worship_type:
+            count_sql += " AND COALESCE(cmt.team_type, '') ILIKE :worship_type_fallback"
         if instruments:
-            count_sql += " AND cmt.instruments_needed::text ILIKE :instruments"
+            count_sql += " AND COALESCE(cmt.instruments_needed::text, '[]') ILIKE :instruments"
         if search:
             count_sql += " AND cmt.title ILIKE :search"
         count_result = db.execute(text(count_sql), params)
@@ -201,9 +241,18 @@ def get_music_team_recruitments_list(
         offset = (page - 1) * limit
         query_sql += f" OFFSET {offset} LIMIT {limit}"
         
+        # 디버깅을 위한 상세 로그
+        print(f"🔍 [DEBUG] 실행할 쿼리: {query_sql}")
+        print(f"🔍 [DEBUG] 파라미터: {params}")
+
         result = db.execute(text(query_sql), params)
         recruitments_list = result.fetchall()
         print(f"🔍 [MUSIC_TEAM_RECRUIT] 조회된 데이터 개수: {len(recruitments_list)}")
+
+        # 전체 데이터 개수도 확인 (필터 없이)
+        total_without_filter_sql = "SELECT COUNT(*) FROM community_music_teams"
+        total_without_filter = db.execute(text(total_without_filter_sql)).scalar()
+        print(f"🔍 [DEBUG] 필터 없는 전체 데이터 개수: {total_without_filter}")
         
         # 사용자 정보 조회 (author_name을 위해)
         author_names = {}
@@ -309,8 +358,62 @@ def get_music_team_recruitments_list(
         
     except Exception as e:
         print(f"❌ [MUSIC_TEAM_RECRUIT] 목록 조회 오류: {str(e)}")
+        import traceback
+        print(f"❌ [MUSIC_TEAM_RECRUIT] 오류 세부사항: {traceback.format_exc()}")
+
+        # 간단한 조회로 다시 시도 (호환성 확보)
+        try:
+            print("🔄 [FALLBACK] 기본 조회로 재시도...")
+            fallback_sql = """
+                SELECT
+                    id, title,
+                    COALESCE(team_name, '미정') as team_name,
+                    COALESCE(team_type, '찬양팀') as team_type,
+                    '주일예배' as worship_type,
+                    COALESCE(status, '모집중') as status,
+                    created_at
+                FROM community_music_teams
+                ORDER BY created_at DESC
+                LIMIT 10
+            """
+            fallback_result = db.execute(text(fallback_sql))
+            fallback_data = fallback_result.fetchall()
+            print(f"🔄 [FALLBACK] 기본 조회 결과: {len(fallback_data)}개")
+
+            if fallback_data:
+                return {
+                    "success": True,
+                    "message": "스키마 업데이트 중입니다. 기본 데이터를 반환합니다.",
+                    "data": [
+                        {
+                            "id": row[0],
+                            "title": row[1],
+                            "team_name": row[2],
+                            "team_type": row[3],
+                            "worship_type": row[4],
+                            "status": row[5],
+                            "instruments_needed": [],
+                            "author_name": "익명",
+                            "views": 0,
+                            "created_at": row[6].isoformat() if row[6] else None
+                        }
+                        for row in fallback_data
+                    ],
+                    "pagination": {
+                        "current_page": 1,
+                        "total_pages": 1,
+                        "total_count": len(fallback_data),
+                        "per_page": limit,
+                        "has_next": False,
+                        "has_prev": False
+                    }
+                }
+        except Exception as fallback_error:
+            print(f"❌ [FALLBACK] 기본 조회도 실패: {fallback_error}")
+
         return {
-            "success": True,
+            "success": False,
+            "message": f"데이터 조회 중 오류가 발생했습니다: {str(e)}",
             "data": [],
             "pagination": {
                 "current_page": page,
