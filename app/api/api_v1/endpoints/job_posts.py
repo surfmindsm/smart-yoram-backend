@@ -86,7 +86,15 @@ def get_job_posting_list(
             SELECT
                 jp.id,
                 jp.title,
-                'active' as status,
+                jp.company_name,
+                jp.job_type,
+                jp.employment_type,
+                jp.location,
+                jp.salary_range,
+                jp.description,
+                jp.requirements,
+                jp.contact_info,
+                jp.status,
                 COALESCE(jp.view_count, 0) as views,
                 0 as likes,
                 jp.created_at,
@@ -124,32 +132,34 @@ def get_job_posting_list(
         job_list = result.fetchall()
         print(f"🔍 [JOB_POSTING_LIST] 조회된 데이터 개수: {len(job_list)}")
         
-        # 응답 데이터 구성
+        # 응답 데이터 구성 (실제 DB 데이터 사용)
         data_items = []
         for row in job_list:
-            # 기본 정보만으로 간소화 (Raw SQL 결과 사용)
             data_items.append({
-                "id": row[0],
-                "title": row[1],
-                "company": row[1],  # 제목을 회사명으로 임시 사용
-                "position": "일반",  # 기본값
-                "employment_type": "정규직",  # 기본값
-                "location": "미정",  # 기본값
-                "status": row[2],
-                "salary_range": "협의",  # 기본값
-                "description": row[1],  # 제목을 설명으로 임시 사용
-                "requirements": "없음",  # 기본값
-                "contact_phone": "",  # 기본값
-                "contact_email": None,  # 기본값
-                "contact_info": "댓글로 연락",  # 기본값
-                "created_at": row[5].isoformat() if row[5] else None,
-                "updated_at": row[5].isoformat() if row[5] else None,
-                "view_count": row[3] or 0,
-                "author_id": row[6],  # 작성자 ID
-                "author_name": row[7] or "익명",  # 작성자 이름
-                "church_id": row[8],  # 실제 데이터베이스의 church_id
-                "expires_at": row[9].isoformat() if row[9] else None,  # 마감일
-                "deadline": row[9].isoformat() if row[9] else None,  # 마감일 (호환성)
+                "id": row[0],                                           # jp.id
+                "title": row[1],                                        # jp.title
+                "company": row[2] or "미정",                             # jp.company_name
+                "position": row[3] or "일반",                            # jp.job_type
+                "job_type": row[3] or "일반",                            # jp.job_type (누락된 필드 추가!)
+                "employment_type": row[4] or "정규직",                   # jp.employment_type
+                "location": row[5] or "미정",                            # jp.location
+                "salary_range": row[6] or "협의",                        # jp.salary_range
+                "description": row[7] or "상세 설명 없음",                # jp.description
+                "requirements": row[8] or "없음",                        # jp.requirements
+                "contact_info": row[9] or "댓글로 연락",                  # jp.contact_info
+                "status": row[10] or "active",                          # jp.status
+                "view_count": row[11] or 0,                             # views
+                "likes": row[12] or 0,                                  # likes
+                "created_at": row[13].isoformat() if row[13] else None, # jp.created_at
+                "updated_at": row[13].isoformat() if row[13] else None, # jp.created_at (updated_at 대용)
+                "author_id": row[14],                                   # jp.author_id
+                "author_name": row[15] or "익명",                        # u.full_name
+                "church_id": row[16],                                   # jp.church_id
+                "expires_at": row[17].isoformat() if row[17] else None, # jp.application_deadline
+                "deadline": row[17].isoformat() if row[17] else None,   # jp.application_deadline (호환성)
+                # 연락처 분리 (contact_info에서 파싱)
+                "contact_phone": "",                                    # 기본값 (파싱 필요시 추가)
+                "contact_email": None,                                  # 기본값 (파싱 필요시 추가)
             })
         
         total_pages = (total_count + limit - 1) // limit
@@ -338,6 +348,7 @@ async def create_job_post(
                 "title": job_record.title,
                 "company": job_record.company_name,
                 "position": job_record.job_type,
+                "job_type": job_record.job_type,  # 누락된 필드 추가
                 "employment_type": job_record.employment_type,
                 "location": job_record.location,
                 "salary_range": job_record.salary_range,
@@ -448,24 +459,55 @@ def get_job_post_detail(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """구인 공고 상세 조회 - 단순화된 버전"""
+    """구인 공고 상세 조회 - 실제 DB 데이터 사용"""
     try:
+        from sqlalchemy import text
+
+        detail_sql = """
+            SELECT
+                jp.id, jp.title, jp.company_name, jp.job_type, jp.employment_type,
+                jp.location, jp.salary_range, jp.description, jp.requirements,
+                jp.contact_info, jp.status, jp.view_count, jp.created_at,
+                jp.author_id, u.full_name, jp.church_id, jp.application_deadline
+            FROM job_posts jp
+            LEFT JOIN users u ON jp.author_id = u.id
+            WHERE jp.id = :job_id
+        """
+
+        result = db.execute(text(detail_sql), {"job_id": job_id})
+        row = result.fetchone()
+
+        if not row:
+            return {
+                "success": False,
+                "message": "해당 구인 공고를 찾을 수 없습니다."
+            }
+
         return {
             "success": True,
             "data": {
-                "id": job_id,
-                "title": "샘플 구인 공고",
-                "company": "샘플 회사",
-                "position": "개발자",
-                "employment_type": "정규직",
-                "location": "서울",
-                "status": "open",
-                "description": "샘플 구인공고 설명",
-                "contact_method": "이메일",
-                "contact_info": "test@company.com"
+                "id": row[0],
+                "title": row[1],
+                "company": row[2] or "미정",
+                "position": row[3] or "일반",
+                "job_type": row[3] or "일반",  # 누락된 필드 추가
+                "employment_type": row[4] or "정규직",
+                "location": row[5] or "미정",
+                "salary_range": row[6] or "협의",
+                "description": row[7] or "상세 설명 없음",
+                "requirements": row[8] or "없음",
+                "contact_info": row[9] or "댓글로 연락",
+                "status": row[10] or "active",
+                "view_count": row[11] or 0,
+                "created_at": row[12].isoformat() if row[12] else None,
+                "author_id": row[13],
+                "author_name": row[14] or "익명",
+                "church_id": row[15],
+                "expires_at": row[16].isoformat() if row[16] else None,
+                "deadline": row[16].isoformat() if row[16] else None
             }
         }
-        
+
     except Exception as e:
         return {
             "success": False,
