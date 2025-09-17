@@ -230,16 +230,16 @@ def get_my_posts(
                 # 각 테이블마다 새로운 트랜잭션 시작 (rollback 방지)
                 db.rollback()
                 
-                # 더 안전한 SQL 쿼리 (필수 필드만 조회)
+                # 실제 조회수와 좋아요 수를 가져오는 SQL 쿼리
                 query = text(f"""
-                    SELECT 
+                    SELECT
                         id,
                         title,
-                        'active' as status,
-                        0 as views,
-                        0 as likes,
+                        COALESCE(status, 'active') as status,
+                        COALESCE(view_count, 0) as views,
+                        COALESCE(likes, 0) as likes,
                         created_at
-                    FROM {table_name} 
+                    FROM {table_name}
                     WHERE {author_field} = :user_id
                     ORDER BY created_at DESC
                 """)
